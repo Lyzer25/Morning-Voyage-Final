@@ -7,13 +7,13 @@ import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import CoffeeHero from "@/components/coffee/coffee-hero"
 import CoffeeGrid from "@/components/coffee/coffee-grid"
-import CoffeeSidebar from "@/components/coffee/coffee-sidebar"
 import CoffeeSort from "@/components/coffee/coffee-sort"
 import FormatFilterTabs from "@/components/coffee/format-filter-tabs"
 import PageTransition from "@/components/ui/page-transition"
 import { Button } from "@/components/ui/button"
 import { Filter, Grid3X3, List, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import SeamlessFilterSidebar from "@/components/coffee/seamless-filter-sidebar"
 
 export default function CoffeePage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -239,7 +239,7 @@ export default function CoffeePage() {
                         type="button"
                         variant="outline"
                         onClick={clearAllFilters}
-                        className="border-2 border-[#9E7C83] text-[#9E7C83] hover:bg-[#9E7C83] hover:text-white px-4 py-3 rounded-2xl font-semibold transition-all duration-300"
+                        className="border-2 border-[#9E7C83] text-[#9E7C83] hover:bg-[#9E7C83] hover:text-white px-4 py-3 rounded-2xl font-semibold transition-all duration-300 bg-transparent"
                       >
                         <X className="w-4 h-4 mr-2" />
                         Clear All
@@ -344,8 +344,8 @@ export default function CoffeePage() {
 
         <Footer />
 
-        {/* Animated Sidebar */}
-        <CoffeeSidebar
+        {/* Seamless Animated Sidebar */}
+        <SeamlessFilterSidebar
           isOpen={showSidebar}
           onClose={handleCloseSidebar}
           selectedCategory={selectedCategory}
