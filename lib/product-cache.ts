@@ -1,7 +1,7 @@
 // Enhanced product cache management system with better variant grouping
-import type { SheetProduct } from "./google-sheets-integration"
-import type { GroupedProduct } from "./product-variants"
-import { groupProductVariants } from "./product-variants"
+import type { SheetProduct } from './google-sheets-integration'
+import type { GroupedProduct } from './product-variants'
+import { groupProductVariants } from './product-variants'
 
 // In-memory cache for products
 let productCache: SheetProduct[] = []
@@ -51,7 +51,7 @@ export function updateProductCache(products: SheetProduct[]): void {
     groupedProductCache.slice(0, 3).forEach((product, index) => {
       console.log(`   ${index + 1}. ${product.productName}:`)
       console.log(`      - Variants: ${product.variants.length}`)
-      console.log(`      - Formats: ${product.availableFormats.join(", ")}`)
+      console.log(`      - Formats: ${product.availableFormats.join(', ')}`)
       console.log(`      - Price range: $${product.priceRange.min} - $${product.priceRange.max}`)
     })
   }
@@ -72,89 +72,91 @@ export function getCacheStatus() {
 // Set syncing status
 export function setSyncingStatus(status: boolean): void {
   isSyncing = status
-  console.log(`🔄 Sync status: ${status ? "SYNCING" : "IDLE"}`)
+  console.log(`🔄 Sync status: ${status ? 'SYNCING' : 'IDLE'}`)
 }
 
 // Initialize cache with static data if empty
 export function initializeCache(): void {
   if (productCache.length === 0) {
-    console.log("🚀 Initializing product cache with sample products...")
+    console.log('🚀 Initializing product cache with sample products...')
 
     // Initialize with sample products that demonstrate variants
     productCache = [
       {
-        sku: "COFFEE-MORNING-12OZ-WHOLE",
-        productName: "Morning Blend",
-        category: "coffee",
-        subcategory: "signature-blend",
-        status: "active",
+        sku: 'COFFEE-MORNING-12OZ-WHOLE',
+        productName: 'Morning Blend',
+        category: 'coffee',
+        subcategory: 'signature-blend',
+        status: 'active',
         price: 16.99,
-        description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
-        roastLevel: "medium",
-        origin: "Colombia & Brazil",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Chocolate", "Caramel", "Nuts"],
+        description:
+          'Our signature morning blend - smooth, balanced, and perfect for starting your day',
+        roastLevel: 'medium',
+        origin: 'Colombia & Brazil',
+        weight: '12 oz',
+        format: 'whole-bean',
+        tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
         featured: true,
       },
       {
-        sku: "COFFEE-MORNING-12OZ-GROUND",
-        productName: "Morning Blend",
-        category: "coffee",
-        subcategory: "signature-blend",
-        status: "active",
+        sku: 'COFFEE-MORNING-12OZ-GROUND',
+        productName: 'Morning Blend',
+        category: 'coffee',
+        subcategory: 'signature-blend',
+        status: 'active',
         price: 16.99,
-        description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
-        roastLevel: "medium",
-        origin: "Colombia & Brazil",
-        weight: "12 oz",
-        format: "ground",
-        tastingNotes: ["Chocolate", "Caramel", "Nuts"],
+        description:
+          'Our signature morning blend - smooth, balanced, and perfect for starting your day',
+        roastLevel: 'medium',
+        origin: 'Colombia & Brazil',
+        weight: '12 oz',
+        format: 'ground',
+        tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
         featured: true,
       },
       {
-        sku: "COFFEE-DARK-12OZ-WHOLE",
-        productName: "Dark Roast Supreme",
-        category: "coffee",
-        subcategory: "dark-roast",
-        status: "active",
+        sku: 'COFFEE-DARK-12OZ-WHOLE',
+        productName: 'Dark Roast Supreme',
+        category: 'coffee',
+        subcategory: 'dark-roast',
+        status: 'active',
         price: 17.99,
-        description: "Bold and intense dark roast with rich, smoky flavors",
-        roastLevel: "dark",
-        origin: "Guatemala",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
+        description: 'Bold and intense dark roast with rich, smoky flavors',
+        roastLevel: 'dark',
+        origin: 'Guatemala',
+        weight: '12 oz',
+        format: 'whole-bean',
+        tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
         featured: true,
       },
       {
-        sku: "COFFEE-DARK-12OZ-GROUND",
-        productName: "Dark Roast Supreme",
-        category: "coffee",
-        subcategory: "dark-roast",
-        status: "active",
+        sku: 'COFFEE-DARK-12OZ-GROUND',
+        productName: 'Dark Roast Supreme',
+        category: 'coffee',
+        subcategory: 'dark-roast',
+        status: 'active',
         price: 17.99,
-        description: "Bold and intense dark roast with rich, smoky flavors",
-        roastLevel: "dark",
-        origin: "Guatemala",
-        weight: "12 oz",
-        format: "ground",
-        tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
+        description: 'Bold and intense dark roast with rich, smoky flavors',
+        roastLevel: 'dark',
+        origin: 'Guatemala',
+        weight: '12 oz',
+        format: 'ground',
+        tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
         featured: true,
       },
       {
-        sku: "COFFEE-LIGHT-12OZ-WHOLE",
-        productName: "Ethiopian Single Origin",
-        category: "coffee",
-        subcategory: "single-origin",
-        status: "active",
+        sku: 'COFFEE-LIGHT-12OZ-WHOLE',
+        productName: 'Ethiopian Single Origin',
+        category: 'coffee',
+        subcategory: 'single-origin',
+        status: 'active',
         price: 19.99,
-        description: "Bright and fruity single origin from Ethiopia",
-        roastLevel: "light",
-        origin: "Ethiopia",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Blueberry", "Floral", "Citrus"],
+        description: 'Bright and fruity single origin from Ethiopia',
+        roastLevel: 'light',
+        origin: 'Ethiopia',
+        weight: '12 oz',
+        format: 'whole-bean',
+        tastingNotes: ['Blueberry', 'Floral', 'Citrus'],
         featured: false,
       },
     ] as SheetProduct[]

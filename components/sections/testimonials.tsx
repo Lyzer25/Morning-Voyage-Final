@@ -1,36 +1,36 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Star, Quote } from "lucide-react"
+import { Card, CardContent } from '@/components/ui/card'
+import { Star, Quote } from 'lucide-react'
 
 const testimonials = [
   {
-    name: "Sarah Johnson",
-    role: "Coffee Enthusiast",
-    location: "New York, NY",
+    name: 'Sarah Johnson',
+    role: 'Coffee Enthusiast',
+    location: 'New York, NY',
     content:
-      "The difference in freshness is incredible! I can actually taste the difference when coffee is roasted to order. Morning Voyage has ruined all other coffee for me.",
+      'The difference in freshness is incredible! I can actually taste the difference when coffee is roasted to order. Morning Voyage has ruined all other coffee for me.',
     rating: 5,
-    avatar: "SJ",
-    gradient: "from-[#4B2E2E] to-[#6E6658]",
+    avatar: 'SJ',
+    gradient: 'from-[#4B2E2E] to-[#6E6658]',
   },
   {
-    name: "Michael Chen",
-    role: "Fashion Blogger",
-    location: "Los Angeles, CA",
+    name: 'Michael Chen',
+    role: 'Fashion Blogger',
+    location: 'Los Angeles, CA',
     content:
-      "Love the quality of both their coffee and fashion line. The hoodie I bought is incredibly soft and the coffee keeps me energized for my morning shoots.",
+      'Love the quality of both their coffee and fashion line. The hoodie I bought is incredibly soft and the coffee keeps me energized for my morning shoots.',
     rating: 5,
-    avatar: "MC",
-    gradient: "from-[#9E7C83] to-[#6E6658]",
+    avatar: 'MC',
+    gradient: 'from-[#9E7C83] to-[#6E6658]',
   },
   {
-    name: "Emma Rodriguez",
-    role: "Subscription Customer",
-    location: "Austin, TX",
+    name: 'Emma Rodriguez',
+    role: 'Subscription Customer',
+    location: 'Austin, TX',
     content:
-      "The subscription service is perfect for my busy lifestyle. Fresh coffee delivered right to my door, and I never have to worry about running out.",
+      'The subscription service is perfect for my busy lifestyle. Fresh coffee delivered right to my door, and I never have to worry about running out.',
     rating: 5,
-    avatar: "ER",
-    gradient: "from-[#D5BFA3] to-[#9E7C83]",
+    avatar: 'ER',
+    gradient: 'from-[#D5BFA3] to-[#9E7C83]',
   },
 ]
 
@@ -47,8 +47,8 @@ export default function Testimonials() {
             What Our Customers Say
           </h2>
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed">
-            Don't just take our word for it. Here's what coffee lovers and fashion enthusiasts are saying about Morning
-            Voyage.
+            Don't just take our word for it. Here's what coffee lovers and fashion enthusiasts are
+            saying about Morning Voyage.
           </p>
         </div>
 
@@ -75,7 +75,9 @@ export default function Testimonials() {
                   {/* Quote */}
                   <div className="relative mb-8">
                     <Quote className="absolute -top-2 -left-2 w-8 h-8 text-[#D5BFA3] opacity-50" />
-                    <p className="text-[#6E6658] leading-relaxed pl-6 font-light text-lg">"{testimonial.content}"</p>
+                    <p className="text-[#6E6658] leading-relaxed pl-6 font-light text-lg">
+                      "{testimonial.content}"
+                    </p>
                   </div>
 
                   {/* Author */}

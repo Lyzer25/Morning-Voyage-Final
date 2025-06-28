@@ -1,0 +1,276 @@
+---
+description: Morning Voyage E-commerce Rules - Shopify Dropshipping with Roastify Fulfillment
+globs: 
+alwaysApply: true
+---
+# Cursor Agent Comprehensive Rules Configuration
+# This file defines rules for the Cursor AI agent for Morning Voyage, a dropshipping e-commerce
+# site built with Next.js, integrated with Shopify for backend/payments and Roastify for fulfillment.
+# The site is designed for home hosting on Starlink with moderate traffic expectations.
+
+rules:
+  # Rule 1: Project Structure & File Navigation
+  - name: "Project Structure"
+    description: "Enforce proper Next.js project structure for single-application e-commerce site"
+    priority: 1
+    alwaysApply: true
+    globs: ["**/*"]
+    triggers:
+      - event: "open_file"
+      - event: "search_code"
+      - event: "create_file"
+    conditions:
+      - "Whenever the agent navigates the file system or references project files"
+    guidelines:
+      - "Recognize that this is a **single Next.js application** (not a monorepo) with standard structure."
+      - "Organize code by feature/domain: `/app/` for pages, `/components/` for UI components, `/lib/` for utilities and integrations."
+      - "Keep **Shopify integration** code in `/lib/shopify/` directory for centralized API management."
+      - "Store **Roastify integration** logic in `/lib/roastify/` or as part of Shopify webhook handlers."
+      - "Place **order management** and fulfillment logic in `/lib/orders/` for clear separation of concerns."
+      - "Maintain **component hierarchy**: UI components in `/components/ui/`, feature-specific components in `/components/[feature]/`."
+      - "Focus on **source code and configuration** files. Never edit `node_modules/`, build outputs, or third-party dependencies."
+      - "When creating new files, choose appropriate directories based on functionality and maintain consistent naming conventions."
+      - "Keep **environment-specific configurations** clearly separated and documented."
+    dependencies: []
+
+  # Rule 2: E-commerce Integration (Shopify/Roastify)
+  - name: "E-commerce Integration"
+    description: "Guidelines for Shopify Storefront API and Roastify fulfillment integration"
+    priority: 1
+    alwaysApply: true
+    globs: ["**/lib/shopify/**", "**/lib/roastify/**", "**/api/**"]
+    triggers:
+      - event: "shopify_api_call"
+      - event: "order_processing"
+      - event: "webhook_handling"
+    conditions:
+      - "When working with Shopify API, order processing, or fulfillment workflows"
+    guidelines:
+      - "Use **Shopify Storefront API** for all product data, cart management, and checkout processes."
+      - "Implement **robust error handling** for all external API calls - Starlink connection can be unstable."
+      - "Add **retry logic** with exponential backoff for failed API requests (network resilience)."
+      - "Cache **product data** aggressively to reduce API calls and improve performance on limited bandwidth."
+      - "Handle **webhook events** from Shopify for order updates, payment confirmations, and fulfillment status."
+      - "Integrate **Roastify fulfillment** through Shopify's fulfillment service APIs, not direct API calls."
+      - "Implement **order state management** to track: placed → paid → fulfilled → shipped → delivered."
+      - "Add **inventory sync** mechanisms to prevent overselling of dropshipped products."
+      - "Log all **API interactions** for debugging and monitoring order flow issues."
+      - "Use **TypeScript interfaces** for all API response types to ensure type safety."
+      - "Implement **rate limiting** awareness to respect Shopify API limits."
+    dependencies:
+      - "Error Handling"
+      - "Home Hosting Optimization"
+
+  # Rule 3: Home Hosting Optimization
+  - name: "Home Hosting Optimization"
+    description: "Optimize for Starlink connectivity and home hosting constraints"
+    priority: 1
+    alwaysApply: true
+    globs: ["**/*"]
+    triggers:
+      - event: "api_request"
+      - event: "image_loading"
+      - event: "data_fetching"
+    conditions:
+      - "When implementing features that require network connectivity or data transfer"
+    guidelines:
+      - "Implement **aggressive caching** using Next.js built-in caching, Redis, or in-memory stores."
+      - "Optimize **image delivery** with Next.js Image component, WebP format, and proper sizing."
+      - "Add **retry mechanisms** for all external API calls due to potential Starlink interruptions."
+      - "Use **static generation** (SSG) where possible to reduce server load and improve performance."
+      - "Implement **graceful degradation** - site should work even if some external services are down."
+      - "Add **health checks** and monitoring for critical services (Shopify, payment processing)."
+      - "Use **CDN strategies** where possible to offload static assets from home server."
+      - "Implement **bandwidth-efficient** data fetching patterns (pagination, infinite scroll)."
+      - "Add **connection status indicators** to inform users of network issues."
+      - "Use **service workers** for offline capabilities and background sync when connection is restored."
+      - "Minimize **bundle sizes** and implement code splitting for faster initial loads."
+    dependencies:
+      - "E-commerce Integration"
+      - "Error Handling"
+
+  # Rule 4: Code Generation Best Practices
+  - name: "Code Generation"
+    description: "Standards and best practices for generating clean, maintainable TypeScript code"
+    priority: 2
+    alwaysApply: false
+    globs: ["**/*.ts", "**/*.tsx"]
+    triggers:
+      - event: "write_code"
+      - event: "review_code"
+    conditions:
+      - "When generating or modifying code"
+    guidelines:
+      - "Write **clean, readable, and idiomatic** TypeScript code following modern React patterns."
+      - "Use **modern ES/TypeScript features** (async/await, optional chaining, nullish coalescing)."
+      - "Ensure **strong typing** - avoid `any` types, prefer specific types and interfaces."
+      - "Apply **Single Responsibility Principle** - keep functions and components focused and small."
+      - "Follow **React best practices** - use hooks properly, avoid unnecessary re-renders."
+      - "Implement **proper error boundaries** for React components to handle failures gracefully."
+      - "Use **custom hooks** for reusable logic, especially for API calls and state management."
+      - "Add **JSDoc comments** for complex logic, public APIs, and business-critical functions."
+      - "Ensure **accessibility** with proper ARIA labels, semantic HTML, and keyboard navigation."
+      - "Include **loading states** and **error states** for all async operations."
+      - "Validate **user inputs** using Zod or similar validation libraries."
+    dependencies:
+      - "Error Handling"
+      - "Adherence to Style Guides"
+
+  # Rule 5: Error Handling & Resilience
+  - name: "Error Handling"
+    description: "Comprehensive error handling for dropshipping operations and network resilience"
+    priority: 1
+    alwaysApply: true
+    globs: ["**/*.ts", "**/*.tsx"]
+    triggers:
+      - event: "api_call"
+      - event: "order_processing"
+      - event: "payment_handling"
+    conditions:
+      - "When implementing any operation that can fail"
+    guidelines:
+      - "Wrap **all external API calls** in try/catch blocks with proper error logging."
+      - "Implement **exponential backoff** for retrying failed requests (especially important for Starlink)."
+      - "Add **circuit breakers** for external services to prevent cascading failures."
+      - "Log **detailed error information** including context, user ID, order ID, and timestamp."
+      - "Implement **user-friendly error messages** that don't expose sensitive system information."
+      - "Add **fallback mechanisms** for critical operations (payment processing, order placement)."
+      - "Use **error boundaries** in React to catch and handle component errors gracefully."
+      - "Implement **queue systems** for critical operations that must not be lost (order processing)."
+      - "Add **health checks** for all critical integrations (Shopify, payment providers)."
+      - "Create **error tracking** and alerting for production issues."
+      - "Handle **network timeouts** gracefully with appropriate user feedback."
+    dependencies:
+      - "E-commerce Integration"
+      - "Home Hosting Optimization"
+
+  # Rule 6: Testing and Quality Assurance
+  - name: "Testing"
+    description: "Testing strategies for e-commerce functionality and integrations"
+    priority: 3
+    alwaysApply: false
+    globs: ["**/*.spec.ts", "**/*.test.ts"]
+    triggers:
+      - event: "run_tests"
+      - event: "generate_tests"
+    conditions:
+      - "When implementing testing or quality assurance measures"
+    guidelines:
+      - "Implement **unit tests** for critical business logic, especially order processing and payment handling."
+      - "Add **integration tests** for Shopify API interactions and webhook handlers."
+      - "Create **mock data** for testing without hitting real APIs during development."
+      - "Test **error scenarios** including network failures, API timeouts, and invalid responses."
+      - "Implement **end-to-end tests** for critical user journeys (browse → add to cart → checkout)."
+      - "Add **performance tests** to ensure the site performs well on home hosting setup."
+      - "Test **mobile responsiveness** since many customers will shop on mobile devices."
+      - "Validate **accessibility** with automated testing tools and manual checks."
+      - "Use **TypeScript compiler** and linter as first line of defense for code quality."
+      - "Test **offline scenarios** and connection recovery for resilient user experience."
+    dependencies:
+      - "Code Generation"
+      - "Error Handling"
+
+  # Rule 7: Security and Privacy
+  - name: "Security"
+    description: "Security best practices for e-commerce and customer data protection"
+    priority: 2
+    alwaysApply: true
+    globs: ["**/*"]
+    triggers:
+      - event: "handle_user_data"
+      - event: "api_endpoint"
+      - event: "authentication"
+    conditions:
+      - "When handling customer data, payments, or authentication"
+    guidelines:
+      - "Never store **payment information** locally - let Shopify handle all payment processing."
+      - "Validate **all user inputs** on both client and server side to prevent injection attacks."
+      - "Use **HTTPS only** for all communications, especially important for home hosting."
+      - "Implement **rate limiting** on API endpoints to prevent abuse and DoS attacks."
+      - "Add **CSRF protection** for all form submissions and state-changing operations."
+      - "Store **sensitive configuration** in environment variables, never in code."
+      - "Implement **proper session management** with secure cookies and appropriate expiration."
+      - "Add **audit logging** for all administrative actions and order modifications."
+      - "Use **Content Security Policy** headers to prevent XSS attacks."
+      - "Implement **proper CORS** configuration for API endpoints."
+      - "Regular **security updates** for all dependencies and frameworks."
+    dependencies:
+      - "Code Generation"
+      - "Error Handling"
+
+  # Rule 8: Performance Optimization
+  - name: "Performance"
+    description: "Optimize for home hosting and moderate traffic with efficient resource usage"
+    priority: 2
+    alwaysApply: true
+    globs: ["**/*"]
+    triggers:
+      - event: "page_load"
+      - event: "api_request"
+      - event: "image_handling"
+    conditions:
+      - "When implementing features that affect site performance"
+    guidelines:
+      - "Use **Next.js Image component** with proper optimization for all images."
+      - "Implement **lazy loading** for images and components below the fold."
+      - "Use **static generation** where possible to reduce server processing."
+      - "Implement **client-side caching** for API responses and static data."
+      - "Optimize **bundle sizes** with proper code splitting and tree shaking."
+      - "Use **compression** for all assets (gzip, brotli) to reduce bandwidth usage."
+      - "Implement **CDN** for static assets to reduce load on home server."
+      - "Add **performance monitoring** to track Core Web Vitals and user experience metrics."
+      - "Use **database indexing** and query optimization for any local data storage."
+      - "Implement **background processing** for non-critical operations."
+    dependencies:
+      - "Home Hosting Optimization"
+      - "Code Generation"
+
+  # Rule 9: Documentation and Maintenance
+  - name: "Documentation"
+    description: "Maintain comprehensive documentation for e-commerce operations"
+    priority: 3
+    alwaysApply: false
+    globs: ["**/*.md", "**/*.mdx"]
+    triggers:
+      - event: "feature_complete"
+      - event: "api_changes"
+    conditions:
+      - "When completing features or making significant changes"
+    guidelines:
+      - "Document **all API integrations** including Shopify webhooks and Roastify fulfillment."
+      - "Maintain **environment setup** documentation for local development and production deployment."
+      - "Document **order flow** and fulfillment processes for operational clarity."
+      - "Keep **troubleshooting guides** for common issues with Starlink connectivity."
+      - "Document **monitoring and alerting** setup for production issues."
+      - "Maintain **changelog** for all significant updates and feature additions."
+      - "Document **security practices** and compliance measures."
+      - "Keep **API documentation** current with request/response examples."
+      - "Document **deployment procedures** for home hosting setup."
+      - "Maintain **disaster recovery** procedures and backup strategies."
+    dependencies:
+      - "Code Generation"
+      - "E-commerce Integration"
+
+  # Rule 10: Adherence to Style Guides
+  - name: "Style Guides"
+    description: "Consistent coding style and formatting for maintainability"
+    priority: 2
+    alwaysApply: true
+    globs: ["**/*"]
+    triggers:
+      - event: "write_code"
+      - event: "save_file"
+    conditions:
+      - "When writing or modifying any code or documentation"
+    guidelines:
+      - "Use **consistent naming conventions** - camelCase for variables/functions, PascalCase for components."
+      - "Follow **Prettier** formatting rules for consistent code style."
+      - "Use **ESLint** rules to catch common issues and enforce best practices."
+      - "Maintain **consistent import order** - external libraries first, then internal modules."
+      - "Use **meaningful variable names** that clearly indicate purpose and context."
+      - "Keep **functions small** and focused on single responsibilities."
+      - "Use **TypeScript interfaces** for all data structures and API responses."
+      - "Follow **React naming conventions** for components, hooks, and props."
+      - "Maintain **consistent file structure** and naming patterns."
+      - "Remove **unused imports** and dead code to keep codebase clean."
+    dependencies: []

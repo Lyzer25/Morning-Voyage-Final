@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { RefreshCw, CheckCircle, AlertCircle, Clock, Zap, Pause, Play } from "lucide-react"
+import { useState, useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { RefreshCw, CheckCircle, AlertCircle, Clock, Zap, Pause, Play } from 'lucide-react'
 
 interface SyncStatus {
   lastSync: string
@@ -20,51 +20,51 @@ export default function AutoSyncManager() {
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true)
   const [isManualSync, setIsManualSync] = useState(false)
   const [countdown, setCountdown] = useState(300) // 5 minutes
-  const [lastSyncResult, setLastSyncResult] = useState<string>("")
+  const [lastSyncResult, setLastSyncResult] = useState<string>('')
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const countdownRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch sync status
   const fetchSyncStatus = async () => {
     try {
-      const response = await fetch("/api/admin/sync")
+      const response = await fetch('/api/admin/sync')
       const data = await response.json()
       if (data.success) {
         setSyncStatus(data.cache)
         setCountdown(Math.floor(data.cache.nextSyncIn / 1000))
-        console.log("📊 Sync status:", data.cache)
+        console.log('📊 Sync status:', data.cache)
       }
     } catch (error) {
-      console.error("Failed to fetch sync status:", error)
+      console.error('Failed to fetch sync status:', error)
     }
   }
 
   // Perform sync
   const performSync = async () => {
     try {
-      console.log("🔄 Starting sync...")
-      const response = await fetch("/api/admin/sync", { method: "POST" })
+      console.log('🔄 Starting sync...')
+      const response = await fetch('/api/admin/sync', { method: 'POST' })
       const data = await response.json()
 
       if (data.success) {
         setSyncStatus(data.cache)
         setCountdown(300) // Reset to 5 minutes
         setLastSyncResult(`✅ Synced ${data.count} products`)
-        console.log("✅ Auto-sync completed:", data.count, "products")
+        console.log('✅ Auto-sync completed:', data.count, 'products')
       } else {
         setLastSyncResult(`❌ Sync failed: ${data.error}`)
-        console.error("❌ Sync failed:", data.error)
+        console.error('❌ Sync failed:', data.error)
       }
     } catch (error) {
       setLastSyncResult(`❌ Sync error: ${error}`)
-      console.error("Auto-sync failed:", error)
+      console.error('Auto-sync failed:', error)
     }
   }
 
   // Manual sync
   const handleManualSync = async () => {
     setIsManualSync(true)
-    setLastSyncResult("🔄 Syncing...")
+    setLastSyncResult('🔄 Syncing...')
     await performSync()
     setIsManualSync(false)
   }
@@ -79,10 +79,10 @@ export default function AutoSyncManager() {
     // Set up auto-sync interval
     intervalRef.current = setInterval(
       async () => {
-        console.log("🔄 Auto-sync triggered...")
+        console.log('🔄 Auto-sync triggered...')
         await performSync()
       },
-      5 * 60 * 1000,
+      5 * 60 * 1000
     ) // 5 minutes
 
     return () => {
@@ -97,7 +97,7 @@ export default function AutoSyncManager() {
     if (!autoSyncEnabled || countdown <= 0) return
 
     countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
+      setCountdown(prev => {
         if (prev <= 1) {
           return 300 // Reset to 5 minutes
         }
@@ -116,7 +116,7 @@ export default function AutoSyncManager() {
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const getStatusIcon = () => {
@@ -154,7 +154,7 @@ export default function AutoSyncManager() {
               size="sm"
               onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
               className={`p-2 rounded-lg transition-colors ${
-                autoSyncEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                autoSyncEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
               }`}
             >
               {autoSyncEnabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -177,13 +177,13 @@ export default function AutoSyncManager() {
             <span className="text-[#6E6658] font-medium">Last Sync:</span>
             <div className="text-[#4B2E2E] font-bold flex items-center">
               <Clock className="w-3 h-3 mr-1" />
-              {syncStatus?.lastSync ? new Date(syncStatus.lastSync).toLocaleTimeString() : "Never"}
+              {syncStatus?.lastSync ? new Date(syncStatus.lastSync).toLocaleTimeString() : 'Never'}
             </div>
           </div>
           <div>
             <span className="text-[#6E6658] font-medium">Status:</span>
             <div className="text-[#4B2E2E] font-bold">
-              {syncStatus?.isSyncing || isManualSync ? "Syncing" : "Ready"}
+              {syncStatus?.isSyncing || isManualSync ? 'Syncing' : 'Ready'}
             </div>
           </div>
         </div>
@@ -201,12 +201,15 @@ export default function AutoSyncManager() {
             <span className="text-[#4B2E2E] font-semibold">Auto-Sync Status</span>
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-[#9E7C83]" />
-              <span className="text-sm text-[#6E6658]">{autoSyncEnabled ? "Active" : "Paused"}</span>
+              <span className="text-sm text-[#6E6658]">
+                {autoSyncEnabled ? 'Active' : 'Paused'}
+              </span>
             </div>
           </div>
           {autoSyncEnabled && (
             <div className="text-sm text-[#6E6658]">
-              Next sync in: <span className="font-mono font-bold">{formatCountdown(countdown)}</span>
+              Next sync in:{' '}
+              <span className="font-mono font-bold">{formatCountdown(countdown)}</span>
             </div>
           )}
         </div>

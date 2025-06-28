@@ -1,24 +1,24 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Star, Heart, Eye, Coffee, MapPin } from "lucide-react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import type { GroupedProduct } from "@/lib/product-variants"
-import { getPriceDisplay, hasMultipleFormats, getFormatDisplayName } from "@/lib/product-variants"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Star, Heart, Eye, Coffee, MapPin } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import type { GroupedProduct } from '@/lib/product-variants'
+import { getPriceDisplay, hasMultipleFormats, getFormatDisplayName } from '@/lib/product-variants'
 
 interface CoffeeGridProps {
   products: GroupedProduct[]
-  viewMode: "grid" | "list"
+  viewMode: 'grid' | 'list'
 }
 
 const roastColors = {
-  light: "from-[#D5BFA3] to-[#E7CFC7]",
-  medium: "from-[#9E7C83] to-[#D5BFA3]",
-  "medium-dark": "from-[#6E6658] to-[#9E7C83]",
-  dark: "from-[#4B2E2E] to-[#6E6658]",
+  light: 'from-[#D5BFA3] to-[#E7CFC7]',
+  medium: 'from-[#9E7C83] to-[#D5BFA3]',
+  'medium-dark': 'from-[#6E6658] to-[#9E7C83]',
+  dark: 'from-[#4B2E2E] to-[#6E6658]',
 }
 
 export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
@@ -26,13 +26,13 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
   const [favorites, setFavorites] = useState<string[]>([])
 
   const handleProductClick = (product: GroupedProduct) => {
-    const slug = product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, "-")
+    const slug = product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-')
     router.push(`/product/${slug}`)
   }
 
   const toggleFavorite = (productSku: string) => {
     if (favorites.includes(productSku)) {
-      setFavorites(favorites.filter((sku) => sku !== productSku))
+      setFavorites(favorites.filter(sku => sku !== productSku))
     } else {
       setFavorites([...favorites, productSku])
     }
@@ -50,11 +50,12 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
     )
   }
 
-  if (viewMode === "list") {
+  if (viewMode === 'list') {
     return (
       <div className="space-y-6">
-        {products.map((product) => {
-          const gradient = roastColors[product.roastLevel as keyof typeof roastColors] || roastColors.medium
+        {products.map(product => {
+          const gradient =
+            roastColors[product.roastLevel as keyof typeof roastColors] || roastColors.medium
 
           return (
             <Card
@@ -74,7 +75,9 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                         <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mx-auto mb-4 flex items-center justify-center">
                           <Coffee className="w-8 h-8 text-white" />
                         </div>
-                        <p className="text-sm opacity-90 font-medium capitalize">{product.roastLevel} Roast</p>
+                        <p className="text-sm opacity-90 font-medium capitalize">
+                          {product.roastLevel} Roast
+                        </p>
                       </div>
                     </div>
 
@@ -92,14 +95,14 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={(e) => {
+                        onClick={e => {
                           e.stopPropagation()
                           toggleFavorite(product.baseSku)
                         }}
                         className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
                       >
                         <Heart
-                          className={`w-4 h-4 ${favorites.includes(product.baseSku) ? "fill-red-500 text-red-500" : "text-[#6E6658]"}`}
+                          className={`w-4 h-4 ${favorites.includes(product.baseSku) ? 'fill-red-500 text-red-500' : 'text-[#6E6658]'}`}
                         />
                       </Button>
                       <Button
@@ -117,7 +120,10 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                     <div>
                       {/* Header Info */}
                       <div className="flex items-center justify-between mb-3">
-                        <Badge variant="outline" className="border-[#D5BFA3] text-[#6E6658] capitalize">
+                        <Badge
+                          variant="outline"
+                          className="border-[#D5BFA3] text-[#6E6658] capitalize"
+                        >
                           {product.category}
                         </Badge>
                         <div className="flex items-center space-x-1">
@@ -133,7 +139,9 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                       </h3>
 
                       {/* Description */}
-                      <p className="text-[#6E6658] mb-4 font-light leading-relaxed">{product.description}</p>
+                      <p className="text-[#6E6658] mb-4 font-light leading-relaxed">
+                        {product.description}
+                      </p>
 
                       {/* Coffee Details */}
                       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
@@ -148,8 +156,12 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                       {/* Tasting Notes */}
                       {product.tastingNotes && product.tastingNotes.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-4">
-                          {product.tastingNotes.slice(0, 3).map((note) => (
-                            <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658]">
+                          {product.tastingNotes.slice(0, 3).map(note => (
+                            <Badge
+                              key={note}
+                              variant="secondary"
+                              className="text-xs bg-[#F6F1EB] text-[#6E6658]"
+                            >
                               {note}
                             </Badge>
                           ))}
@@ -160,18 +172,22 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                     {/* Price & Actions */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="text-2xl font-bold text-[#4B2E2E]">{getPriceDisplay(product)}</span>
-                        {hasMultipleFormats(product) && <span className="text-xs text-[#6E6658]">starting at</span>}
+                        <span className="text-2xl font-bold text-[#4B2E2E]">
+                          {getPriceDisplay(product)}
+                        </span>
+                        {hasMultipleFormats(product) && (
+                          <span className="text-xs text-[#6E6658]">starting at</span>
+                        )}
                       </div>
                       <Button
-                        onClick={(e) => {
+                        onClick={e => {
                           e.stopPropagation()
                           handleProductClick(product)
                         }}
                         className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
                       >
                         <Eye className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
-                        {hasMultipleFormats(product) ? "Choose Format" : "View Details"}
+                        {hasMultipleFormats(product) ? 'Choose Format' : 'View Details'}
                       </Button>
                     </div>
                   </div>
@@ -186,8 +202,9 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
 
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-      {products.map((product) => {
-        const gradient = roastColors[product.roastLevel as keyof typeof roastColors] || roastColors.medium
+      {products.map(product => {
+        const gradient =
+          roastColors[product.roastLevel as keyof typeof roastColors] || roastColors.medium
 
         return (
           <Card
@@ -210,14 +227,14 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation()
                     toggleFavorite(product.baseSku)
                   }}
                   className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
                 >
                   <Heart
-                    className={`w-4 h-4 ${favorites.includes(product.baseSku) ? "fill-red-500 text-red-500" : "text-[#6E6658]"}`}
+                    className={`w-4 h-4 ${favorites.includes(product.baseSku) ? 'fill-red-500 text-red-500' : 'text-[#6E6658]'}`}
                   />
                 </Button>
               </div>
@@ -231,7 +248,9 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                   <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mx-auto mb-4 flex items-center justify-center">
                     <Coffee className="w-8 h-8 text-white" />
                   </div>
-                  <p className="text-sm opacity-90 font-medium capitalize">{product.roastLevel} Roast</p>
+                  <p className="text-sm opacity-90 font-medium capitalize">
+                    {product.roastLevel} Roast
+                  </p>
                 </div>
 
                 {/* Hover Overlay */}
@@ -240,13 +259,13 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                     <Button
                       size="sm"
                       className="bg-white text-[#4B2E2E] hover:bg-white/90 rounded-full shadow-xl"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation()
                         handleProductClick(product)
                       }}
                     >
                       <Eye className="w-4 h-4 mr-2" />
-                      {hasMultipleFormats(product) ? "Choose Format" : "View Details"}
+                      {hasMultipleFormats(product) ? 'Choose Format' : 'View Details'}
                     </Button>
                   </div>
                 </div>
@@ -256,7 +275,10 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
               <div className="p-6 space-y-4">
                 {/* Header Info */}
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="border-[#D5BFA3] text-[#6E6658] capitalize text-xs">
+                  <Badge
+                    variant="outline"
+                    className="border-[#D5BFA3] text-[#6E6658] capitalize text-xs"
+                  >
                     {product.category}
                   </Badge>
                   <div className="flex items-center space-x-1">
@@ -282,8 +304,12 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                 {/* Tasting Notes */}
                 {product.tastingNotes && product.tastingNotes.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {product.tastingNotes.slice(0, 2).map((note) => (
-                      <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658] px-2 py-1">
+                    {product.tastingNotes.slice(0, 2).map(note => (
+                      <Badge
+                        key={note}
+                        variant="secondary"
+                        className="text-xs bg-[#F6F1EB] text-[#6E6658] px-2 py-1"
+                      >
                         {note}
                       </Badge>
                     ))}
@@ -293,21 +319,23 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                 {/* Price & Action - Better spacing and layout */}
                 <div className="flex items-end justify-between pt-2">
                   <div className="flex flex-col">
-                    <span className="text-xl font-bold text-[#4B2E2E]">{getPriceDisplay(product)}</span>
+                    <span className="text-xl font-bold text-[#4B2E2E]">
+                      {getPriceDisplay(product)}
+                    </span>
                     {hasMultipleFormats(product) && (
                       <span className="text-xs text-[#6E6658] leading-none">starting at</span>
                     )}
                   </div>
                   <Button
                     size="sm"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation()
                       handleProductClick(product)
                     }}
                     className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group/btn px-4 py-2"
                   >
                     <Eye className="w-4 h-4 mr-1 group-hover/btn:scale-110 transition-transform duration-300" />
-                    {hasMultipleFormats(product) ? "Choose" : "View"}
+                    {hasMultipleFormats(product) ? 'Choose' : 'View'}
                   </Button>
                 </div>
 
@@ -315,7 +343,7 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                 {hasMultipleFormats(product) && (
                   <div className="pt-2 border-t border-[#F6F1EB]">
                     <div className="flex flex-wrap gap-1">
-                      {product.availableFormats.map((format) => (
+                      {product.availableFormats.map(format => (
                         <Badge
                           key={format}
                           variant="outline"

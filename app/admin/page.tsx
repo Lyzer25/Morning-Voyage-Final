@@ -1,7 +1,7 @@
-import Header from "@/components/layout/header"
-import Footer from "@/components/layout/footer"
-import SheetsTestPanel from "@/components/admin/sheets-test-panel"
-import AutoSyncManager from "@/components/admin/auto-sync-manager"
+import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
+import SheetsTestPanel from '@/components/admin/sheets-test-panel'
+import AutoSyncManager from '@/components/admin/auto-sync-manager'
 
 export default function AdminPage() {
   return (

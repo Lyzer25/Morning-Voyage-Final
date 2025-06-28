@@ -1,33 +1,33 @@
-"use client"
+'use client'
 
-import { Coffee, Award, Leaf, Clock } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Coffee, Award, Leaf, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const coffeeStats = [
   {
     icon: Coffee,
-    title: "12+ Blends",
-    description: "Signature & Single Origins",
-    gradient: "from-[#4B2E2E] to-[#6E6658]",
+    title: '12+ Blends',
+    description: 'Signature & Single Origins',
+    gradient: 'from-[#4B2E2E] to-[#6E6658]',
   },
   {
     icon: Award,
-    title: "85+ Cup Score",
-    description: "Specialty Grade Coffee",
-    gradient: "from-[#6E6658] to-[#9E7C83]",
+    title: '85+ Cup Score',
+    description: 'Specialty Grade Coffee',
+    gradient: 'from-[#6E6658] to-[#9E7C83]',
   },
   {
     icon: Leaf,
-    title: "Direct Trade",
-    description: "Ethically Sourced",
-    gradient: "from-[#9E7C83] to-[#D5BFA3]",
+    title: 'Direct Trade',
+    description: 'Ethically Sourced',
+    gradient: 'from-[#9E7C83] to-[#D5BFA3]',
   },
 ]
 
 const roastLevels = [
-  { name: "Light", color: "#D5BFA3", description: "Bright & Fruity" },
-  { name: "Medium", color: "#9E7C83", description: "Balanced & Sweet" },
-  { name: "Dark", color: "#6E6658", description: "Bold & Rich" },
+  { name: 'Light', color: '#D5BFA3', description: 'Bright & Fruity' },
+  { name: 'Medium', color: '#9E7C83', description: 'Balanced & Sweet' },
+  { name: 'Dark', color: '#6E6658', description: 'Bold & Rich' },
 ]
 
 export default function CoffeeHero() {
@@ -43,7 +43,9 @@ export default function CoffeeHero() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <Coffee className="w-4 h-4 text-[#D5BFA3]" />
-            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">FRESHLY ROASTED DAILY</span>
+            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
+              FRESHLY ROASTED DAILY
+            </span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] mb-6 tracking-tight">
@@ -54,8 +56,9 @@ export default function CoffeeHero() {
           </h1>
 
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed mb-12">
-            Discover our carefully curated selection of specialty coffee beans, roasted to perfection and delivered
-            fresh to your door. From bright single origins to rich signature blends, find your perfect cup.
+            Discover our carefully curated selection of specialty coffee beans, roasted to
+            perfection and delivered fresh to your door. From bright single origins to rich
+            signature blends, find your perfect cup.
           </p>
 
           {/* Coffee Stats */}

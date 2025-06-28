@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { RefreshCw, CheckCircle, AlertCircle, Database, Eye, Copy, Zap } from "lucide-react"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { RefreshCw, CheckCircle, AlertCircle, Database, Eye, Copy, Zap } from 'lucide-react'
 
 interface TestResult {
   success: boolean
@@ -26,53 +26,53 @@ interface TestResult {
 export default function SheetsTestPanel() {
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTest, setActiveTest] = useState<string>("")
+  const [activeTest, setActiveTest] = useState<string>('')
 
   const runConnectionTest = async () => {
     setIsLoading(true)
-    setActiveTest("connection")
+    setActiveTest('connection')
 
     try {
-      const response = await fetch("/api/products/test")
+      const response = await fetch('/api/products/test')
       const result = await response.json()
       setTestResult(result)
     } catch (error) {
       setTestResult({
         success: false,
-        error: "Failed to connect to API",
+        error: 'Failed to connect to API',
         troubleshooting: [
           "1. Check that you're connected to the internet",
-          "2. Make sure the API route is deployed correctly",
-          "3. Check browser console for more errors",
+          '2. Make sure the API route is deployed correctly',
+          '3. Check browser console for more errors',
         ],
       })
     } finally {
       setIsLoading(false)
-      setActiveTest("")
+      setActiveTest('')
     }
   }
 
   const runProductSync = async () => {
     setIsLoading(true)
-    setActiveTest("sync")
+    setActiveTest('sync')
 
     try {
-      const response = await fetch("/api/admin/sync", { method: "POST" })
+      const response = await fetch('/api/admin/sync', { method: 'POST' })
       const result = await response.json()
       setTestResult(result)
     } catch (error) {
       setTestResult({
         success: false,
-        error: "Failed to sync products",
+        error: 'Failed to sync products',
         troubleshooting: [
-          "1. Make sure the connection test passes first",
-          "2. Check your spreadsheet has product data",
-          "3. Verify environment variables are set correctly",
+          '1. Make sure the connection test passes first',
+          '2. Check your spreadsheet has product data',
+          '3. Verify environment variables are set correctly',
         ],
       })
     } finally {
       setIsLoading(false)
-      setActiveTest("")
+      setActiveTest('')
     }
   }
 
@@ -96,7 +96,7 @@ export default function SheetsTestPanel() {
               disabled={isLoading}
               className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-xl h-12"
             >
-              {isLoading && activeTest === "connection" ? (
+              {isLoading && activeTest === 'connection' ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Testing Connection...
@@ -114,7 +114,7 @@ export default function SheetsTestPanel() {
               disabled={isLoading}
               className="bg-gradient-to-r from-[#9E7C83] to-[#6E6658] hover:from-[#6E6658] hover:to-[#9E7C83] text-white rounded-xl h-12"
             >
-              {isLoading && activeTest === "sync" ? (
+              {isLoading && activeTest === 'sync' ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Syncing Products...
@@ -131,7 +131,7 @@ export default function SheetsTestPanel() {
           {testResult && (
             <div
               className={`p-4 rounded-xl border-2 ${
-                testResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"
+                testResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
               }`}
             >
               <div className="flex items-center mb-3">
@@ -140,8 +140,10 @@ export default function SheetsTestPanel() {
                 ) : (
                   <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
                 )}
-                <span className={`font-semibold ${testResult.success ? "text-green-800" : "text-red-800"}`}>
-                  {testResult.success ? "Success!" : "Error"}
+                <span
+                  className={`font-semibold ${testResult.success ? 'text-green-800' : 'text-red-800'}`}
+                >
+                  {testResult.success ? 'Success!' : 'Error'}
                 </span>
                 {testResult.httpStatus && (
                   <Badge variant="outline" className="ml-2">
@@ -155,13 +157,19 @@ export default function SheetsTestPanel() {
                 )}
               </div>
 
-              {testResult.message && <p className="text-sm text-gray-700 mb-3">{testResult.message}</p>}
+              {testResult.message && (
+                <p className="text-sm text-gray-700 mb-3">{testResult.message}</p>
+              )}
 
-              {testResult.error && <p className="text-sm text-red-700 mb-3 font-medium">{testResult.error}</p>}
+              {testResult.error && (
+                <p className="text-sm text-red-700 mb-3 font-medium">{testResult.error}</p>
+              )}
 
               {testResult.count !== undefined && (
                 <div className="flex items-center gap-2 mb-3">
-                  <Badge className="bg-blue-100 text-blue-800">{testResult.count} products found</Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {testResult.count} products found
+                  </Badge>
                 </div>
               )}
 
@@ -181,7 +189,9 @@ export default function SheetsTestPanel() {
                     <div className="flex items-center justify-between">
                       <span>Last Sync:</span>
                       <span className="font-mono text-xs">
-                        {testResult.cache.lastSync ? new Date(testResult.cache.lastSync).toLocaleString() : "Never"}
+                        {testResult.cache.lastSync
+                          ? new Date(testResult.cache.lastSync).toLocaleString()
+                          : 'Never'}
                       </span>
                     </div>
                   </div>
@@ -199,7 +209,7 @@ export default function SheetsTestPanel() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span>API Key:</span>
-                      <span>{testResult.config.hasApiKey ? "✓ Configured" : "✗ Missing"}</span>
+                      <span>{testResult.config.hasApiKey ? '✓ Configured' : '✗ Missing'}</span>
                     </div>
                     {testResult.config.testUrl && (
                       <div className="mt-2">
@@ -263,11 +273,13 @@ export default function SheetsTestPanel() {
                   <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto">
                     {testResult.sampleData.slice(0, 5).map((row, i) => (
                       <div key={i} className="border-b border-gray-200 py-1">
-                        {row.join(" | ")}
+                        {row.join(' | ')}
                       </div>
                     ))}
                     {testResult.sampleData.length > 5 && (
-                      <div className="text-gray-500 pt-1">...and {testResult.sampleData.length - 5} more rows</div>
+                      <div className="text-gray-500 pt-1">
+                        ...and {testResult.sampleData.length - 5} more rows
+                      </div>
                     )}
                   </div>
                 </details>

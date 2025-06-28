@@ -1,58 +1,58 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Star, ArrowRight, Heart, ShoppingCart } from "lucide-react"
-import { formatPrice } from "@/lib/utils"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Star, ArrowRight, Heart, ShoppingCart } from 'lucide-react'
+import { formatPrice } from '@/lib/utils'
 
 const products = [
   {
     id: 1,
-    name: "Morning Blend",
-    category: "Coffee",
-    price: "$24.99",
-    originalPrice: "$29.99",
+    name: 'Morning Blend',
+    category: 'Coffee',
+    price: '$24.99',
+    originalPrice: '$29.99',
     rating: 4.9,
     reviews: 234,
-    badge: "Bestseller",
-    description: "A smooth, balanced blend perfect for starting your day",
-    gradient: "from-[#4B2E2E] to-[#6E6658]",
+    badge: 'Bestseller',
+    description: 'A smooth, balanced blend perfect for starting your day',
+    gradient: 'from-[#4B2E2E] to-[#6E6658]',
   },
   {
     id: 2,
-    name: "Dark Roast Supreme",
-    category: "Coffee",
-    price: "$26.99",
-    originalPrice: "$31.99",
+    name: 'Dark Roast Supreme',
+    category: 'Coffee',
+    price: '$26.99',
+    originalPrice: '$31.99',
     rating: 4.8,
     reviews: 189,
-    badge: "Premium",
-    description: "Bold and intense flavor for the serious coffee lover",
-    gradient: "from-[#6E6658] to-[#9E7C83]",
+    badge: 'Premium',
+    description: 'Bold and intense flavor for the serious coffee lover',
+    gradient: 'from-[#6E6658] to-[#9E7C83]',
   },
   {
     id: 3,
-    name: "Voyage Hoodie",
-    category: "Fashion",
-    price: "$49.99",
-    originalPrice: "$69.99",
+    name: 'Voyage Hoodie',
+    category: 'Fashion',
+    price: '$49.99',
+    originalPrice: '$69.99',
     rating: 4.7,
     reviews: 156,
-    badge: "Limited",
-    description: "Premium cotton hoodie with embroidered logo",
-    gradient: "from-[#9E7C83] to-[#D5BFA3]",
+    badge: 'Limited',
+    description: 'Premium cotton hoodie with embroidered logo',
+    gradient: 'from-[#9E7C83] to-[#D5BFA3]',
   },
   {
     id: 4,
-    name: "Coffee Tote Bag",
-    category: "Fashion",
-    price: "$19.99",
-    originalPrice: "$24.99",
+    name: 'Coffee Tote Bag',
+    category: 'Fashion',
+    price: '$19.99',
+    originalPrice: '$24.99',
     rating: 4.9,
     reviews: 298,
-    badge: "Eco-Friendly",
-    description: "Sustainable canvas tote for the eco-conscious coffee lover",
-    gradient: "from-[#D5BFA3] to-[#4B2E2E]",
+    badge: 'Eco-Friendly',
+    description: 'Sustainable canvas tote for the eco-conscious coffee lover',
+    gradient: 'from-[#D5BFA3] to-[#4B2E2E]',
   },
 ]
 
@@ -63,13 +63,16 @@ export default function ProductShowcase() {
         <div className="text-center mb-20">
           <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
-            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">FEATURED PRODUCTS</span>
+            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
+              FEATURED PRODUCTS
+            </span>
           </div>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] mb-6 tracking-tight">
             Curated for You
           </h2>
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed">
-            Discover our most popular coffee blends and fashion pieces, crafted with care and attention to detail.
+            Discover our most popular coffee blends and fashion pieces, crafted with care and
+            attention to detail.
           </p>
         </div>
 
@@ -106,7 +109,7 @@ export default function ProductShowcase() {
                   <div className="text-center text-white relative z-10">
                     <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mx-auto mb-4 flex items-center justify-center">
                       <span className="text-white font-bold text-2xl">
-                        {product.category === "Coffee" ? "☕" : "👕"}
+                        {product.category === 'Coffee' ? '☕' : '👕'}
                       </span>
                     </div>
                     <p className="text-sm opacity-90 font-medium">{product.category}</p>
@@ -143,13 +146,19 @@ export default function ProductShowcase() {
                   </h3>
 
                   {/* Description */}
-                  <p className="text-sm text-[#6E6658] mb-4 font-light leading-relaxed">{product.description}</p>
+                  <p className="text-sm text-[#6E6658] mb-4 font-light leading-relaxed">
+                    {product.description}
+                  </p>
 
                   {/* Price */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <span className="text-xl font-bold text-[#4B2E2E]">{formatPrice(product.price)}</span>
-                      <span className="text-sm text-[#6E6658] line-through">{formatPrice(product.originalPrice)}</span>
+                      <span className="text-xl font-bold text-[#4B2E2E]">
+                        {formatPrice(product.price)}
+                      </span>
+                      <span className="text-sm text-[#6E6658] line-through">
+                        {formatPrice(product.originalPrice)}
+                      </span>
                     </div>
                     <Button
                       size="sm"

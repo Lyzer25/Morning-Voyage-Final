@@ -1,10 +1,15 @@
-"use client"
+'use client'
 
-import { useEffect, useMemo } from "react"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { X } from "lucide-react"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { useEffect, useMemo } from 'react'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { X } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 
 type Product = {
   subcategory?: string
@@ -45,26 +50,26 @@ export default function IntegratedFilterPanel({
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024 && isOpen) {
-        document.body.style.overflow = "hidden"
+        document.body.style.overflow = 'hidden'
       } else {
-        document.body.style.overflow = ""
+        document.body.style.overflow = ''
       }
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose()
       }
     }
 
     handleResize() // Initial check
-    window.addEventListener("resize", handleResize)
-    document.addEventListener("keydown", handleKeyDown)
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.body.style.overflow = "" // Cleanup on close
-      window.removeEventListener("resize", handleResize)
-      document.removeEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = '' // Cleanup on close
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen, onClose])
 
@@ -73,10 +78,10 @@ export default function IntegratedFilterPanel({
     const roastLevels = new Set<string>()
     const formats = new Set<string>()
 
-    products.forEach((p) => {
+    products.forEach(p => {
       if (p.subcategory) categories.add(p.subcategory)
       if (p.roastLevel) roastLevels.add(p.roastLevel)
-      p.availableFormats?.forEach((f) => formats.add(f))
+      p.availableFormats?.forEach(f => formats.add(f))
     })
 
     return {
@@ -91,7 +96,7 @@ export default function IntegratedFilterPanel({
       {/* Backdrop */}
       <div
         className={`fixed inset-0 z-30 bg-black/30 backdrop-blur-sm transition-opacity duration-500 lg:hidden ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
       />
@@ -99,7 +104,7 @@ export default function IntegratedFilterPanel({
       {/* Panel */}
       <aside
         className={`fixed top-0 left-0 z-40 h-full w-80 max-w-[90vw] bg-gradient-to-br from-[#F6F1EB] to-white shadow-2xl transition-transform duration-500 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-full flex-col">
@@ -111,17 +116,23 @@ export default function IntegratedFilterPanel({
           </div>
 
           <div className="flex-grow overflow-y-auto p-4">
-            <Accordion type="multiple" defaultValue={["category", "roast", "format", "price"]} className="w-full">
+            <Accordion
+              type="multiple"
+              defaultValue={['category', 'roast', 'format', 'price']}
+              className="w-full"
+            >
               <AccordionItem value="category">
-                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">Category</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">
+                  Category
+                </AccordionTrigger>
                 <AccordionContent className="pt-2">
                   <div className="space-y-2">
                     <FilterButton
                       label="All"
-                      isActive={selectedCategory === "all"}
-                      onClick={() => setSelectedCategory("all")}
+                      isActive={selectedCategory === 'all'}
+                      onClick={() => setSelectedCategory('all')}
                     />
-                    {filterOptions.categories.map((cat) => (
+                    {filterOptions.categories.map(cat => (
                       <FilterButton
                         key={cat}
                         label={cat}
@@ -134,15 +145,17 @@ export default function IntegratedFilterPanel({
               </AccordionItem>
 
               <AccordionItem value="roast">
-                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">Roast Level</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">
+                  Roast Level
+                </AccordionTrigger>
                 <AccordionContent className="pt-2">
                   <div className="space-y-2">
                     <FilterButton
                       label="All"
-                      isActive={selectedRoastLevel === "all"}
-                      onClick={() => setSelectedRoastLevel("all")}
+                      isActive={selectedRoastLevel === 'all'}
+                      onClick={() => setSelectedRoastLevel('all')}
                     />
-                    {filterOptions.roastLevels.map((level) => (
+                    {filterOptions.roastLevels.map(level => (
                       <FilterButton
                         key={level}
                         label={level}
@@ -155,15 +168,17 @@ export default function IntegratedFilterPanel({
               </AccordionItem>
 
               <AccordionItem value="format">
-                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">Format</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">
+                  Format
+                </AccordionTrigger>
                 <AccordionContent className="pt-2">
                   <div className="space-y-2">
                     <FilterButton
                       label="All"
-                      isActive={selectedFormat === "all"}
-                      onClick={() => setSelectedFormat("all")}
+                      isActive={selectedFormat === 'all'}
+                      onClick={() => setSelectedFormat('all')}
                     />
-                    {filterOptions.formats.map((format) => (
+                    {filterOptions.formats.map(format => (
                       <FilterButton
                         key={format}
                         label={format}
@@ -176,7 +191,9 @@ export default function IntegratedFilterPanel({
               </AccordionItem>
 
               <AccordionItem value="price">
-                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">Price Range</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold text-[#4B2E2E]">
+                  Price Range
+                </AccordionTrigger>
                 <AccordionContent className="pt-4">
                   <div className="px-1">
                     <Slider
@@ -184,7 +201,7 @@ export default function IntegratedFilterPanel({
                       max={50}
                       step={1}
                       value={priceRange}
-                      onValueChange={(value) => setPriceRange(value as [number, number])}
+                      onValueChange={value => setPriceRange(value as [number, number])}
                     />
                     <div className="mt-2 flex justify-between text-sm text-[#6E6658]">
                       <span>${priceRange[0]}</span>
@@ -211,14 +228,22 @@ export default function IntegratedFilterPanel({
   )
 }
 
-function FilterButton({ label, isActive, onClick }: { label: string; isActive: boolean; onClick: () => void }) {
+function FilterButton({
+  label,
+  isActive,
+  onClick,
+}: {
+  label: string
+  isActive: boolean
+  onClick: () => void
+}) {
   return (
     <Button
-      variant={isActive ? "default" : "outline"}
+      variant={isActive ? 'default' : 'outline'}
       className={`w-full justify-start capitalize ${
         isActive
-          ? "bg-[#4B2E2E] text-white hover:bg-[#4B2E2E]/90"
-          : "border-stone-300 text-[#6E6658] hover:bg-stone-200"
+          ? 'bg-[#4B2E2E] text-white hover:bg-[#4B2E2E]/90'
+          : 'border-stone-300 text-[#6E6658] hover:bg-stone-200'
       }`}
       onClick={onClick}
     >

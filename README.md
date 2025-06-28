@@ -34,14 +34,18 @@ Morning Voyage is a specialty coffee brand selling premium coffee products, subs
 2. Install dependencies:
    \`\`\`bash
    npm install
+
    # or
+
    yarn install
    \`\`\`
 
 3. Run the development server:
    \`\`\`bash
    npm run dev
+
    # or
+
    yarn dev
    \`\`\`
 
@@ -52,7 +56,9 @@ Morning Voyage is a specialty coffee brand selling premium coffee products, subs
 1. Build the application:
    \`\`\`bash
    npm run build
+
    # or
+
    yarn build
    \`\`\`
 
@@ -102,7 +108,7 @@ Morning Voyage is a specialty coffee brand selling premium coffee products, subs
      \`\`\`
    - Copy static assets:
      \`\`\`bash
-     cp -r public/* /var/www/morningvoyage/public/
+     cp -r public/\* /var/www/morningvoyage/public/
      \`\`\`
 
 5. Set up SSL with Let's Encrypt:

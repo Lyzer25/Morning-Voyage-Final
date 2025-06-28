@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useEffect, useState } from "react"
-import { usePathname } from "next/navigation"
-import { Coffee, Loader2 } from "lucide-react"
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { Coffee, Loader2 } from 'lucide-react'
 
 export default function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -15,7 +15,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
     setIsLoading(true)
 
     // Scroll to top immediately when route changes
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
 
     const timer = setTimeout(() => {
       setDisplayChildren(children)
@@ -47,7 +47,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
 
           {/* Animated dots */}
           <div className="flex justify-center space-x-1 mt-4">
-            {[0, 1, 2].map((i) => (
+            {[0, 1, 2].map(i => (
               <div
                 key={i}
                 className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"

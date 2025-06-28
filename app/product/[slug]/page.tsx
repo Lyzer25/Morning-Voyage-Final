@@ -1,10 +1,10 @@
-import { notFound } from "next/navigation"
-import Header from "@/components/layout/header"
-import Footer from "@/components/layout/footer"
-import ProductDetail from "@/components/product/product-detail"
-import ProductRecommendations from "@/components/product/product-recommendations"
-import PageTransition from "@/components/ui/page-transition"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import { notFound } from 'next/navigation'
+import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
+import ProductDetail from '@/components/product/product-detail'
+import ProductRecommendations from '@/components/product/product-recommendations'
+import PageTransition from '@/components/ui/page-transition'
+import { getCachedGroupedProducts } from '@/lib/product-cache'
 
 interface ProductPageProps {
   params: {
@@ -20,14 +20,16 @@ export default function ProductPage({ params }: ProductPageProps) {
   console.log(`📊 Available products: ${products.length}`)
 
   // Find product by slug (match against baseSku or productName)
-  const product = products.find((p) => {
-    const baseSkuSlug = p.baseSku.toLowerCase().replace(/[^a-z0-9]/g, "-")
+  const product = products.find(p => {
+    const baseSkuSlug = p.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-')
     const nameSlug = p.productName
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
 
-    console.log(`   Checking: ${p.productName} -> baseSkuSlug: ${baseSkuSlug}, nameSlug: ${nameSlug}`)
+    console.log(
+      `   Checking: ${p.productName} -> baseSkuSlug: ${baseSkuSlug}, nameSlug: ${nameSlug}`
+    )
 
     return baseSkuSlug === params.slug || nameSlug === params.slug
   })
@@ -41,7 +43,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   // Get related products
   const relatedProducts = products
-    .filter((p) => p.category === product.category && p.baseSku !== product.baseSku)
+    .filter(p => p.category === product.category && p.baseSku !== product.baseSku)
     .slice(0, 4)
 
   return (
@@ -64,7 +66,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 export async function generateStaticParams() {
   const products = getCachedGroupedProducts()
 
-  return products.map((product) => ({
-    slug: product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+  return products.map(product => ({
+    slug: product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-'),
   }))
 }

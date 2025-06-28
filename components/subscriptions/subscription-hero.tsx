@@ -1,26 +1,26 @@
-"use client"
+'use client'
 
-import { Coffee, Gift, Calendar, Truck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Coffee, Gift, Calendar, Truck } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const benefits = [
   {
     icon: Coffee,
-    title: "Always Fresh",
-    description: "Roasted after you order",
-    gradient: "from-[#4B2E2E] to-[#6E6658]",
+    title: 'Always Fresh',
+    description: 'Roasted after you order',
+    gradient: 'from-[#4B2E2E] to-[#6E6658]',
   },
   {
     icon: Truck,
-    title: "Free Shipping",
-    description: "On all subscriptions",
-    gradient: "from-[#6E6658] to-[#9E7C83]",
+    title: 'Free Shipping',
+    description: 'On all subscriptions',
+    gradient: 'from-[#6E6658] to-[#9E7C83]',
   },
   {
     icon: Calendar,
-    title: "Flexible Schedule",
-    description: "Skip, pause, or cancel anytime",
-    gradient: "from-[#9E7C83] to-[#D5BFA3]",
+    title: 'Flexible Schedule',
+    description: 'Skip, pause, or cancel anytime',
+    gradient: 'from-[#9E7C83] to-[#D5BFA3]',
   },
 ]
 
@@ -37,7 +37,9 @@ export default function SubscriptionHero() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <Gift className="w-4 h-4 text-[#D5BFA3]" />
-            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">NEVER RUN OUT</span>
+            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
+              NEVER RUN OUT
+            </span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] mb-6 tracking-tight">
@@ -48,8 +50,8 @@ export default function SubscriptionHero() {
           </h1>
 
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed mb-12">
-            Get freshly roasted coffee delivered to your door on your schedule. Save money, never run out, and discover
-            new favorites with our flexible subscription plans.
+            Get freshly roasted coffee delivered to your door on your schedule. Save money, never
+            run out, and discover new favorites with our flexible subscription plans.
           </p>
 
           {/* Benefits */}

@@ -1,5 +1,5 @@
 // Enhanced product variant management system
-import type { SheetProduct } from "./google-sheets-integration"
+import type { SheetProduct } from './google-sheets-integration'
 
 export interface ProductVariant {
   sku: string
@@ -38,19 +38,19 @@ export interface GroupedProduct {
 export function getBaseSku(sku: string): string {
   // More aggressive base SKU extraction
   return sku
-    .replace(/-?(12|16|24|32)OZ$/i, "")
-    .replace(/-?(WHOLE|GROUND|PODS?|INSTANT)$/i, "")
-    .replace(/-?(BEAN|BEANS)$/i, "")
-    .replace(/-?(WB|GR|PD)$/i, "") // Common abbreviations
-    .replace(/-+$/, "") // Remove trailing dashes
+    .replace(/-?(12|16|24|32)OZ$/i, '')
+    .replace(/-?(WHOLE|GROUND|PODS?|INSTANT)$/i, '')
+    .replace(/-?(BEAN|BEANS)$/i, '')
+    .replace(/-?(WB|GR|PD)$/i, '') // Common abbreviations
+    .replace(/-+$/, '') // Remove trailing dashes
     .trim()
 }
 
 // Extract base product name (remove format indicators)
 export function getBaseProductName(name: string): string {
   return name
-    .replace(/\s*-\s*(Whole Bean|Ground|Pods?|Instant)$/i, "")
-    .replace(/\s*$$(Whole Bean|Ground|Pods?|Instant)$$$/i, "")
+    .replace(/\s*-\s*(Whole Bean|Ground|Pods?|Instant)$/i, '')
+    .replace(/\s*$$(Whole Bean|Ground|Pods?|Instant)$$$/i, '')
     .trim()
 }
 
@@ -73,18 +73,22 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
   products.forEach((product, index) => {
     // Use product name as the primary grouping key, not SKU
     const baseName = getBaseProductName(product.productName)
-    const baseKey = `${baseName}-${product.category}-${product.subcategory}`.toLowerCase().replace(/\s+/g, "-")
+    const baseKey = `${baseName}-${product.category}-${product.subcategory}`
+      .toLowerCase()
+      .replace(/\s+/g, '-')
 
-    console.log(`Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`)
+    console.log(
+      `Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`
+    )
 
     const variant: ProductVariant = {
       sku: product.sku,
-      format: product.format || "whole-bean",
+      format: product.format || 'whole-bean',
       weight: product.weight,
       packSize: product.packSize,
       price: product.price,
       originalPrice: product.originalPrice,
-      inStock: product.status === "active",
+      inStock: product.status === 'active',
     }
 
     if (grouped.has(baseKey)) {
@@ -92,7 +96,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       const existingProduct = grouped.get(baseKey)!
 
       // Check if this format already exists
-      const existingVariant = existingProduct.variants.find((v) => v.format === variant.format)
+      const existingVariant = existingProduct.variants.find(v => v.format === variant.format)
       if (existingVariant) {
         console.log(`  ⚠️ Duplicate format ${variant.format} for ${baseName}, skipping...`)
         return
@@ -147,7 +151,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
   })
 
   const result = Array.from(grouped.values()).filter(
-    (product) => product.status === "active" && product.variants.some((v) => v.inStock),
+    product => product.status === 'active' && product.variants.some(v => v.inStock)
   )
 
   console.log(`✅ Final grouping result:`)
@@ -156,7 +160,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
 
   result.forEach((product, index) => {
     console.log(
-      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(", ")})`,
+      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(', ')})`
     )
   })
 
@@ -165,31 +169,31 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
 
 // Get variant by format for a grouped product
 export function getVariantByFormat(product: GroupedProduct, format: string): ProductVariant | null {
-  return product.variants.find((v) => v.format === format) || null
+  return product.variants.find(v => v.format === format) || null
 }
 
 // Get available formats for display
 export function getFormatDisplayName(format: string): string {
   const formatNames: Record<string, string> = {
-    "whole-bean": "Whole Bean",
-    ground: "Ground",
-    pods: "Coffee Pods",
-    instant: "Instant",
+    'whole-bean': 'Whole Bean',
+    ground: 'Ground',
+    pods: 'Coffee Pods',
+    instant: 'Instant',
   }
 
-  return formatNames[format] || format.charAt(0).toUpperCase() + format.slice(1).replace(/-/g, " ")
+  return formatNames[format] || format.charAt(0).toUpperCase() + format.slice(1).replace(/-/g, ' ')
 }
 
 // Get format description
 export function getFormatDescription(format: string): string {
   const descriptions: Record<string, string> = {
-    "whole-bean": "Grind fresh at home for maximum flavor",
-    ground: "Ready to brew - perfect for drip coffee",
-    pods: "Compatible with single-serve machines",
-    instant: "Just add hot water",
+    'whole-bean': 'Grind fresh at home for maximum flavor',
+    ground: 'Ready to brew - perfect for drip coffee',
+    pods: 'Compatible with single-serve machines',
+    instant: 'Just add hot water',
   }
 
-  return descriptions[format] || "Premium coffee format"
+  return descriptions[format] || 'Premium coffee format'
 }
 
 // Check if product has multiple formats
@@ -209,21 +213,27 @@ export function getPriceDisplay(product: GroupedProduct): string {
 export function searchGroupedProducts(products: GroupedProduct[], query: string): GroupedProduct[] {
   const lowercaseQuery = query.toLowerCase()
   return products.filter(
-    (product) =>
+    product =>
       product.productName.toLowerCase().includes(lowercaseQuery) ||
       product.description.toLowerCase().includes(lowercaseQuery) ||
-      product.tastingNotes?.some((note) => note.toLowerCase().includes(lowercaseQuery)) ||
+      product.tastingNotes?.some(note => note.toLowerCase().includes(lowercaseQuery)) ||
       product.origin?.toLowerCase().includes(lowercaseQuery) ||
-      product.availableFormats.some((format) => format.toLowerCase().includes(lowercaseQuery)),
+      product.availableFormats.some(format => format.toLowerCase().includes(lowercaseQuery))
   )
 }
 
-export function filterGroupedProductsByCategory(products: GroupedProduct[], category: string): GroupedProduct[] {
-  if (category === "all") return products
-  return products.filter((product) => product.subcategory === category)
+export function filterGroupedProductsByCategory(
+  products: GroupedProduct[],
+  category: string
+): GroupedProduct[] {
+  if (category === 'all') return products
+  return products.filter(product => product.subcategory === category)
 }
 
-export function filterGroupedProductsByFormat(products: GroupedProduct[], format: string): GroupedProduct[] {
-  if (format === "all") return products
-  return products.filter((product) => product.availableFormats.includes(format))
+export function filterGroupedProductsByFormat(
+  products: GroupedProduct[],
+  format: string
+): GroupedProduct[] {
+  if (format === 'all') return products
+  return products.filter(product => product.availableFormats.includes(format))
 }

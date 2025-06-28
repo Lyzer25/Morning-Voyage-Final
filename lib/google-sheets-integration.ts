@@ -2,10 +2,10 @@
 export interface SheetProduct {
   sku: string
   productName: string
-  category: "coffee" | "subscription" | "gift-set" | "variety-pack" | "equipment"
+  category: 'coffee' | 'subscription' | 'gift-set' | 'variety-pack' | 'equipment'
   subcategory: string
-  status: "active" | "inactive" | "coming-soon" | "sold-out"
-  format?: "whole-bean" | "ground" | "pods"
+  status: 'active' | 'inactive' | 'coming-soon' | 'sold-out'
+  format?: 'whole-bean' | 'ground' | 'pods'
   weight?: string // "12 oz" | "12-pack"
   packSize?: number // 1 for single bag, 12 for pod pack
   price: number
@@ -13,19 +13,19 @@ export interface SheetProduct {
   description: string
   longDescription?: string
   sizeOptions?: string[]
-  roastLevel?: "light" | "medium" | "medium-dark" | "dark"
+  roastLevel?: 'light' | 'medium' | 'medium-dark' | 'dark'
   origin?: string
   processingMethod?: string
   tastingNotes?: string[] // Parsed from comma-separated or individual columns
   altitude?: string
   variety?: string
-  subscriptionType?: "monthly" | "bi-weekly" | "weekly"
+  subscriptionType?: 'monthly' | 'bi-weekly' | 'weekly'
   subscriptionBags?: number
   giftDuration?: string
   featured: boolean
   badge?: string
   tags?: string[]
-  season?: "spring" | "summer" | "fall" | "winter" | "year-round"
+  season?: 'spring' | 'summer' | 'fall' | 'winter' | 'year-round'
   primaryImageUrl?: string
   galleryImages?: string[]
   videoUrl?: string
@@ -41,7 +41,7 @@ export interface SheetProduct {
 // Google Sheets API configuration
 const SHEET_CONFIG = {
   spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-  range: "Sheet1!A:Z", // Changed from "Products!A:AZ" to "Sheet1!A:Z"
+  range: 'Sheet1!A:Z', // Changed from "Products!A:AZ" to "Sheet1!A:Z"
   apiKey: process.env.GOOGLE_SHEETS_API_KEY,
 }
 
@@ -58,105 +58,106 @@ export function transformSheetRowToProduct(row: string[], headers: string[]): Sh
     // Normalize header for comparison (remove spaces, convert to lowercase)
     const normalizedHeader = header
       .toLowerCase()
-      .replace(/\s+/g, "")
-      .replace(/[^a-z0-9]/g, "")
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9]/g, '')
 
     switch (normalizedHeader) {
-      case "sku":
+      case 'sku':
         product.sku = value
         break
-      case "productname":
+      case 'productname':
         product.productName = value
         break
-      case "category":
+      case 'category':
         product.category = value.toLowerCase()
         break
-      case "subcategory":
-        product.subcategory = value.toLowerCase().replace(/\s+/g, "-")
+      case 'subcategory':
+        product.subcategory = value.toLowerCase().replace(/\s+/g, '-')
         break
-      case "status":
+      case 'status':
         product.status = value.toLowerCase()
         break
-      case "format":
-        product.format = value.toLowerCase().replace(/\s+/g, "-")
+      case 'format':
+        product.format = value.toLowerCase().replace(/\s+/g, '-')
         break
-      case "weight":
+      case 'weight':
         product.weight = value
         break
-      case "packsize":
+      case 'packsize':
         product.packSize = Number.parseInt(value)
         break
-      case "price":
+      case 'price':
         product.price = Number.parseFloat(value)
         break
-      case "originalprice":
+      case 'originalprice':
         product.originalPrice = Number.parseFloat(value)
         break
-      case "description":
+      case 'description':
         product.description = value
         break
-      case "longdescription":
+      case 'longdescription':
         product.longDescription = value
         break
-      case "sizeoptions":
-        product.sizeOptions = value.split("|").map((s) => s.trim())
+      case 'sizeoptions':
+        product.sizeOptions = value.split('|').map(s => s.trim())
         break
-      case "roastlevel":
+      case 'roastlevel':
         product.roastLevel = value.toLowerCase()
         break
-      case "origin":
+      case 'origin':
         product.origin = value
         break
-      case "processingmethod":
-        product.processingMethod = value.toLowerCase().replace(/\s+/g, "-")
+      case 'processingmethod':
+        product.processingMethod = value.toLowerCase().replace(/\s+/g, '-')
         break
-      case "tastingnotes":
+      case 'tastingnotes':
         // Handle comma-separated tasting notes
         product.tastingNotes = value
-          .split(",")
-          .map((s) => s.trim())
+          .split(',')
+          .map(s => s.trim())
           .filter(Boolean)
         break
-      case "featured":
-        product.featured = value.toLowerCase() === "true" || value.toLowerCase() === "yes" || value === "1"
+      case 'featured':
+        product.featured =
+          value.toLowerCase() === 'true' || value.toLowerCase() === 'yes' || value === '1'
         break
-      case "badge":
+      case 'badge':
         product.badge = value
         break
-      case "tags":
-        product.tags = value.split("|").map((s) => s.trim())
+      case 'tags':
+        product.tags = value.split('|').map(s => s.trim())
         break
-      case "season":
+      case 'season':
         product.season = value.toLowerCase()
         break
-      case "primaryimageurl":
+      case 'primaryimageurl':
         product.primaryImageUrl = value
         break
-      case "galleryimages":
-        product.galleryImages = value.split("|").map((s) => s.trim())
+      case 'galleryimages':
+        product.galleryImages = value.split('|').map(s => s.trim())
         break
-      case "videourl":
+      case 'videourl':
         product.videoUrl = value
         break
-      case "metatitle":
+      case 'metatitle':
         product.metaTitle = value
         break
-      case "metadescription":
+      case 'metadescription':
         product.metaDescription = value
         break
-      case "urlslug":
+      case 'urlslug':
         product.urlSlug = value || generateSlug(product.productName)
         break
-      case "createddate":
+      case 'createddate':
         product.createdDate = value
         break
-      case "updateddate":
+      case 'updateddate':
         product.updatedDate = value
         break
-      case "launchdate":
+      case 'launchdate':
         product.launchDate = value
         break
-      case "discontinuedate":
+      case 'discontinuedate':
         product.discontinueDate = value
         break
     }
@@ -173,7 +174,7 @@ export function transformSheetRowToProduct(row: string[], headers: string[]): Sh
   }
 
   if (!product.status) {
-    product.status = "active"
+    product.status = 'active'
   }
 
   if (product.featured === undefined) {
@@ -182,7 +183,7 @@ export function transformSheetRowToProduct(row: string[], headers: string[]): Sh
 
   // Validate required fields
   if (!product.sku || !product.productName || !product.category || !product.price) {
-    console.warn("Invalid product row - missing required fields:", {
+    console.warn('Invalid product row - missing required fields:', {
       sku: product.sku,
       productName: product.productName,
       category: product.category,
@@ -192,7 +193,7 @@ export function transformSheetRowToProduct(row: string[], headers: string[]): Sh
     return null
   }
 
-  console.log("Successfully transformed product:", product.productName)
+  console.log('Successfully transformed product:', product.productName)
   return product as SheetProduct
 }
 
@@ -200,9 +201,9 @@ export function transformSheetRowToProduct(row: string[], headers: string[]): Sh
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .trim()
 }
 
@@ -215,13 +216,13 @@ export async function fetchProductsFromSheet(): Promise<SheetProduct[]> {
     const data = await response.json()
 
     if (!data.values || data.values.length === 0) {
-      console.warn("No data found in spreadsheet")
+      console.warn('No data found in spreadsheet')
       return []
     }
 
     const [headers, ...rows] = data.values
-    console.log("Found headers:", headers)
-    console.log("Found rows:", rows.length)
+    console.log('Found headers:', headers)
+    console.log('Found rows:', rows.length)
 
     const products: SheetProduct[] = []
 
@@ -239,26 +240,26 @@ export async function fetchProductsFromSheet(): Promise<SheetProduct[]> {
     console.log(`Loaded ${products.length} active products from spreadsheet`)
     return products
   } catch (error) {
-    console.error("Error fetching products from sheet:", error)
+    console.error('Error fetching products from sheet:', error)
     return []
   }
 }
 
 // Filter products by format
 export function filterProductsByFormat(products: SheetProduct[], format: string): SheetProduct[] {
-  if (format === "all") return products
-  return products.filter((product) => product.format === format)
+  if (format === 'all') return products
+  return products.filter(product => product.format === format)
 }
 
 // Get unique formats from products
 export function getAvailableFormats(products: SheetProduct[]): string[] {
-  const formats = new Set(products.map((p) => p.format).filter(Boolean))
+  const formats = new Set(products.map(p => p.format).filter(Boolean))
   return Array.from(formats)
 }
 
 // Get unique weights from products
 export function getAvailableWeights(products: SheetProduct[]): string[] {
-  const weights = new Set(products.map((p) => p.weight).filter(Boolean))
+  const weights = new Set(products.map(p => p.weight).filter(Boolean))
   return Array.from(weights)
 }
 
@@ -266,14 +267,14 @@ export function getAvailableWeights(products: SheetProduct[]): string[] {
 export function searchProducts(products: SheetProduct[], query: string): SheetProduct[] {
   const lowercaseQuery = query.toLowerCase()
   return products.filter(
-    (product) =>
+    product =>
       product.productName.toLowerCase().includes(lowercaseQuery) ||
       product.description.toLowerCase().includes(lowercaseQuery) ||
       product.format?.toLowerCase().includes(lowercaseQuery) ||
       product.weight?.toLowerCase().includes(lowercaseQuery) ||
-      product.tastingNotes?.some((note) => note.toLowerCase().includes(lowercaseQuery)) ||
+      product.tastingNotes?.some(note => note.toLowerCase().includes(lowercaseQuery)) ||
       product.origin?.toLowerCase().includes(lowercaseQuery) ||
-      product.tags?.some((tag) => tag.toLowerCase().includes(lowercaseQuery)),
+      product.tags?.some(tag => tag.toLowerCase().includes(lowercaseQuery))
   )
 }
 
@@ -348,13 +349,16 @@ export async function getCachedProducts(): Promise<SheetProduct[]> {
 
 // Webhook handler for real-time updates
 export async function handleSheetWebhook(payload: any) {
-  console.log("Sheet updated, refreshing product cache...")
+  console.log('Sheet updated, refreshing product cache...')
   productCache = await fetchProductsFromSheet()
   lastFetch = Date.now()
 }
 
 // Product filtering and search functions
-export function filterProductsByCategory(products: SheetProduct[], category: string): SheetProduct[] {
-  if (category === "all") return products
-  return products.filter((product) => product.category === category)
+export function filterProductsByCategory(
+  products: SheetProduct[],
+  category: string
+): SheetProduct[] {
+  if (category === 'all') return products
+  return products.filter(product => product.category === category)
 }

@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Star,
   Heart,
@@ -19,16 +19,16 @@ import {
   Plus,
   Minus,
   Check,
-} from "lucide-react"
-import { formatPrice } from "@/lib/utils"
-import { useRouter } from "next/navigation"
-import type { GroupedProduct } from "@/lib/product-variants"
+} from 'lucide-react'
+import { formatPrice } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import type { GroupedProduct } from '@/lib/product-variants'
 import {
   getVariantByFormat,
   getFormatDisplayName,
   getFormatDescription,
   hasMultipleFormats,
-} from "@/lib/product-variants"
+} from '@/lib/product-variants'
 
 interface ProductDetailProps {
   product: GroupedProduct
@@ -49,7 +49,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
   const handleAddToCart = () => {
     // Add to cart logic here
-    console.log("Added to cart:", {
+    console.log('Added to cart:', {
       baseSku: product.baseSku,
       variantSku: currentVariant.sku,
       productName: product.productName,
@@ -60,14 +60,16 @@ export default function ProductDetail({ product }: ProductDetailProps) {
     })
 
     // You can integrate with your cart system here
-    alert(`Added ${quantity}x ${product.productName} (${getFormatDisplayName(selectedFormat)}) to cart!`)
+    alert(
+      `Added ${quantity}x ${product.productName} (${getFormatDisplayName(selectedFormat)}) to cart!`
+    )
   }
 
   const roastColors = {
-    light: "from-[#D5BFA3] to-[#E7CFC7]",
-    medium: "from-[#9E7C83] to-[#D5BFA3]",
-    "medium-dark": "from-[#6E6658] to-[#9E7C83]",
-    dark: "from-[#4B2E2E] to-[#6E6658]",
+    light: 'from-[#D5BFA3] to-[#E7CFC7]',
+    medium: 'from-[#9E7C83] to-[#D5BFA3]',
+    'medium-dark': 'from-[#6E6658] to-[#9E7C83]',
+    dark: 'from-[#4B2E2E] to-[#6E6658]',
   }
 
   const gradient = roastColors[product.roastLevel as keyof typeof roastColors] || roastColors.medium
@@ -105,8 +107,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                       <Coffee className="w-12 h-12 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">{product.productName}</h3>
-                    <p className="text-lg opacity-90 font-light capitalize">{product.roastLevel} Roast</p>
-                    <p className="text-sm opacity-75 mt-2">{getFormatDisplayName(selectedFormat)}</p>
+                    <p className="text-lg opacity-90 font-light capitalize">
+                      {product.roastLevel} Roast
+                    </p>
+                    <p className="text-sm opacity-75 mt-2">
+                      {getFormatDisplayName(selectedFormat)}
+                    </p>
                   </div>
 
                   {/* Badge */}
@@ -135,7 +141,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                       onClick={() => setIsFavorite(!isFavorite)}
                       className="w-10 h-10 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
                     >
-                      <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-[#6E6658]"}`} />
+                      <Heart
+                        className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-[#6E6658]'}`}
+                      />
                     </Button>
                     <Button
                       size="icon"
@@ -165,17 +173,26 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                 </div>
               </div>
 
-              <h1 className="text-4xl font-black text-[#4B2E2E] mb-4 leading-tight">{product.productName}</h1>
+              <h1 className="text-4xl font-black text-[#4B2E2E] mb-4 leading-tight">
+                {product.productName}
+              </h1>
 
-              <p className="text-xl text-[#6E6658] leading-relaxed font-light">{product.description}</p>
+              <p className="text-xl text-[#6E6658] leading-relaxed font-light">
+                {product.description}
+              </p>
             </div>
 
             {/* Price */}
             <div className="flex items-center gap-4">
-              <span className="text-4xl font-black text-[#4B2E2E]">{formatPrice(currentVariant.price)}</span>
-              {currentVariant.originalPrice && currentVariant.originalPrice > currentVariant.price && (
-                <span className="text-xl text-[#6E6658] line-through">{formatPrice(currentVariant.originalPrice)}</span>
-              )}
+              <span className="text-4xl font-black text-[#4B2E2E]">
+                {formatPrice(currentVariant.price)}
+              </span>
+              {currentVariant.originalPrice &&
+                currentVariant.originalPrice > currentVariant.price && (
+                  <span className="text-xl text-[#6E6658] line-through">
+                    {formatPrice(currentVariant.originalPrice)}
+                  </span>
+                )}
               <Badge className="bg-[#D5BFA3] text-white">Fresh Roasted</Badge>
             </div>
 
@@ -188,7 +205,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     Choose Format
                   </h3>
                   <div className="grid grid-cols-1 gap-3">
-                    {product.availableFormats.map((format) => {
+                    {product.availableFormats.map(format => {
                       const variant = getVariantByFormat(product, format)
                       if (!variant) return null
 
@@ -201,31 +218,37 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                       return (
                         <Button
                           key={format}
-                          variant={isSelected ? "default" : "outline"}
+                          variant={isSelected ? 'default' : 'outline'}
                           onClick={() => setSelectedFormat(format)}
                           className={`p-4 h-auto rounded-xl transition-all duration-300 relative ${
                             isSelected
-                              ? "bg-[#4B2E2E] text-white shadow-lg ring-2 ring-[#D5BFA3]"
-                              : "border-2 border-[#D5BFA3] text-[#6E6658] hover:bg-[#F6F1EB] hover:border-[#4B2E2E]"
+                              ? 'bg-[#4B2E2E] text-white shadow-lg ring-2 ring-[#D5BFA3]'
+                              : 'border-2 border-[#D5BFA3] text-[#6E6658] hover:bg-[#F6F1EB] hover:border-[#4B2E2E]'
                           }`}
                         >
                           <div className="text-left w-full">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold">{getFormatDisplayName(format)}</span>
+                                  <span className="font-semibold">
+                                    {getFormatDisplayName(format)}
+                                  </span>
                                   {isSelected && <Check className="w-4 h-4" />}
                                 </div>
-                                <div className="text-xs opacity-75 mt-1">{getFormatDescription(format)}</div>
+                                <div className="text-xs opacity-75 mt-1">
+                                  {getFormatDescription(format)}
+                                </div>
                                 {variant.weight && (
-                                  <div className="text-xs opacity-75 mt-1">Weight: {variant.weight}</div>
+                                  <div className="text-xs opacity-75 mt-1">
+                                    Weight: {variant.weight}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-right ml-4">
                                 <div className="font-bold">{formatPrice(variant.price)}</div>
                                 {priceDifference !== 0 && (
                                   <div className="text-xs opacity-75">
-                                    {priceDifference > 0 ? "+" : ""}
+                                    {priceDifference > 0 ? '+' : ''}
                                     {formatPrice(priceDifference)}
                                   </div>
                                 )}
@@ -237,7 +260,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     })}
                   </div>
                   <div className="mt-4 text-sm text-[#6E6658] bg-[#F6F1EB] rounded-lg p-3">
-                    <strong>Current Selection:</strong> {getFormatDisplayName(selectedFormat)} -{" "}
+                    <strong>Current Selection:</strong> {getFormatDisplayName(selectedFormat)} -{' '}
                     {getFormatDescription(selectedFormat)}
                     <br />
                     <strong>SKU:</strong> {currentVariant.sku}
@@ -265,7 +288,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     <div className="flex items-center text-[#6E6658]">
                       <Scale className="w-4 h-4 mr-3 text-[#D5BFA3]" />
                       <div>
-                        <div className="text-xs text-[#9E7C83] uppercase tracking-wide">Roast Level</div>
+                        <div className="text-xs text-[#9E7C83] uppercase tracking-wide">
+                          Roast Level
+                        </div>
                         <div className="font-semibold capitalize">{product.roastLevel}</div>
                       </div>
                     </div>
@@ -285,7 +310,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     <div className="flex items-center text-[#6E6658]">
                       <Leaf className="w-4 h-4 mr-3 text-[#D5BFA3]" />
                       <div>
-                        <div className="text-xs text-[#9E7C83] uppercase tracking-wide">Processing</div>
+                        <div className="text-xs text-[#9E7C83] uppercase tracking-wide">
+                          Processing
+                        </div>
                         <div className="font-semibold capitalize">{product.processingMethod}</div>
                       </div>
                     </div>
@@ -303,8 +330,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     Tasting Notes
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {product.tastingNotes.map((note) => (
-                      <Badge key={note} variant="secondary" className="bg-[#F6F1EB] text-[#6E6658] px-3 py-1">
+                    {product.tastingNotes.map(note => (
+                      <Badge
+                        key={note}
+                        variant="secondary"
+                        className="bg-[#F6F1EB] text-[#6E6658] px-3 py-1"
+                      >
                         {note}
                       </Badge>
                     ))}
@@ -328,7 +359,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <span className="text-xl font-bold text-[#4B2E2E] min-w-[3rem] text-center">{quantity}</span>
+                    <span className="text-xl font-bold text-[#4B2E2E] min-w-[3rem] text-center">
+                      {quantity}
+                    </span>
                     <Button
                       variant="outline"
                       size="icon"
@@ -358,7 +391,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                   <div className="text-[#6E6658]">
                     {product.productName} - {getFormatDisplayName(selectedFormat)}
                     <br />
-                    SKU: {currentVariant.sku} • {currentVariant.weight || "Standard size"}
+                    SKU: {currentVariant.sku} • {currentVariant.weight || 'Standard size'}
                   </div>
                 </div>
               </CardContent>

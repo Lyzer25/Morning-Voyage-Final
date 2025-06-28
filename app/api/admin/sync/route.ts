@@ -1,15 +1,15 @@
-import { NextResponse } from "next/server"
-import { fetchProductsFromSheet } from "@/lib/google-sheets-integration"
-import { updateProductCache, setSyncingStatus, getCacheStatus } from "@/lib/product-cache"
+import { NextResponse } from 'next/server'
+import { fetchProductsFromSheet } from '@/lib/google-sheets-integration'
+import { updateProductCache, setSyncingStatus, getCacheStatus } from '@/lib/product-cache'
 
 // Admin-only endpoint for syncing with Google Sheets
 export async function POST(request: Request) {
   try {
     // Verify this is an admin request (you can add authentication here)
-    const authHeader = request.headers.get("authorization")
+    const authHeader = request.headers.get('authorization')
     // For now, we'll allow any request, but you can add admin auth here
 
-    console.log("🔄 Admin sync started...")
+    console.log('🔄 Admin sync started...')
     setSyncingStatus(true)
 
     // Fetch products from Google Sheets
@@ -22,7 +22,9 @@ export async function POST(request: Request) {
     setSyncingStatus(false)
 
     const cacheStatus = getCacheStatus()
-    console.log(`✅ Sync completed - Raw: ${cacheStatus.rawProductCount}, Grouped: ${cacheStatus.groupedProductCount}`)
+    console.log(
+      `✅ Sync completed - Raw: ${cacheStatus.rawProductCount}, Grouped: ${cacheStatus.groupedProductCount}`
+    )
 
     return NextResponse.json({
       success: true,
@@ -32,16 +34,16 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("❌ Admin sync error:", error)
+    console.error('❌ Admin sync error:', error)
     setSyncingStatus(false)
     return NextResponse.json(
       {
         success: false,
-        error: "Sync failed",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: 'Sync failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString(),
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
@@ -56,7 +58,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Error getting sync status:", error)
-    return NextResponse.json({ success: false, error: "Failed to get status" }, { status: 500 })
+    console.error('Error getting sync status:', error)
+    return NextResponse.json({ success: false, error: 'Failed to get status' }, { status: 500 })
   }
 }

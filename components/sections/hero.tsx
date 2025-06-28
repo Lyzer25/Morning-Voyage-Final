@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Coffee, Sparkles, Play } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { ArrowRight, Coffee, Sparkles, Play } from 'lucide-react'
 
 export default function Hero() {
   return (
@@ -19,7 +19,9 @@ export default function Hero() {
           <div className="space-y-8 lg:pr-8">
             <div className="inline-flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg">
               <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
-              <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">FRESHLY ROASTED DAILY</span>
+              <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
+                FRESHLY ROASTED DAILY
+              </span>
             </div>
 
             <div className="space-y-6">
@@ -28,13 +30,15 @@ export default function Hero() {
                 <span className="block bg-gradient-to-r from-[#9E7C83] to-[#6E6658] bg-clip-text text-transparent">
                   Roasted,
                 </span>
-                <span className="block text-4xl sm:text-5xl lg:text-6xl font-light text-[#6E6658]">Just for You</span>
+                <span className="block text-4xl sm:text-5xl lg:text-6xl font-light text-[#6E6658]">
+                  Just for You
+                </span>
               </h1>
 
               <p className="text-xl text-[#6E6658] max-w-xl leading-relaxed font-light">
-                We don't believe in shelf-sitters. Every bag of coffee is{" "}
-                <span className="font-semibold text-[#4B2E2E]">roasted after you order</span>—never before. Peak
-                freshness, bold flavor, uncompromising quality.
+                We don't believe in shelf-sitters. Every bag of coffee is{' '}
+                <span className="font-semibold text-[#4B2E2E]">roasted after you order</span>—never
+                before. Peak freshness, bold flavor, uncompromising quality.
               </p>
             </div>
 
@@ -59,9 +63,9 @@ export default function Hero() {
             {/* Modern Stats */}
             <div className="grid grid-cols-3 gap-8 pt-12">
               {[
-                { value: "24hrs", label: "Fresh Roasted", icon: "⚡" },
-                { value: "50+", label: "Coffee Blends", icon: "☕" },
-                { value: "10k+", label: "Happy Customers", icon: "❤️" },
+                { value: '24hrs', label: 'Fresh Roasted', icon: '⚡' },
+                { value: '50+', label: 'Coffee Blends', icon: '☕' },
+                { value: '10k+', label: 'Happy Customers', icon: '❤️' },
               ].map((stat, index) => (
                 <div key={index} className="text-center group">
                   <div className="text-3xl mb-2">{stat.icon}</div>
@@ -127,9 +131,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        
-      </div>
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce"></div>
     </section>
   )
 }

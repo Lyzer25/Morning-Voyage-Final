@@ -1,15 +1,15 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { RefreshCw, CheckCircle, AlertCircle, Clock } from "lucide-react"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { RefreshCw, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 
 interface SyncStatus {
   lastSync: string
   productCount: number
-  status: "synced" | "syncing" | "error"
+  status: 'synced' | 'syncing' | 'error'
   errors?: string[]
 }
 
@@ -17,28 +17,28 @@ export default function ProductSyncStatus() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     lastSync: new Date().toISOString(),
     productCount: 0,
-    status: "synced",
+    status: 'synced',
   })
   const [isManualSync, setIsManualSync] = useState(false)
 
   const handleManualSync = async () => {
     setIsManualSync(true)
-    setSyncStatus((prev) => ({ ...prev, status: "syncing" }))
+    setSyncStatus(prev => ({ ...prev, status: 'syncing' }))
 
     try {
-      const response = await fetch("/api/products?refresh=true")
+      const response = await fetch('/api/products?refresh=true')
       const data = await response.json()
 
       setSyncStatus({
         lastSync: new Date().toISOString(),
         productCount: data.count,
-        status: "synced",
+        status: 'synced',
       })
     } catch (error) {
-      setSyncStatus((prev) => ({
+      setSyncStatus(prev => ({
         ...prev,
-        status: "error",
-        errors: ["Failed to sync with Google Sheets"],
+        status: 'error',
+        errors: ['Failed to sync with Google Sheets'],
       }))
     } finally {
       setIsManualSync(false)
@@ -47,22 +47,22 @@ export default function ProductSyncStatus() {
 
   const getStatusIcon = () => {
     switch (syncStatus.status) {
-      case "synced":
+      case 'synced':
         return <CheckCircle className="w-5 h-5 text-green-500" />
-      case "syncing":
+      case 'syncing':
         return <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
-      case "error":
+      case 'error':
         return <AlertCircle className="w-5 h-5 text-red-500" />
     }
   }
 
   const getStatusBadge = () => {
     switch (syncStatus.status) {
-      case "synced":
+      case 'synced':
         return <Badge className="bg-green-100 text-green-800">Synced</Badge>
-      case "syncing":
+      case 'syncing':
         return <Badge className="bg-blue-100 text-blue-800">Syncing...</Badge>
-      case "error":
+      case 'error':
         return <Badge className="bg-red-100 text-red-800">Error</Badge>
     }
   }
@@ -106,7 +106,7 @@ export default function ProductSyncStatus() {
 
         <Button
           onClick={handleManualSync}
-          disabled={isManualSync || syncStatus.status === "syncing"}
+          disabled={isManualSync || syncStatus.status === 'syncing'}
           className="w-full bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-xl"
         >
           {isManualSync ? (
@@ -122,7 +122,9 @@ export default function ProductSyncStatus() {
           )}
         </Button>
 
-        <div className="text-xs text-[#6E6658] text-center">Products automatically sync every 5 minutes</div>
+        <div className="text-xs text-[#6E6658] text-center">
+          Products automatically sync every 5 minutes
+        </div>
       </CardContent>
     </Card>
   )

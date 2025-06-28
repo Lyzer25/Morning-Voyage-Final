@@ -1,8 +1,13 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ArrowUpDown } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ChevronDown, ArrowUpDown } from 'lucide-react'
 
 interface ShopSortProps {
   sortBy: string
@@ -10,15 +15,15 @@ interface ShopSortProps {
 }
 
 const sortOptions = [
-  { value: "featured", label: "Featured" },
-  { value: "newest", label: "Newest" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
-  { value: "rating", label: "Highest Rated" },
+  { value: 'featured', label: 'Featured' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price-low', label: 'Price: Low to High' },
+  { value: 'price-high', label: 'Price: High to Low' },
+  { value: 'rating', label: 'Highest Rated' },
 ]
 
 export default function ShopSort({ sortBy, setSortBy }: ShopSortProps) {
-  const currentSort = sortOptions.find((option) => option.value === sortBy)
+  const currentSort = sortOptions.find(option => option.value === sortBy)
 
   return (
     <DropdownMenu>
@@ -36,14 +41,14 @@ export default function ShopSort({ sortBy, setSortBy }: ShopSortProps) {
         align="end"
         className="w-56 bg-white/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl p-2"
       >
-        {sortOptions.map((option) => (
+        {sortOptions.map(option => (
           <DropdownMenuItem
             key={option.value}
             onClick={() => setSortBy(option.value)}
             className={`rounded-xl p-3 cursor-pointer transition-all duration-300 ${
               sortBy === option.value
-                ? "bg-[#4B2E2E] text-white"
-                : "text-[#6E6658] hover:bg-[#F6F1EB] hover:text-[#4B2E2E]"
+                ? 'bg-[#4B2E2E] text-white'
+                : 'text-[#6E6658] hover:bg-[#F6F1EB] hover:text-[#4B2E2E]'
             }`}
           >
             <span className="font-medium">{option.label}</span>

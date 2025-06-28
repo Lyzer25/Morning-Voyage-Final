@@ -1,27 +1,27 @@
-"use client"
-import { Coffee, Shirt, Wrench, Sparkles, ArrowDown } from "lucide-react"
+'use client'
+import { Coffee, Shirt, Wrench, Sparkles, ArrowDown } from 'lucide-react'
 
 const categories = [
   {
-    name: "Coffee",
+    name: 'Coffee',
     icon: Coffee,
-    description: "Premium roasted beans",
-    gradient: "from-[#4B2E2E] to-[#6E6658]",
-    count: "12+ blends",
+    description: 'Premium roasted beans',
+    gradient: 'from-[#4B2E2E] to-[#6E6658]',
+    count: '12+ blends',
   },
   {
-    name: "Fashion",
+    name: 'Fashion',
     icon: Shirt,
-    description: "Sustainable apparel",
-    gradient: "from-[#9E7C83] to-[#6E6658]",
-    count: "8+ items",
+    description: 'Sustainable apparel',
+    gradient: 'from-[#9E7C83] to-[#6E6658]',
+    count: '8+ items',
   },
   {
-    name: "Equipment",
+    name: 'Equipment',
     icon: Wrench,
-    description: "Brewing essentials",
-    gradient: "from-[#D5BFA3] to-[#9E7C83]",
-    count: "6+ tools",
+    description: 'Brewing essentials',
+    gradient: 'from-[#D5BFA3] to-[#9E7C83]',
+    count: '6+ tools',
   },
 ]
 
@@ -38,7 +38,9 @@ export default function ShopHero() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <Sparkles className="w-4 h-4 text-[#D5BFA3]" />
-            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">PREMIUM COLLECTION</span>
+            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
+              PREMIUM COLLECTION
+            </span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] mb-6 tracking-tight">
@@ -49,8 +51,9 @@ export default function ShopHero() {
           </h1>
 
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed mb-12">
-            Discover our curated collection of freshly roasted coffee, sustainable fashion, and premium brewing
-            equipment. Every product is crafted with intention and delivered with care.
+            Discover our curated collection of freshly roasted coffee, sustainable fashion, and
+            premium brewing equipment. Every product is crafted with intention and delivered with
+            care.
           </p>
 
           {/* Category Quick Links */}
@@ -76,7 +79,9 @@ export default function ShopHero() {
                     {category.name}
                   </h3>
                   <p className="text-[#6E6658] text-sm mb-2 font-light">{category.description}</p>
-                  <span className="text-xs text-[#9E7C83] font-semibold uppercase tracking-wide">{category.count}</span>
+                  <span className="text-xs text-[#9E7C83] font-semibold uppercase tracking-wide">
+                    {category.count}
+                  </span>
                 </div>
 
                 {/* Decorative Corner */}

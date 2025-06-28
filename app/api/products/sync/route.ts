@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
-import { getCachedProducts } from "@/lib/google-sheets-integration"
+import { NextResponse } from 'next/server'
+import { getCachedProducts } from '@/lib/google-sheets-integration'
 
 export async function GET() {
   try {
@@ -12,7 +12,7 @@ export async function GET() {
       lastSync: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Error syncing products:", error)
-    return NextResponse.json({ success: false, error: "Failed to sync products" }, { status: 500 })
+    console.error('Error syncing products:', error)
+    return NextResponse.json({ success: false, error: 'Failed to sync products' }, { status: 500 })
   }
 }

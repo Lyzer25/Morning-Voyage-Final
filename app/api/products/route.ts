@@ -1,21 +1,35 @@
-import { NextResponse } from "next/server"
-import { getCachedGroupedProducts, getCacheStatus } from "@/lib/product-cache"
+import { NextResponse } from 'next/server'
+import { getCachedGroupedProducts, getCacheStatus } from '@/lib/product-cache'
 import {
   searchGroupedProducts,
   filterGroupedProductsByCategory,
   filterGroupedProductsByFormat,
-} from "@/lib/product-variants"
+} from '@/lib/product-variants'
+import { ApiErrorHandler, generateRequestId } from '@/lib/api-error-handler'
 
 // This endpoint serves cached grouped products to end users (no Google Sheets API calls)
 export async function GET(request: Request) {
+  const requestId = generateRequestId()
+  const context = {
+    operation: 'fetch_products',
+    endpoint: '/api/products',
+    requestId,
+  }
+
   try {
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get("category")
-    const format = searchParams.get("format")
-    const search = searchParams.get("search")
-    const featured = searchParams.get("featured")
+    const category = searchParams.get('category')
+    const format = searchParams.get('format')
+    const search = searchParams.get('search')
+    const featured = searchParams.get('featured')
 
-    console.log("🔍 API Request filters:", { category, format, search, featured })
+    console.log('🔍 API Request filters:', {
+      category,
+      format,
+      search,
+      featured,
+      requestId,
+    })
 
     // Get grouped products from cache (no API calls!)
     let products = getCachedGroupedProducts()
@@ -26,17 +40,17 @@ export async function GET(request: Request) {
       console.log(`📋 Sample products from cache:`)
       products.slice(0, 3).forEach((product, index) => {
         console.log(
-          `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(", ")})`,
+          `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(', ')})`
         )
       })
     }
 
-    // Apply filters
-    if (category && category !== "all") {
+    // Apply filters with validation
+    if (category && category !== 'all') {
       const beforeCount = products.length
-      if (category === "coffee") {
+      if (category === 'coffee') {
         // For coffee category, get all coffee products regardless of subcategory
-        products = products.filter((product) => product.category === "coffee")
+        products = products.filter(product => product.category === 'coffee')
       } else {
         // For specific subcategories
         products = filterGroupedProductsByCategory(products, category)
@@ -44,7 +58,7 @@ export async function GET(request: Request) {
       console.log(`🏷️ Category filter (${category}): ${beforeCount} → ${products.length}`)
     }
 
-    if (format && format !== "all") {
+    if (format && format !== 'all') {
       const beforeCount = products.length
       products = filterGroupedProductsByFormat(products, format)
       console.log(`📦 Format filter (${format}): ${beforeCount} → ${products.length}`)
@@ -52,13 +66,17 @@ export async function GET(request: Request) {
 
     if (search) {
       const beforeCount = products.length
-      products = searchGroupedProducts(products, search)
-      console.log(`🔍 Search filter (${search}): ${beforeCount} → ${products.length}`)
+      // Sanitize search input
+      const sanitizedSearch = search.trim().slice(0, 100) // Limit search length
+      if (sanitizedSearch.length > 0) {
+        products = searchGroupedProducts(products, sanitizedSearch)
+        console.log(`🔍 Search filter (${sanitizedSearch}): ${beforeCount} → ${products.length}`)
+      }
     }
 
-    if (featured === "true") {
+    if (featured === 'true') {
       const beforeCount = products.length
-      products = products.filter((product) => product.featured)
+      products = products.filter(product => product.featured)
       console.log(`⭐ Featured filter: ${beforeCount} → ${products.length}`)
     }
 
@@ -66,24 +84,29 @@ export async function GET(request: Request) {
 
     console.log(`✅ Returning ${products.length} grouped products`)
 
-    return NextResponse.json({
-      success: true,
-      count: products.length,
-      products: products,
-      cache: {
-        lastSync: cacheStatus.lastSync,
-        groupedProductCount: cacheStatus.groupedProductCount,
-        rawProductCount: cacheStatus.rawProductCount,
-        source: "cache", // Always from cache for end users
-      },
-      debug: {
-        totalInCache: getCachedGroupedProducts().length,
+    // Use centralized success handler
+    return ApiErrorHandler.handleSuccess(
+      {
+        count: products.length,
+        products: products,
+        cache: {
+          lastSync: cacheStatus.lastSync,
+          groupedProductCount: cacheStatus.groupedProductCount,
+          rawProductCount: cacheStatus.rawProductCount,
+          source: 'cache', // Always from cache for end users
+        },
         filters: { category, format, search, featured },
-        timestamp: new Date().toISOString(),
+      },
+      context
+    )
+  } catch (error) {
+    // Use centralized error handler
+    return ApiErrorHandler.handleError(error, {
+      ...context,
+      additionalContext: {
+        query: Object.fromEntries(new URL(request.url).searchParams),
+        cacheStatus: getCacheStatus(),
       },
     })
-  } catch (error) {
-    console.error("❌ Error fetching cached products:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch products" }, { status: 500 })
   }
 }
