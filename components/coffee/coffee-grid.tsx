@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Star, Heart, Eye, Coffee, MapPin } from 'lucide-react'
-import { useState } from 'react'
+import { useState, memo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { GroupedProduct } from '@/lib/product-variants'
 import { getPriceDisplay, hasMultipleFormats, getFormatDisplayName } from '@/lib/product-variants'
@@ -19,9 +19,9 @@ const roastColors = {
   medium: 'from-[#9E7C83] to-[#D5BFA3]',
   'medium-dark': 'from-[#6E6658] to-[#9E7C83]',
   dark: 'from-[#4B2E2E] to-[#6E6658]',
-}
+} as const
 
-export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
+const CoffeeGrid = memo(function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
   const router = useRouter()
   const [favorites, setFavorites] = useState<string[]>([])
 
@@ -362,4 +362,6 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
       })}
     </div>
   )
-}
+})
+
+export default CoffeeGrid

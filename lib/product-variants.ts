@@ -65,6 +65,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       name: product.productName,
       format: product.format,
       price: product.price,
+      status: product.status,
     })
   })
 
@@ -78,7 +79,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       .replace(/\s+/g, '-')
 
     console.log(
-      `Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`
+      `Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}" -> status: "${product.status}"`
     )
 
     const variant: ProductVariant = {
@@ -119,7 +120,12 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
         existingProduct.featured = product.featured
       }
 
-      console.log(`  ✅ Added variant ${variant.format} to existing product: ${baseName}`)
+      // CRITICAL FIX: Update group status to active if ANY variant is active
+      if (product.status === 'active') {
+        existingProduct.status = 'active'
+      }
+
+      console.log(`  ✅ Added variant ${variant.format} to existing product: ${baseName} (group status: ${existingProduct.status})`)
     } else {
       // Create new grouped product
       const groupedProduct: GroupedProduct = {
@@ -135,7 +141,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
         tastingNotes: product.tastingNotes,
         featured: product.featured,
         badge: product.badge,
-        status: product.status,
+        status: product.status, // Start with this variant's status
         variants: [variant],
         defaultVariant: variant,
         availableFormats: [variant.format],
@@ -146,21 +152,24 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       }
 
       grouped.set(baseKey, groupedProduct)
-      console.log(`  ✅ Created new grouped product: ${baseName} (${baseKey})`)
+      console.log(`  ✅ Created new grouped product: ${baseName} (${baseKey}) with status: ${product.status}`)
     }
   })
 
+  // CRITICAL FIX: Filter by variants having active products, not group status
   const result = Array.from(grouped.values()).filter(
-    product => product.status === 'active' && product.variants.some(v => v.inStock)
+    product => product.variants.some(v => v.inStock)
   )
 
   console.log(`✅ Final grouping result:`)
   console.log(`   - Input: ${products.length} raw products`)
-  console.log(`   - Output: ${result.length} grouped products`)
+  console.log(`   - Grouped: ${grouped.size} total groups`)
+  console.log(`   - Output: ${result.length} groups with active variants`)
 
   result.forEach((product, index) => {
+    const activeVariants = product.variants.filter(v => v.inStock).length
     console.log(
-      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(', ')})`
+      `   ${index + 1}. ${product.productName} (${product.variants.length} variants, ${activeVariants} active: ${product.availableFormats.join(', ')})`
     )
   })
 

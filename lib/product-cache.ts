@@ -8,6 +8,7 @@ let productCache: SheetProduct[] = []
 let groupedProductCache: GroupedProduct[] = []
 let lastSyncTime = 0
 let isSyncing = false
+let hasBeenInitialized = false
 
 // Cache duration (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -32,21 +33,25 @@ export function isCacheStale(): boolean {
 export function updateProductCache(products: SheetProduct[]): void {
   console.log(`🔄 Updating cache with ${products.length} raw products...`)
 
-  productCache = products
+  // Only update if we actually have products from Google Sheets
+  // This prevents overwriting sample data with empty results
+  if (products.length > 0) {
+    console.log(`✅ Updating cache with real Google Sheets data...`)
+    productCache = products
+    
+    // Group products into variants
+    console.log(`🔄 Grouping products into variants...`)
+    groupedProductCache = groupProductVariants(products)
+    
+    lastSyncTime = Date.now()
+    hasBeenInitialized = true
 
-  // Group products into variants
-  console.log(`🔄 Grouping products into variants...`)
-  groupedProductCache = groupProductVariants(products)
+    console.log(`✅ Product cache updated with Google Sheets data:`)
+    console.log(`   - Raw products: ${products.length}`)
+    console.log(`   - Grouped products: ${groupedProductCache.length}`)
+    console.log(`   - Sync time: ${new Date(lastSyncTime).toLocaleString()}`)
 
-  lastSyncTime = Date.now()
-
-  console.log(`✅ Product cache updated:`)
-  console.log(`   - Raw products: ${products.length}`)
-  console.log(`   - Grouped products: ${groupedProductCache.length}`)
-  console.log(`   - Sync time: ${new Date(lastSyncTime).toLocaleString()}`)
-
-  // Log some examples for debugging
-  if (groupedProductCache.length > 0) {
+    // Log some examples for debugging
     console.log(`📊 Sample grouped products:`)
     groupedProductCache.slice(0, 3).forEach((product, index) => {
       console.log(`   ${index + 1}. ${product.productName}:`)
@@ -54,6 +59,14 @@ export function updateProductCache(products: SheetProduct[]): void {
       console.log(`      - Formats: ${product.availableFormats.join(', ')}`)
       console.log(`      - Price range: $${product.priceRange.min} - $${product.priceRange.max}`)
     })
+  } else {
+    console.log(`⚠️ No products from Google Sheets - keeping existing cache data`)
+    console.log(`   - Current cache has ${productCache.length} raw products`)
+    console.log(`   - Current cache has ${groupedProductCache.length} grouped products`)
+    
+    // Still update the sync time to show when we last attempted
+    lastSyncTime = Date.now()
+    console.log(`   - Last sync attempt: ${new Date(lastSyncTime).toLocaleString()}`)
   }
 }
 
@@ -75,9 +88,10 @@ export function setSyncingStatus(status: boolean): void {
   console.log(`🔄 Sync status: ${status ? 'SYNCING' : 'IDLE'}`)
 }
 
-// Initialize cache with static data if empty
+// Initialize cache with static data only if never initialized and no Google Sheets data
 export function initializeCache(): void {
-  if (productCache.length === 0) {
+  // Only initialize with sample data if we have no data at all
+  if (productCache.length === 0 && groupedProductCache.length === 0 && !hasBeenInitialized) {
     console.log('🚀 Initializing product cache with sample products...')
 
     // Initialize with sample products that demonstrate variants
@@ -164,11 +178,16 @@ export function initializeCache(): void {
     groupedProductCache = groupProductVariants(productCache)
     lastSyncTime = Date.now()
 
-    console.log(`✅ Initialized cache:`)
+    console.log(`✅ Initialized cache with sample data:`)
     console.log(`   - Raw products: ${productCache.length}`)
     console.log(`   - Grouped products: ${groupedProductCache.length}`)
+  } else if (productCache.length > 0 || groupedProductCache.length > 0) {
+    console.log(`📦 Cache already contains data (${hasBeenInitialized ? 'Google Sheets' : 'existing'}):`);
+    console.log(`   - Raw products: ${productCache.length}`)
+    console.log(`   - Grouped products: ${groupedProductCache.length}`)
+    console.log(`   - Last sync: ${new Date(lastSyncTime).toLocaleString()}`)
   }
 }
 
-// Auto-initialize cache
+// Auto-initialize cache when module loads (but won't override existing data)
 initializeCache()

@@ -11,7 +11,7 @@ import PageTransition from '@/components/ui/page-transition'
 import { Button } from '@/components/ui/button'
 import { Filter, Grid3X3, List, Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import IntegratedFilterPanel from '@/components/coffee/integrated-filter-panel'
+import SimpleFilterDropdown from '@/components/coffee/simple-filter-dropdown'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import type { GroupedProduct } from '@/lib/product-variants'
 
@@ -27,8 +27,20 @@ export default function CoffeePage() {
         const res = await fetch('/api/products?category=coffee')
         if (!res.ok) throw new Error('Failed to fetch products')
         const json = await res.json()
-        setProducts(Array.isArray(json.products) ? json.products : [])
+        
+        // Debug logging
+        console.log('🔍 Frontend received API response:', json)
+        console.log('🔍 Response success:', json.success)
+        console.log('🔍 Response data:', json.data)
+        console.log('🔍 Products array:', json.data?.products)
+        console.log('🔍 Products length:', json.data?.products?.length)
+        console.log('🔍 First product:', json.data?.products?.[0])
+        
+        const productsArray = Array.isArray(json.data?.products) ? json.data.products : []
+        console.log('📊 Final products array to set in state:', productsArray.length)
+        setProducts(productsArray)
       } catch (e) {
+        console.error('🚨 Frontend API error:', e)
         setError((e as Error).message)
       } finally {
         setIsLoading(false)
@@ -44,25 +56,26 @@ export default function CoffeePage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedRoastLevel, setSelectedRoastLevel] = useState('all')
   const [selectedFormat, setSelectedFormat] = useState('all')
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50])
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100])
 
   const [sortBy, setSortBy] = useState('featured')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [showFilters, setShowFilters] = useState(false)
 
   const clearAllFilters = () => {
     setSearchQuery('')
     setSelectedCategory('all')
     setSelectedRoastLevel('all')
     setSelectedFormat('all')
-    setPriceRange([0, 50])
+    setPriceRange([0, 100])
   }
 
   /* -------------- MEMO FILTER --------------- */
   const filtered = useMemo(() => {
+    console.log('🔄 Frontend filtering starting with', products.length, 'products')
     let list = [...products]
 
     if (debouncedSearch.trim()) {
+      const beforeCount = list.length
       const q = debouncedSearch.toLowerCase()
       list = list.filter(
         p =>
@@ -71,14 +84,33 @@ export default function CoffeePage() {
           p.origin?.toLowerCase().includes(q) ||
           p.tastingNotes?.some(n => n.toLowerCase().includes(q))
       )
+      console.log(`🔍 Search filter "${q}": ${beforeCount} → ${list.length}`)
     }
 
-    if (selectedCategory !== 'all') list = list.filter(p => p.subcategory === selectedCategory)
-    if (selectedRoastLevel !== 'all') list = list.filter(p => p.roastLevel === selectedRoastLevel)
-    if (selectedFormat !== 'all')
-      list = list.filter(p => p.availableFormats?.includes(selectedFormat))
+    if (selectedCategory !== 'all') {
+      const beforeCount = list.length
+      list = list.filter(p => p.subcategory === selectedCategory)
+      console.log(`📂 Category filter "${selectedCategory}": ${beforeCount} → ${list.length}`)
+    }
 
-    list = list.filter(p => (p.defaultVariant?.price ?? p.priceRange?.min ?? 0) <= priceRange[1])
+    if (selectedRoastLevel !== 'all') {
+      const beforeCount = list.length
+      list = list.filter(p => p.roastLevel === selectedRoastLevel)
+      console.log(`☕ Roast filter "${selectedRoastLevel}": ${beforeCount} → ${list.length}`)
+    }
+
+    if (selectedFormat !== 'all') {
+      const beforeCount = list.length
+      list = list.filter(p => p.availableFormats?.includes(selectedFormat))
+      console.log(`📦 Format filter "${selectedFormat}": ${beforeCount} → ${list.length}`)
+    }
+
+    const beforePriceFilter = list.length
+    list = list.filter(p => {
+      const price = p.defaultVariant?.price ?? p.priceRange?.min ?? 0
+      return price <= priceRange[1]
+    })
+    console.log(`💰 Price filter (≤$${priceRange[1]}): ${beforePriceFilter} → ${list.length}`)
 
     switch (sortBy) {
       case 'price-low':
@@ -92,6 +124,14 @@ export default function CoffeePage() {
         break
       default:
         list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+    }
+
+    console.log(`✅ Final filtered products: ${list.length}`)
+    if (list.length > 0) {
+      console.log('📋 Sample filtered products:')
+      list.slice(0, 3).forEach((product, index) => {
+        console.log(`   ${index + 1}. ${product.productName} - $${product.defaultVariant?.price ?? 'N/A'}`)
+      })
     }
 
     return list
@@ -137,32 +177,14 @@ export default function CoffeePage() {
     selectedRoastLevel !== 'all' ||
     selectedFormat !== 'all' ||
     priceRange[0] > 0 ||
-    priceRange[1] < 50
+    priceRange[1] < 100
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
         <Header />
 
-        {/* Drawer */}
-        <IntegratedFilterPanel
-          isOpen={showFilters}
-          onClose={() => setShowFilters(false)}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          selectedRoastLevel={selectedRoastLevel}
-          setSelectedRoastLevel={setSelectedRoastLevel}
-          selectedFormat={selectedFormat}
-          setSelectedFormat={setSelectedFormat}
-          priceRange={priceRange}
-          setPriceRange={setPriceRange}
-          clearAllFilters={clearAllFilters}
-          products={products}
-        />
-
-        <main
-          className={`relative pt-24 transition-all duration-500 ${showFilters ? 'lg:ml-80' : ''}`}
-        >
+        <main className="relative pt-24">
           <CoffeeHero />
 
           {/* Top Controls */}
@@ -197,29 +219,17 @@ export default function CoffeePage() {
 
               {/* Right side controls */}
               <div className="flex flex-wrap items-center gap-4">
-                {hasActive && !showFilters && (
-                  <Button
-                    variant="outline"
-                    onClick={clearAllFilters}
-                    className="rounded-2xl border-2 border-[#9E7C83] text-[#9E7C83] hover:bg-[#9E7C83] hover:text-white bg-transparent"
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Clear All
-                  </Button>
-                )}
-
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(true)}
-                  className={`rounded-2xl border-2 px-6 py-3 ${
-                    showFilters
-                      ? 'border-[#4B2E2E] bg-[#4B2E2E] text-white'
-                      : 'border-[#4B2E2E] bg-white/60 text-[#4B2E2E] hover:bg-[#4B2E2E] hover:text-white'
-                  }`}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filters
-                </Button>
+                {/* New Lightweight Filter Dropdown */}
+                <SimpleFilterDropdown
+                  products={products}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  selectedRoastLevel={selectedRoastLevel}
+                  setSelectedRoastLevel={setSelectedRoastLevel}
+                  selectedFormat={selectedFormat}
+                  setSelectedFormat={setSelectedFormat}
+                  clearAllFilters={clearAllFilters}
+                />
 
                 {/* View toggle */}
                 <div className="flex rounded-2xl border border-white/20 bg-white/60 p-1 backdrop-blur-sm">
