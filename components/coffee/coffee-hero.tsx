@@ -41,7 +41,7 @@ export default function CoffeeHero() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
+          <div className="inline-flex items-center space-x-2 bg-white/80 rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <Coffee className="w-4 h-4 text-[#D5BFA3]" />
             <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
               FRESHLY ROASTED DAILY
@@ -66,7 +66,11 @@ export default function CoffeeHero() {
             {coffeeStats.map((stat, index) => (
               <div
                 key={stat.title}
-                className="group relative bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                className="group relative bg-white/80 rounded-3xl p-6 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                style={{
+                  willChange: 'transform',
+                  backfaceVisibility: 'hidden'
+                }}
               >
                 {/* Gradient Background on Hover */}
                 <div
@@ -75,7 +79,13 @@ export default function CoffeeHero() {
 
                 <div className="relative z-10 text-center">
                   <div
-                    className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br ${stat.gradient} rounded-2xl mb-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+                    className={`inline-flex items-center justify-center bg-gradient-to-br ${stat.gradient} rounded-2xl mb-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      minWidth: '64px',
+                      minHeight: '64px'
+                    }}
                   >
                     <stat.icon className="w-8 h-8 text-white" />
                   </div>
@@ -90,14 +100,21 @@ export default function CoffeeHero() {
           </div>
 
           {/* Roast Level Guide */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-lg max-w-2xl mx-auto mb-8">
+          <div className="bg-white/80 rounded-3xl p-8 border border-white/20 shadow-lg max-w-2xl mx-auto mb-8">
             <h3 className="text-2xl font-bold text-[#4B2E2E] mb-6">Roast Level Guide</h3>
             <div className="grid grid-cols-3 gap-6">
               {roastLevels.map((roast, index) => (
                 <div key={roast.name} className="text-center group">
                   <div
-                    className="w-12 h-12 rounded-full mx-auto mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                    style={{ backgroundColor: roast.color }}
+                    className="rounded-full mx-auto mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    style={{ 
+                      backgroundColor: roast.color,
+                      width: '48px',
+                      height: '48px',
+                      minWidth: '48px',
+                      minHeight: '48px',
+                      aspectRatio: '1'
+                    }}
                   ></div>
                   <h4 className="font-bold text-[#4B2E2E] mb-1">{roast.name}</h4>
                   <p className="text-sm text-[#6E6658] font-light">{roast.description}</p>

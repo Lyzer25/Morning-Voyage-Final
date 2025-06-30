@@ -58,10 +58,13 @@ const products = [
 
 export default function ProductShowcase() {
   return (
-    <section className="py-32 bg-gradient-to-b from-white via-[#F6F1EB]/30 to-white">
+    <section 
+      className="py-32 bg-gradient-to-b from-white via-[#F6F1EB]/30 to-white"
+      style={{ contain: 'layout style paint' }}
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-20">
-          <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
+          <div className="inline-flex items-center space-x-2 bg-white/90 rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
             <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
               FEATURED PRODUCTS
@@ -80,12 +83,17 @@ export default function ProductShowcase() {
           {products.map((product, index) => (
             <Card
               key={product.id}
-              className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/70 backdrop-blur-xl hover:-translate-y-2 overflow-hidden"
+              className="group hover:shadow-xl transition-transform duration-300 border-0 bg-white/95 hover:-translate-y-1 overflow-hidden"
+              style={{
+                contentVisibility: 'auto',
+                containIntrinsicSize: '400px',
+                contain: 'layout style paint'
+              }}
             >
               <CardContent className="p-0 relative">
                 {/* Badge */}
                 <div className="absolute top-4 left-4 z-10">
-                  <span className="bg-white/90 backdrop-blur-sm text-[#4B2E2E] text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                  <span className="bg-white/95 text-[#4B2E2E] text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                     {product.badge}
                   </span>
                 </div>
@@ -95,7 +103,7 @@ export default function ProductShowcase() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
+                    className="w-8 h-8 bg-white/95 hover:bg-white rounded-full shadow-lg transition-colors duration-200"
                   >
                     <Heart className="w-4 h-4 text-[#6E6658]" />
                   </Button>
@@ -107,7 +115,7 @@ export default function ProductShowcase() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent"></div>
                   <div className="text-center text-white relative z-10">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                    <div className="w-16 h-16 bg-white/25 rounded-2xl mx-auto mb-4 flex items-center justify-center">
                       <span className="text-white font-bold text-2xl">
                         {product.category === 'Coffee' ? '☕' : '👕'}
                       </span>
@@ -115,11 +123,14 @@ export default function ProductShowcase() {
                     <p className="text-sm opacity-90 font-medium">{product.category}</p>
                   </div>
 
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  {/* Hover Overlay - Optimized */}
+                  <div 
+                    className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+                    style={{ willChange: 'opacity' }}
+                  >
                     <Button
                       size="sm"
-                      className="bg-white text-[#4B2E2E] hover:bg-white/90 rounded-full shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+                      className="bg-white text-[#4B2E2E] hover:bg-white/95 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-200"
                     >
                       <ShoppingCart className="w-4 h-4 mr-2" />
                       Quick Add
@@ -162,7 +173,7 @@ export default function ProductShowcase() {
                     </div>
                     <Button
                       size="sm"
-                      className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white rounded-full shadow-lg hover:shadow-xl transition-colors duration-200"
                     >
                       Add to Cart
                     </Button>
@@ -176,7 +187,7 @@ export default function ProductShowcase() {
         <div className="text-center">
           <Button
             size="lg"
-            className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group font-semibold"
+            className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-colors duration-200 group font-semibold"
           >
             View All Products
             <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />

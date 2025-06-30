@@ -9,9 +9,18 @@ import Footer from '@/components/layout/footer'
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]"
+      style={{
+        contain: 'layout style paint',
+        willChange: 'scroll-position'
+      }}
+    >
       <Header />
-      <main className="relative overflow-hidden">
+      <main 
+        className="relative overflow-hidden"
+        style={{ contain: 'layout style paint' }}
+      >
         <Hero />
         <Features />
         <ProductShowcase />

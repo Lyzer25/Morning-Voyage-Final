@@ -48,10 +48,19 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+      <div 
+        className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]"
+        style={{
+          contain: 'layout style paint',
+          willChange: 'scroll-position'
+        }}
+      >
         <Header />
 
-        <main className="relative overflow-hidden pt-24">
+        <main 
+          className="relative overflow-hidden pt-24"
+          style={{ contain: 'layout style paint' }}
+        >
           <ProductDetail product={product} />
           {relatedProducts.length > 0 && <ProductRecommendations products={relatedProducts} />}
         </main>

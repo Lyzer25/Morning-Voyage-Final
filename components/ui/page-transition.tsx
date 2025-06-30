@@ -2,7 +2,7 @@
 
 import type React from 'react'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Coffee, Loader2 } from 'lucide-react'
 
@@ -10,19 +10,27 @@ export default function PageTransition({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(false)
   const [displayChildren, setDisplayChildren] = useState(children)
+  const previousPathnameRef = useRef(pathname)
 
   useEffect(() => {
-    setIsLoading(true)
+    // Only trigger loading transition for actual route changes, not content updates
+    if (pathname !== previousPathnameRef.current) {
+      setIsLoading(true)
 
-    // Scroll to top immediately when route changes
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+      // Only scroll to top for actual page navigation, not filter updates
+      window.scrollTo({ top: 0, behavior: 'smooth' })
 
-    const timer = setTimeout(() => {
+      const timer = setTimeout(() => {
+        setDisplayChildren(children)
+        setIsLoading(false)
+        previousPathnameRef.current = pathname
+      }, 300)
+
+      return () => clearTimeout(timer)
+    } else {
+      // For same-page updates (like filtering), update children immediately without loading state
       setDisplayChildren(children)
-      setIsLoading(false)
-    }, 300)
-
-    return () => clearTimeout(timer)
+    }
   }, [pathname, children])
 
   if (isLoading) {
