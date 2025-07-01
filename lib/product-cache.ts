@@ -1,84 +1,106 @@
-// Enhanced product cache management system with better variant grouping
+// File-based product cache management system
 import type { SheetProduct } from './google-sheets-integration'
 import type { GroupedProduct } from './product-variants'
 import { groupProductVariants } from './product-variants'
+import { readFileSync, existsSync } from 'fs'
+import { join } from 'path'
 
-// In-memory cache for products
-let productCache: SheetProduct[] = []
-let groupedProductCache: GroupedProduct[] = []
-let lastSyncTime = 0
-let isSyncing = false
-let hasBeenInitialized = false
-
-// Cache duration (5 minutes)
-const CACHE_DURATION = 5 * 60 * 1000
-
-// Get raw products from cache (admin only)
-export function getCachedProductsSync(): SheetProduct[] {
-  return productCache
-}
-
-// Get grouped products from cache (for end users)
-export function getCachedGroupedProducts(): GroupedProduct[] {
-  return groupedProductCache
-}
-
-// Check if cache needs refresh
-export function isCacheStale(): boolean {
-  const now = Date.now()
-  return now - lastSyncTime > CACHE_DURATION
-}
-
-// Update cache with new products (admin only)
-export function updateProductCache(products: SheetProduct[]): void {
-  console.log(`🔄 Updating cache with ${products.length} raw products...`)
-
-  // Only update if we actually have products from Google Sheets
-  // This prevents overwriting sample data with empty results
-  if (products.length > 0) {
-    console.log(`✅ Updating cache with real Google Sheets data...`)
-    productCache = products
-    
-    // Group products into variants
-    console.log(`🔄 Grouping products into variants...`)
-    groupedProductCache = groupProductVariants(products)
-    
-    lastSyncTime = Date.now()
-    hasBeenInitialized = true
-
-    console.log(`✅ Product cache updated with Google Sheets data:`)
-    console.log(`   - Raw products: ${products.length}`)
-    console.log(`   - Grouped products: ${groupedProductCache.length}`)
-    console.log(`   - Sync time: ${new Date(lastSyncTime).toLocaleString()}`)
-
-    // Log some examples for debugging
-    console.log(`📊 Sample grouped products:`)
-    groupedProductCache.slice(0, 3).forEach((product, index) => {
-      console.log(`   ${index + 1}. ${product.productName}:`)
-      console.log(`      - Variants: ${product.variants.length}`)
-      console.log(`      - Formats: ${product.availableFormats.join(', ')}`)
-      console.log(`      - Price range: $${product.priceRange.min} - $${product.priceRange.max}`)
-    })
-  } else {
-    console.log(`⚠️ No products from Google Sheets - keeping existing cache data`)
-    console.log(`   - Current cache has ${productCache.length} raw products`)
-    console.log(`   - Current cache has ${groupedProductCache.length} grouped products`)
-    
-    // Still update the sync time to show when we last attempted
-    lastSyncTime = Date.now()
-    console.log(`   - Last sync attempt: ${new Date(lastSyncTime).toLocaleString()}`)
+// Cache interfaces
+interface CacheData {
+  products: GroupedProduct[]
+  stats: {
+    rawProducts: number
+    groupedProducts: number
+    activeProducts: number
+    timestamp: string
+    syncDuration?: number
+    error?: string
   }
 }
 
-// Get cache status
+// Cache file path
+const CACHE_FILE_PATH = join(process.cwd(), 'product-cache.json')
+
+// Sync status tracking
+let isSyncing = false
+
+// Load products from persistent JSON cache
+export function getCachedGroupedProducts(): GroupedProduct[] {
+  try {
+    if (existsSync(CACHE_FILE_PATH)) {
+      console.log('📂 Loading products from persistent cache:', CACHE_FILE_PATH)
+      const raw = readFileSync(CACHE_FILE_PATH, 'utf8')
+      const cacheData: CacheData = JSON.parse(raw)
+      
+      if (cacheData.products && Array.isArray(cacheData.products)) {
+        console.log(`✅ Loaded ${cacheData.products.length} products from cache`)
+        console.log(`📊 Cache stats:`, cacheData.stats)
+        return cacheData.products
+      } else {
+        console.warn('⚠️ Invalid cache data structure, using fallback')
+        return getFallbackProducts()
+      }
+    } else {
+      console.warn('⚠️ Product cache file not found, using fallback products')
+      console.log(`   Expected file: ${CACHE_FILE_PATH}`)
+      console.log(`   Run 'npm run sync' to create initial cache`)
+      return getFallbackProducts()
+    }
+  } catch (error) {
+    console.error('❌ Error reading product cache:', error)
+    console.log('   Using fallback products instead')
+    return getFallbackProducts()
+  }
+}
+
+// Get raw products from cache (admin/API use)
+export function getCachedProductsSync(): SheetProduct[] {
+  // This function is for admin use - we'll read the cache and return raw products
+  // For now, we don't store raw products in the cache file, only grouped ones
+  console.warn('⚠️ getCachedProductsSync: Raw products not stored in file cache')
+  return []
+}
+
+// Get cache status and stats
 export function getCacheStatus() {
-  return {
-    rawProductCount: productCache.length,
-    groupedProductCount: groupedProductCache.length,
-    lastSync: new Date(lastSyncTime).toISOString(),
-    isStale: isCacheStale(),
-    isSyncing,
-    nextSyncIn: Math.max(0, CACHE_DURATION - (Date.now() - lastSyncTime)),
+  try {
+    if (existsSync(CACHE_FILE_PATH)) {
+      const raw = readFileSync(CACHE_FILE_PATH, 'utf8')
+      const cacheData: CacheData = JSON.parse(raw)
+      
+      return {
+        exists: true,
+        groupedProductCount: cacheData.products?.length || 0,
+        lastSync: cacheData.stats?.timestamp || 'unknown',
+        rawProductCount: cacheData.stats?.rawProducts || 0,
+        activeProductCount: cacheData.stats?.activeProducts || 0,
+        syncDuration: cacheData.stats?.syncDuration,
+        error: cacheData.stats?.error,
+        isSyncing,
+        filePath: CACHE_FILE_PATH
+      }
+    } else {
+      return {
+        exists: false,
+        groupedProductCount: 0,
+        lastSync: 'never',
+        rawProductCount: 0,
+        activeProductCount: 0,
+        isSyncing,
+        filePath: CACHE_FILE_PATH
+      }
+    }
+  } catch (error) {
+    return {
+      exists: false,
+      error: error instanceof Error ? error.message : String(error),
+      groupedProductCount: 0,
+      lastSync: 'error',
+      rawProductCount: 0,
+      activeProductCount: 0,
+      isSyncing,
+      filePath: CACHE_FILE_PATH
+    }
   }
 }
 
@@ -88,106 +110,110 @@ export function setSyncingStatus(status: boolean): void {
   console.log(`🔄 Sync status: ${status ? 'SYNCING' : 'IDLE'}`)
 }
 
-// Initialize cache with static data only if never initialized and no Google Sheets data
-export function initializeCache(): void {
-  // Only initialize with sample data if we have no data at all
-  if (productCache.length === 0 && groupedProductCache.length === 0 && !hasBeenInitialized) {
-    console.log('🚀 Initializing product cache with sample products...')
-
-    // Initialize with sample products that demonstrate variants
-    productCache = [
-      {
-        sku: 'COFFEE-MORNING-12OZ-WHOLE',
-        productName: 'Morning Blend',
-        category: 'coffee',
-        subcategory: 'signature-blend',
-        status: 'active',
-        price: 16.99,
-        description:
-          'Our signature morning blend - smooth, balanced, and perfect for starting your day',
-        roastLevel: 'medium',
-        origin: 'Colombia & Brazil',
-        weight: '12 oz',
-        format: 'whole-bean',
-        tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
-        featured: true,
-      },
-      {
-        sku: 'COFFEE-MORNING-12OZ-GROUND',
-        productName: 'Morning Blend',
-        category: 'coffee',
-        subcategory: 'signature-blend',
-        status: 'active',
-        price: 16.99,
-        description:
-          'Our signature morning blend - smooth, balanced, and perfect for starting your day',
-        roastLevel: 'medium',
-        origin: 'Colombia & Brazil',
-        weight: '12 oz',
-        format: 'ground',
-        tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
-        featured: true,
-      },
-      {
-        sku: 'COFFEE-DARK-12OZ-WHOLE',
-        productName: 'Dark Roast Supreme',
-        category: 'coffee',
-        subcategory: 'dark-roast',
-        status: 'active',
-        price: 17.99,
-        description: 'Bold and intense dark roast with rich, smoky flavors',
-        roastLevel: 'dark',
-        origin: 'Guatemala',
-        weight: '12 oz',
-        format: 'whole-bean',
-        tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
-        featured: true,
-      },
-      {
-        sku: 'COFFEE-DARK-12OZ-GROUND',
-        productName: 'Dark Roast Supreme',
-        category: 'coffee',
-        subcategory: 'dark-roast',
-        status: 'active',
-        price: 17.99,
-        description: 'Bold and intense dark roast with rich, smoky flavors',
-        roastLevel: 'dark',
-        origin: 'Guatemala',
-        weight: '12 oz',
-        format: 'ground',
-        tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
-        featured: true,
-      },
-      {
-        sku: 'COFFEE-LIGHT-12OZ-WHOLE',
-        productName: 'Ethiopian Single Origin',
-        category: 'coffee',
-        subcategory: 'single-origin',
-        status: 'active',
-        price: 19.99,
-        description: 'Bright and fruity single origin from Ethiopia',
-        roastLevel: 'light',
-        origin: 'Ethiopia',
-        weight: '12 oz',
-        format: 'whole-bean',
-        tastingNotes: ['Blueberry', 'Floral', 'Citrus'],
-        featured: false,
-      },
-    ] as SheetProduct[]
-
-    groupedProductCache = groupProductVariants(productCache)
-    lastSyncTime = Date.now()
-
-    console.log(`✅ Initialized cache with sample data:`)
-    console.log(`   - Raw products: ${productCache.length}`)
-    console.log(`   - Grouped products: ${groupedProductCache.length}`)
-  } else if (productCache.length > 0 || groupedProductCache.length > 0) {
-    console.log(`📦 Cache already contains data (${hasBeenInitialized ? 'Google Sheets' : 'existing'}):`);
-    console.log(`   - Raw products: ${productCache.length}`)
-    console.log(`   - Grouped products: ${groupedProductCache.length}`)
-    console.log(`   - Last sync: ${new Date(lastSyncTime).toLocaleString()}`)
+// Legacy function for backward compatibility
+export function updateProductCache(products: SheetProduct[]): void {
+  console.log(`🔄 Legacy updateProductCache called with ${products.length} products`)
+  console.log('   Note: File-based cache is updated by syncProducts.ts script')
+  
+  if (products.length > 0) {
+    console.log('   Consider running: npm run sync')
   }
 }
 
-// Auto-initialize cache when module loads (but won't override existing data)
-initializeCache()
+// Fallback products when cache file doesn't exist
+function getFallbackProducts(): GroupedProduct[] {
+  console.log('🚀 Using fallback sample products...')
+  
+  const sampleProducts: SheetProduct[] = [
+    {
+      sku: 'COFFEE-MORNING-12OZ-WHOLE',
+      productName: 'Morning Blend',
+      category: 'coffee',
+      subcategory: 'signature-blend',
+      status: 'active',
+      price: 16.99,
+      description: 'Our signature morning blend - smooth, balanced, and perfect for starting your day',
+      roastLevel: 'medium',
+      origin: 'Colombia & Brazil',
+      weight: '12 oz',
+      format: 'whole-bean',
+      tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
+      featured: true,
+    },
+    {
+      sku: 'COFFEE-MORNING-12OZ-GROUND',
+      productName: 'Morning Blend',
+      category: 'coffee',
+      subcategory: 'signature-blend',
+      status: 'active',
+      price: 16.99,
+      description: 'Our signature morning blend - smooth, balanced, and perfect for starting your day',
+      roastLevel: 'medium',
+      origin: 'Colombia & Brazil',
+      weight: '12 oz',
+      format: 'ground',
+      tastingNotes: ['Chocolate', 'Caramel', 'Nuts'],
+      featured: true,
+    },
+    {
+      sku: 'COFFEE-DARK-12OZ-WHOLE',
+      productName: 'Dark Roast Supreme',
+      category: 'coffee',
+      subcategory: 'dark-roast',
+      status: 'active',
+      price: 17.99,
+      description: 'Bold and intense dark roast with rich, smoky flavors',
+      roastLevel: 'dark',
+      origin: 'Guatemala',
+      weight: '12 oz',
+      format: 'whole-bean',
+      tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
+      featured: true,
+    },
+    {
+      sku: 'COFFEE-DARK-12OZ-GROUND',
+      productName: 'Dark Roast Supreme',
+      category: 'coffee',
+      subcategory: 'dark-roast',
+      status: 'active',
+      price: 17.99,
+      description: 'Bold and intense dark roast with rich, smoky flavors',
+      roastLevel: 'dark',
+      origin: 'Guatemala',
+      weight: '12 oz',
+      format: 'ground',
+      tastingNotes: ['Dark Chocolate', 'Smoky', 'Robust'],
+      featured: true,
+    },
+    {
+      sku: 'COFFEE-LIGHT-12OZ-WHOLE',
+      productName: 'Ethiopian Single Origin',
+      category: 'coffee',
+      subcategory: 'single-origin',
+      status: 'active',
+      price: 19.99,
+      description: 'Bright and fruity single origin from Ethiopia',
+      roastLevel: 'light',
+      origin: 'Ethiopia',
+      weight: '12 oz',
+      format: 'whole-bean',
+      tastingNotes: ['Blueberry', 'Floral', 'Citrus'],
+      featured: false,
+    },
+  ]
+
+  const groupedProducts = groupProductVariants(sampleProducts)
+  
+  console.log(`✅ Generated ${groupedProducts.length} fallback products`)
+  return groupedProducts
+}
+
+// Check if cache file exists
+export function cacheFileExists(): boolean {
+  return existsSync(CACHE_FILE_PATH)
+}
+
+// Get cache file path (for debugging)
+export function getCacheFilePath(): string {
+  return CACHE_FILE_PATH
+}

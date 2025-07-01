@@ -5,37 +5,36 @@ import ProductDetail from '@/components/product/product-detail'
 import ProductRecommendations from '@/components/product/product-recommendations'
 import PageTransition from '@/components/ui/page-transition'
 import { getCachedGroupedProducts } from '@/lib/product-cache'
+import { generateProductSlug } from '@/lib/product-variants'
 
 interface ProductPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
-  // Get grouped products from cache
+export default async function ProductPage({ params }: ProductPageProps) {
+  // Await params to fix Next.js dynamic route warning
+  const { slug } = await params
+  
+  // Get grouped products from persistent cache
   const products = getCachedGroupedProducts()
 
-  console.log(`🔍 Looking for product with slug: ${params.slug}`)
+  console.log(`🔍 Looking for product with slug: ${slug}`)
   console.log(`📊 Available products: ${products.length}`)
 
-  // Find product by slug (match against baseSku or productName)
+  // Find product by slug using consistent slug generation
   const product = products.find(p => {
-    const baseSkuSlug = p.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-')
-    const nameSlug = p.productName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-
-    console.log(
-      `   Checking: ${p.productName} -> baseSkuSlug: ${baseSkuSlug}, nameSlug: ${nameSlug}`
-    )
-
-    return baseSkuSlug === params.slug || nameSlug === params.slug
+    const productSlug = generateProductSlug(p.baseSku)
+    
+    console.log(`   Checking: ${p.productName} -> slug: ${productSlug}`)
+    
+    return productSlug === slug
   })
 
   if (!product) {
-    console.log(`❌ Product not found for slug: ${params.slug}`)
+    console.log(`❌ Product not found for slug: ${slug}`)
+    console.log(`📋 Available slugs: ${products.map(p => generateProductSlug(p.baseSku)).join(', ')}`)
     notFound()
   }
 
@@ -71,11 +70,11 @@ export default function ProductPage({ params }: ProductPageProps) {
   )
 }
 
-// Generate static params for better performance
+// Generate static params using consistent slug generation
 export async function generateStaticParams() {
   const products = getCachedGroupedProducts()
 
   return products.map(product => ({
-    slug: product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    slug: generateProductSlug(product.baseSku),
   }))
 }

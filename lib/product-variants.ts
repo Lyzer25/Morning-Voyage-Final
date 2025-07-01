@@ -46,6 +46,27 @@ export function getBaseSku(sku: string): string {
     .trim()
 }
 
+// Generate consistent product slug for URLs
+export function generateProductSlug(baseSku: string): string {
+  return baseSku
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .trim()
+}
+
+// Generate slug from product name (fallback)
+export function generateSlugFromName(productName: string): string {
+  return productName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .trim()
+}
+
 // Extract base product name (remove format indicators)
 export function getBaseProductName(name: string): string {
   return name

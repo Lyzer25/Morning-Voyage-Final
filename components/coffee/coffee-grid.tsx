@@ -7,7 +7,7 @@ import { Star, Heart, Eye, Coffee, MapPin } from 'lucide-react'
 import { useState, memo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { GroupedProduct } from '@/lib/product-variants'
-import { getPriceDisplay, hasMultipleFormats, getFormatDisplayName } from '@/lib/product-variants'
+import { getPriceDisplay, hasMultipleFormats, getFormatDisplayName, generateProductSlug } from '@/lib/product-variants'
 
 interface CoffeeGridProps {
   products: GroupedProduct[]
@@ -27,7 +27,7 @@ const CoffeeGrid = memo(function CoffeeGrid({ products, viewMode }: CoffeeGridPr
 
   // Memoized handlers for better performance
   const handleProductClick = useCallback((product: GroupedProduct) => {
-    const slug = product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const slug = generateProductSlug(product.baseSku)
     router.push(`/product/${slug}`)
   }, [router])
 

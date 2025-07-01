@@ -41,7 +41,7 @@ export interface SheetProduct {
 // Google Sheets API configuration
 const SHEET_CONFIG = {
   spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-  range: 'Sheet1!A:Z', // Changed from "Products!A:AZ" to "Sheet1!A:Z"
+  range: 'Sheet1!A1:Z1000', // Broader range with explicit start
   apiKey: process.env.GOOGLE_SHEETS_API_KEY,
 }
 
@@ -253,13 +253,13 @@ export function filterProductsByFormat(products: SheetProduct[], format: string)
 
 // Get unique formats from products
 export function getAvailableFormats(products: SheetProduct[]): string[] {
-  const formats = new Set(products.map(p => p.format).filter(Boolean))
+  const formats = new Set(products.map(p => p.format).filter(Boolean) as string[])
   return Array.from(formats)
 }
 
 // Get unique weights from products
 export function getAvailableWeights(products: SheetProduct[]): string[] {
-  const weights = new Set(products.map(p => p.weight).filter(Boolean))
+  const weights = new Set(products.map(p => p.weight).filter(Boolean) as string[])
   return Array.from(weights)
 }
 
