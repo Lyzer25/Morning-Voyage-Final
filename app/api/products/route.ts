@@ -14,36 +14,61 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category')
     
     console.log("🔄 API: Fetching products from Vercel Blob...")
+    console.log(`🔄 API: Parameters - grouped: ${grouped}, category: ${category}`)
     
     // Get raw products from Vercel Blob
     const rawProducts = await getProducts()
     
-    if (rawProducts.length === 0) {
+    // CRITICAL: Ensure rawProducts is always an array
+    const safeRawProducts = Array.isArray(rawProducts) ? rawProducts : []
+    
+    if (safeRawProducts.length === 0) {
       console.log("⚠️ API: No products found in Vercel Blob")
       return NextResponse.json({ 
         products: [], 
+        count: 0,
         message: "No products found",
         timestamp: new Date().toISOString()
       })
     }
 
-    // Filter by category if specified
-    let filteredProducts = rawProducts
+    // Filter by category if specified with null safety
+    let filteredProducts = safeRawProducts
     if (category) {
-      filteredProducts = rawProducts.filter(p => p.category === category)
+      filteredProducts = safeRawProducts.filter(p => 
+        p && p.category && p.category.toLowerCase() === category.toLowerCase()
+      )
+      console.log(`🔍 API: Filtered to ${filteredProducts.length} products for category: ${category}`)
     }
 
     // Return grouped products if requested (for frontend)
     if (grouped) {
-      const groupedProducts = groupProductVariants(filteredProducts)
-      console.log(`✅ API: Returning ${groupedProducts.length} grouped products`)
-      
-      return NextResponse.json({
-        products: groupedProducts,
-        count: groupedProducts.length,
-        rawCount: filteredProducts.length,
-        timestamp: new Date().toISOString()
-      })
+      try {
+        const groupedProducts = groupProductVariants(filteredProducts)
+        const safeGroupedProducts = Array.isArray(groupedProducts) ? groupedProducts : []
+        
+        console.log(`✅ API: Returning ${safeGroupedProducts.length} grouped products`)
+        
+        return NextResponse.json({
+          products: safeGroupedProducts,
+          count: safeGroupedProducts.length,
+          rawCount: filteredProducts.length,
+          grouped: true,
+          category: category || 'all',
+          timestamp: new Date().toISOString()
+        })
+      } catch (groupError) {
+        console.error("❌ API Error grouping products:", groupError)
+        // Fallback to raw products if grouping fails
+        return NextResponse.json({
+          products: filteredProducts,
+          count: filteredProducts.length,
+          grouped: false,
+          category: category || 'all',
+          message: "Grouping failed, returning raw products",
+          timestamp: new Date().toISOString()
+        })
+      }
     }
 
     // Return raw products (for admin)
@@ -52,14 +77,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       products: filteredProducts,
       count: filteredProducts.length,
+      grouped: false,
+      category: category || 'all',
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
     console.error("❌ API Error fetching products:", error)
     
+    // CRITICAL: Always return valid structure even on error
     return NextResponse.json(
       { 
+        products: [], // Always provide empty array
+        count: 0,
         error: "Failed to fetch products",
         message: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString()
