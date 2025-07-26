@@ -74,6 +74,14 @@ interface FormState {
 export async function uploadCsvAction(prevState: FormState, formData: FormData): Promise<FormState> {
   const file = formData.get("csvFile") as File
 
+  console.log('🔧 ========== ADMIN CSV UPLOAD DEBUG START ==========');
+  console.log('🔧 ADMIN: CSV upload initiated');
+  console.log('🔧 ADMIN: File details:', {
+    name: file?.name,
+    size: file?.size,
+    type: file?.type
+  });
+
   if (!file || file.size === 0) {
     return { error: "Please select a CSV file to upload." }
   }
@@ -82,7 +90,15 @@ export async function uploadCsvAction(prevState: FormState, formData: FormData):
   }
 
   try {
+    console.log('🔧 ADMIN: Reading file content...');
     const csvText = await file.text()
+    console.log('🔧 ADMIN: File content received:', {
+      length: csvText.length,
+      firstLine: csvText.split('\n')[0] || 'EMPTY',
+      preview: csvText.substring(0, 300)
+    });
+
+    console.log('🔧 ADMIN: Parsing CSV with Papa Parse...');
     const parsed = Papa.parse<Product>(csvText, {
       header: true,
       skipEmptyLines: true,
@@ -90,14 +106,23 @@ export async function uploadCsvAction(prevState: FormState, formData: FormData):
       transformHeader: transformHeader,
     })
 
+    console.log('🔧 ADMIN: Parse results:', {
+      dataRows: parsed.data?.length || 0,
+      errors: parsed.errors?.length || 0,
+      headers: parsed.meta?.fields || []
+    });
+
     if (parsed.errors.length > 0) {
+      console.error('🔧 ADMIN: Parse errors:', parsed.errors);
       return { error: `CSV parsing error on row ${parsed.errors[0].row}: ${parsed.errors[0].message}` }
     }
 
     if (!parsed.meta.fields?.includes("sku") || !parsed.meta.fields?.includes("productName")) {
+      console.error('🔧 ADMIN: Missing required columns');
       return { error: "CSV must contain 'sku' and 'productName' columns." }
     }
 
+    console.log('🔧 ADMIN: Processing data...');
     const processedData = parsed.data.map((p: any) => ({
       ...p,
       status: p.status || "active",
@@ -105,16 +130,45 @@ export async function uploadCsvAction(prevState: FormState, formData: FormData):
       featured: p.featured === true || p.featured === "true" || p.featured === "TRUE",
     }))
 
+    console.log('🔧 ADMIN: Processed data sample:', processedData.slice(0, 2));
+    console.log('🔧 ADMIN: Categories in processed data:', 
+      [...new Set(processedData.map(p => p.category).filter(Boolean))]
+    );
+
     const standardizedCsvText = Papa.unparse(processedData, { header: true })
+    console.log('🔧 ADMIN: Generated CSV text:', {
+      length: standardizedCsvText.length,
+      preview: standardizedCsvText.substring(0, 300)
+    });
+
+    console.log('🔧 ADMIN: Saving to blob storage...');
+    console.log('🔧 ADMIN: Target filename:', BLOB_FILENAME);
+    console.log('🔧 ADMIN: Environment check:', {
+      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+      nodeEnv: process.env.NODE_ENV,
+      isVercel: !!process.env.VERCEL
+    });
 
     await put(BLOB_FILENAME, standardizedCsvText, { access: "public", contentType: "text/csv" })
+    console.log('🔧 ADMIN: Successfully saved to blob storage!');
 
     // Trigger comprehensive cache revalidation
+    console.log('🔧 ADMIN: Triggering cache revalidation...');
     await triggerCacheRevalidation()
+    
+    console.log(`🔧 ADMIN: Upload complete - ${processedData.length} products saved to ${BLOB_FILENAME}`);
+    console.log('🔧 ========== ADMIN CSV UPLOAD DEBUG END ==========');
     
     return { success: `Successfully uploaded and updated ${processedData.length} products! Changes will appear on the live site shortly.` }
   } catch (error) {
-    console.error("Error in uploadCsvAction:", error)
+    console.error("🔧 ADMIN: Error in uploadCsvAction:", error)
+    if (error instanceof Error) {
+      console.error('🔧 ADMIN: Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return { error: "An unexpected error occurred during upload." }
   }
 }
