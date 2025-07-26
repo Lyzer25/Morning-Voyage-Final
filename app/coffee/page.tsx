@@ -26,9 +26,55 @@ export async function generateMetadata() {
 
 export default async function CoffeePage() {
   try {
+    console.log('☕ CoffeePage: Starting to load...');
+    
     // Fetch products from API via cache with error handling
     const allProducts = await getCachedGroupedProducts()
-    const coffeeProducts = allProducts.filter((p) => p.category === "coffee")
+    
+    console.log('☕ Raw products received:', allProducts?.length || 0);
+    console.log('☕ Products sample:', allProducts?.slice(0, 2) || 'No products');
+    console.log('☕ Products type:', typeof allProducts);
+    console.log('☕ Is array?', Array.isArray(allProducts));
+
+    if (!allProducts || !Array.isArray(allProducts)) {
+      console.error('❌ Coffee page: Products is not an array:', typeof allProducts);
+      return (
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+            <Header />
+            <div className="container mx-auto px-4 py-8">
+              <h1 className="text-3xl font-bold mb-8">Premium Coffee</h1>
+              <div className="bg-red-100 p-4 rounded">
+                <p className="text-red-600 font-bold">DEBUG: Products data issue</p>
+                <p>Type: {typeof allProducts}</p>
+                <p>Value: {JSON.stringify(allProducts)}</p>
+              </div>
+            </div>
+            <Footer />
+          </div>
+        </PageTransition>
+      );
+    }
+    
+    // Debug the filtering process
+    console.log('☕ All product categories:', allProducts.map(p => p.category));
+    const uniqueCategories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    console.log('☕ Unique categories found:', uniqueCategories);
+    
+    const coffeeProducts = allProducts.filter(product => {
+      console.log('☕ Checking product:', {
+        name: product.productName,
+        category: product.category,
+        categoryLower: product.category?.toLowerCase(),
+        includesCoffee: product.category?.toLowerCase()?.includes('coffee')
+      });
+      return product && 
+        product.category && 
+        product.category.toLowerCase().includes('coffee');
+    });
+    
+    console.log('☕ Coffee products found:', coffeeProducts.length);
+    console.log('☕ Coffee products sample:', coffeeProducts.slice(0, 2));
 
     console.log(`☕ Coffee page: Found ${coffeeProducts.length} coffee products out of ${allProducts.length} total`)
     
@@ -41,6 +87,27 @@ export default async function CoffeePage() {
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
           <Header />
+          
+          {/* DEBUG INFO - REMOVE AFTER FIXING */}
+          <div className="container mx-auto px-4 py-4">
+            <div className="bg-yellow-100 p-4 rounded mb-6 border-2 border-yellow-300">
+              <h3 className="font-bold text-yellow-800 mb-2">🔍 DEBUG INFO (Remove after fixing):</h3>
+              <div className="text-sm text-yellow-700 space-y-1">
+                <p><strong>Total products loaded:</strong> {allProducts.length}</p>
+                <p><strong>Coffee products found:</strong> {coffeeProducts.length}</p>
+                <p><strong>All categories:</strong> {uniqueCategories.join(', ') || 'None'}</p>
+                <p><strong>Sample products:</strong></p>
+                <ul className="ml-4 list-disc">
+                  {allProducts.slice(0, 3).map((p, i) => (
+                    <li key={i}>
+                      {p.productName || 'No name'} - Category: "{p.category || 'No category'}"
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <CoffeePageClient initialProducts={coffeeProducts} />
           <Footer />
         </div>
@@ -49,17 +116,25 @@ export default async function CoffeePage() {
   } catch (error) {
     console.error("❌ Error loading coffee page:", error)
     
-    // Fallback UI for production reliability
+    // Enhanced fallback UI with debug info
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
           <Header />
           <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Coffee Collection</h1>
-            <p className="text-[#6E6658] mb-8">We're updating our coffee selection. Please check back shortly.</p>
-            <div className="text-sm text-[#6E6658]">
+            <div className="bg-red-100 p-4 rounded max-w-md mx-auto">
+              <p className="text-red-600 font-bold">Error loading coffee products</p>
+              <p className="text-red-600 text-sm mt-2">
+                {error instanceof Error ? error.message : String(error)}
+              </p>
               {process.env.NODE_ENV === 'development' && (
-                <>Error: {error instanceof Error ? error.message : 'Unknown error'}</>
+                <details className="mt-2 text-left">
+                  <summary className="cursor-pointer text-red-700">Error Details</summary>
+                  <pre className="text-xs mt-1 overflow-auto">
+                    {error instanceof Error ? error.stack : String(error)}
+                  </pre>
+                </details>
               )}
             </div>
           </div>

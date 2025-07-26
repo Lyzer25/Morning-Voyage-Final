@@ -75,27 +75,59 @@ const SAMPLE_PRODUCTS: Product[] = [
 ]
 
 async function fetchAndParseCsv(): Promise<Product[]> {
-  console.log("Fetching products from Vercel Blob...")
   try {
+    console.log('📊 fetchAndParseCsv: Starting...');
+    console.log('📊 Environment check:', {
+      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+      nodeEnv: process.env.NODE_ENV,
+      isVercel: !!process.env.VERCEL
+    });
+    
     // Check if we have a Vercel Blob token
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       console.log("⚠️ No BLOB_READ_WRITE_TOKEN found, using sample products for development")
+      console.log('📊 Returning sample products count:', SAMPLE_PRODUCTS.length);
       return SAMPLE_PRODUCTS
     }
 
+    console.log('📊 Listing blobs with prefix:', BLOB_FILENAME);
     const blob = await list({ prefix: BLOB_FILENAME, limit: 1 })
-    if (blob.blobs.length === 0) {
-      console.log("No products.csv found in blob storage, using sample products")
+    console.log('📊 Blob list result:', {
+      count: blob.blobs?.length || 0,
+      blobs: blob.blobs?.map(b => ({ url: b.url, size: b.size, uploadedAt: b.uploadedAt })) || []
+    });
+    
+    if (!blob.blobs || blob.blobs.length === 0) {
+      console.log("⚠️ No products.csv found in blob storage, using sample products")
+      console.log('📊 Returning sample products count:', SAMPLE_PRODUCTS.length);
       return SAMPLE_PRODUCTS
     }
 
     const fileUrl = blob.blobs[0].url
+    console.log('📊 Fetching CSV from URL:', fileUrl);
+    
     const response = await fetch(fileUrl, { cache: "no-store" })
+    console.log('📊 Fetch response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      }
+    });
+    
     if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.statusText}`)
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`)
     }
+    
     const csvText = await response.text()
+    console.log('📊 CSV text received:', {
+      length: csvText.length,
+      preview: csvText.substring(0, 500),
+      lineCount: csvText.split('\n').length
+    });
 
+    console.log('📊 Parsing CSV with Papa Parse...');
     const parsed = Papa.parse<Product>(csvText, {
       header: true,
       dynamicTyping: true,
@@ -103,18 +135,61 @@ async function fetchAndParseCsv(): Promise<Product[]> {
       transformHeader: transformHeader,
     })
 
-    // Add default status if missing
-    const productsWithStatus = parsed.data.map((p) => ({
-      ...p,
-      status: p.status || "active",
-      price: typeof p.price === "number" ? p.price : 0,
-    }))
+    console.log('📊 Papa Parse result:', {
+      rowCount: parsed.data?.length || 0,
+      errorCount: parsed.errors?.length || 0,
+      headers: parsed.meta?.fields || [],
+      errors: parsed.errors
+    });
 
-    console.log(`Successfully parsed and processed ${productsWithStatus.length} products.`)
+    if (parsed.errors && parsed.errors.length > 0) {
+      console.error('❌ CSV Parse errors:', parsed.errors);
+    }
+
+    if (!parsed.data || !Array.isArray(parsed.data)) {
+      console.error('❌ Parsed data is not an array:', typeof parsed.data);
+      console.log('📊 Falling back to sample products');
+      return SAMPLE_PRODUCTS;
+    }
+
+    // Add default status if missing and log transformation
+    const productsWithStatus = parsed.data.map((p, index) => {
+      const transformed = {
+        ...p,
+        status: p.status || "active",
+        price: typeof p.price === "number" ? p.price : 0,
+      };
+      
+      // Log first few products for debugging
+      if (index < 3) {
+        console.log(`📊 Product ${index + 1}:`, {
+          sku: transformed.sku,
+          productName: transformed.productName,
+          category: transformed.category,
+          price: transformed.price,
+          status: transformed.status
+        });
+      }
+      
+      return transformed;
+    })
+
+    console.log(`✅ Successfully parsed and processed ${productsWithStatus.length} products.`)
+    console.log('📊 Final products sample categories:', productsWithStatus.slice(0, 5).map(p => p.category));
+    
     return productsWithStatus
   } catch (error) {
-    console.error("Error fetching or parsing CSV from blob:", error)
-    console.log("Falling back to sample products")
+    console.error("❌ Error fetching or parsing CSV from blob:", error)
+    if (error instanceof Error) {
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    console.log("📊 Falling back to sample products");
+    console.log('📊 Sample products count:', SAMPLE_PRODUCTS.length);
+    console.log('📊 Sample products categories:', SAMPLE_PRODUCTS.map(p => p.category));
     return SAMPLE_PRODUCTS
   }
 }
