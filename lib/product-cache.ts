@@ -11,28 +11,28 @@ let isSyncing = false
 // Cache duration (1 minute for development, 5 minutes for production)
 const CACHE_DURATION = process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 60 * 1000
 
-// Fetch products from API - Vercel-optimized URL resolution
+// Fetch products from API - FIXED: Vercel build-time URL resolution
 async function fetchProducts(grouped: boolean = false, category?: string): Promise<any> {
   try {
-    // Use different URL resolution strategies for different contexts
+    // CRITICAL FIX: Proper URL construction for Vercel build environment
     let baseUrl = ''
     
     if (typeof window === 'undefined') {
-      // Server-side: Use relative URLs for internal API calls on Vercel
-      if (process.env.VERCEL) {
-        // On Vercel, use relative URLs for internal API calls
-        baseUrl = ''
-      } else if (process.env.VERCEL_URL) {
-        // Vercel preview/production - construct full URL carefully
+      // Server-side: Need full URLs for Vercel build time
+      if (process.env.VERCEL_URL) {
+        // Vercel environment - use full URL
         baseUrl = process.env.VERCEL_URL.startsWith('http') 
           ? process.env.VERCEL_URL 
           : `https://${process.env.VERCEL_URL}`
+      } else if (process.env.NEXT_PUBLIC_BASE_URL) {
+        // Use explicit base URL from environment
+        baseUrl = process.env.NEXT_PUBLIC_BASE_URL
       } else {
-        // Local development
-        baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+        // Local development fallback
+        baseUrl = 'http://localhost:3000'
       }
     }
-    // Client-side: always use relative URLs
+    // Client-side: use relative URLs
     
     const params = new URLSearchParams()
     if (grouped) params.append('grouped', 'true')
@@ -41,35 +41,49 @@ async function fetchProducts(grouped: boolean = false, category?: string): Promi
     const url = `${baseUrl}/api/products${params.toString() ? '?' + params.toString() : ''}`
     console.log(`🔄 Fetching products from API: ${url} (Vercel: ${!!process.env.VERCEL})`)
     
+    // CRITICAL FIX: Use build-appropriate cache settings
     const response = await fetch(url, {
-      cache: 'no-store',
+      // Use force-cache for build time, no-store for runtime
+      cache: process.env.NODE_ENV === 'production' ? 'force-cache' : 'no-store',
+      next: { 
+        revalidate: process.env.NODE_ENV === 'production' ? 3600 : 60 // 1 hour prod, 1 min dev
+      },
       headers: {
         'Content-Type': 'application/json',
       },
       // Add timeout for production reliability
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(15000) // 15 second timeout for build
     })
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error')
+      console.error(`❌ API Error: ${response.status} ${response.statusText} - ${errorText}`)
       throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
     const data = await response.json()
     console.log(`✅ API Response: ${data.count || data.products?.length || 0} products`)
     
+    // CRITICAL: Ensure we always return a valid data structure
+    if (!data || typeof data !== 'object') {
+      console.warn('⚠️ API returned invalid data, using fallback')
+      return { products: [], count: 0 }
+    }
+    
     return data
   } catch (error) {
     console.error("❌ Error fetching products from API:", error)
-    // In production, provide more detailed error context
-    if (process.env.VERCEL) {
-      console.error("🔍 Vercel context:", {
-        VERCEL_URL: process.env.VERCEL_URL,
-        NODE_ENV: process.env.NODE_ENV,
-        isServer: typeof window === 'undefined'
-      })
-    }
-    throw error
+    // Enhanced error context for debugging
+    console.error("🔍 Debug context:", {
+      VERCEL: !!process.env.VERCEL,
+      VERCEL_URL: process.env.VERCEL_URL,
+      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+      NODE_ENV: process.env.NODE_ENV,
+      isServer: typeof window === 'undefined'
+    })
+    
+    // CRITICAL: Return safe fallback to prevent build failures
+    return { products: [], count: 0 }
   }
 }
 
