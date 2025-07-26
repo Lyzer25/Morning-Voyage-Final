@@ -1,20 +1,20 @@
-'use client'
+"use client"
 
-import type React from 'react'
+import type React from "react"
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Mail, Gift, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Mail, Gift, Sparkles } from "lucide-react"
+import { useState } from "react"
 
 export default function Newsletter() {
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle newsletter signup
-    console.log('Newsletter signup:', email)
-    setEmail('')
+    console.log("Newsletter signup:", email)
+    setEmail("")
   }
 
   return (
@@ -45,8 +45,8 @@ export default function Newsletter() {
           </h2>
 
           <p className="text-xl text-white/90 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-            Subscribe to our newsletter and receive exclusive offers, brewing tips, and be the first
-            to know about new coffee releases and fashion drops.
+            Subscribe to our newsletter and receive exclusive offers, brewing tips, and be the first to know about new
+            coffee releases and fashion drops.
           </p>
 
           {/* Form */}
@@ -58,7 +58,7 @@ export default function Newsletter() {
                   type="email"
                   placeholder="Enter your email address"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-12 h-14 bg-white/95 backdrop-blur-sm border-0 text-[#4B2E2E] placeholder:text-[#6E6658] rounded-2xl shadow-lg font-medium text-lg"
                   required
                 />
@@ -77,9 +77,9 @@ export default function Newsletter() {
           {/* Benefits */}
           <div className="grid sm:grid-cols-3 gap-6 max-w-2xl mx-auto mb-8">
             {[
-              { icon: '🎁', text: '50% Off First Order' },
-              { icon: '☕', text: 'Exclusive Coffee Tips' },
-              { icon: '👕', text: 'Early Fashion Access' },
+              { icon: "🎁", text: "50% Off First Order" },
+              { icon: "☕", text: "Exclusive Coffee Tips" },
+              { icon: "👕", text: "Early Fashion Access" },
             ].map((benefit, index) => (
               <div key={index} className="flex items-center justify-center space-x-2 text-white/90">
                 <span className="text-2xl">{benefit.icon}</span>

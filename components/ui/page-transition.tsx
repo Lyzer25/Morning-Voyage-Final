@@ -1,36 +1,28 @@
-'use client'
+"use client"
 
-import type React from 'react'
+import type React from "react"
 
-import { useEffect, useState, useRef } from 'react'
-import { usePathname } from 'next/navigation'
-import { Coffee, Loader2 } from 'lucide-react'
+import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
+import { Coffee, Loader2 } from "lucide-react"
 
 export default function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(false)
   const [displayChildren, setDisplayChildren] = useState(children)
-  const previousPathnameRef = useRef(pathname)
 
   useEffect(() => {
-    // Only trigger loading transition for actual route changes, not content updates
-    if (pathname !== previousPathnameRef.current) {
-      setIsLoading(true)
+    setIsLoading(true)
 
-      // Only scroll to top for actual page navigation, not filter updates
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll to top immediately when route changes
+    window.scrollTo({ top: 0, behavior: "smooth" })
 
-      const timer = setTimeout(() => {
-        setDisplayChildren(children)
-        setIsLoading(false)
-        previousPathnameRef.current = pathname
-      }, 300)
-
-      return () => clearTimeout(timer)
-    } else {
-      // For same-page updates (like filtering), update children immediately without loading state
+    const timer = setTimeout(() => {
       setDisplayChildren(children)
-    }
+      setIsLoading(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [pathname, children])
 
   if (isLoading) {
@@ -55,7 +47,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
 
           {/* Animated dots */}
           <div className="flex justify-center space-x-1 mt-4">
-            {[0, 1, 2].map(i => (
+            {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"

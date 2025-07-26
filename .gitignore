@@ -10,9 +10,6 @@
 # production
 /build
 
-# product cache
-/product-cache.json
-
 # debug
 npm-debug.log*
 yarn-debug.log*

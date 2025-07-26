@@ -1,33 +1,29 @@
-import { Truck, Award, Zap, Heart } from 'lucide-react'
+import { Truck, Award, Zap, Heart } from "lucide-react"
 
 const features = [
   {
     icon: Zap,
-    title: 'Roasted to Order',
-    description:
-      'Every bag is roasted fresh after you place your order, ensuring maximum flavor and aroma.',
-    gradient: 'from-[#4B2E2E] to-[#6E6658]',
+    title: "Roasted to Order",
+    description: "Every bag is roasted fresh after you place your order, ensuring maximum flavor and aroma.",
+    gradient: "from-[#4B2E2E] to-[#6E6658]",
   },
   {
     icon: Truck,
-    title: 'Lightning Fast Delivery',
-    description:
-      'Free shipping on orders over $35. Get your coffee delivered within 2-3 business days.',
-    gradient: 'from-[#9E7C83] to-[#6E6658]',
+    title: "Lightning Fast Delivery",
+    description: "Free shipping on orders over $35. Get your coffee delivered within 2-3 business days.",
+    gradient: "from-[#9E7C83] to-[#6E6658]",
   },
   {
     icon: Heart,
-    title: 'Sustainable Sourcing',
-    description:
-      'We work directly with farmers to ensure fair trade and environmentally responsible practices.',
-    gradient: 'from-[#D5BFA3] to-[#9E7C83]',
+    title: "Sustainable Sourcing",
+    description: "We work directly with farmers to ensure fair trade and environmentally responsible practices.",
+    gradient: "from-[#D5BFA3] to-[#9E7C83]",
   },
   {
     icon: Award,
-    title: 'Premium Quality',
-    description:
-      "Hand-selected beans from the world's finest coffee regions, curated by our expert roasters.",
-    gradient: 'from-[#6E6658] to-[#4B2E2E]',
+    title: "Premium Quality",
+    description: "Hand-selected beans from the world's finest coffee regions, curated by our expert roasters.",
+    gradient: "from-[#6E6658] to-[#4B2E2E]",
   },
 ]
 
@@ -41,16 +37,14 @@ export default function Features() {
         <div className="text-center mb-20">
           <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg mb-6">
             <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
-            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
-              WHY CHOOSE US
-            </span>
+            <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">WHY CHOOSE US</span>
           </div>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] mb-6 tracking-tight">
             Why Morning Voyage?
           </h2>
           <p className="text-xl text-[#6E6658] max-w-3xl mx-auto font-light leading-relaxed">
-            We're committed to delivering the finest coffee experience, from bean to cup, with
-            uncompromising quality and care.
+            We're committed to delivering the finest coffee experience, from bean to cup, with uncompromising quality
+            and care.
           </p>
         </div>
 

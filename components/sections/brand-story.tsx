@@ -1,5 +1,5 @@
-import { Heart, Users, Leaf, Play } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Heart, Users, Leaf, Play } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function BrandStory() {
   return (
@@ -17,9 +17,7 @@ export default function BrandStory() {
             <div className="space-y-6">
               <div className="inline-flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg">
                 <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
-                <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
-                  OUR STORY
-                </span>
+                <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">OUR STORY</span>
               </div>
 
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#4B2E2E] leading-tight tracking-tight">
@@ -31,14 +29,13 @@ export default function BrandStory() {
 
               <div className="space-y-4">
                 <p className="text-xl text-[#6E6658] leading-relaxed font-light">
-                  Morning Voyage was born from a simple belief: everyone deserves exceptional
-                  coffee. We started as coffee enthusiasts who were tired of stale, mass-produced
-                  beans sitting on shelves for months.
+                  Morning Voyage was born from a simple belief: everyone deserves exceptional coffee. We started as
+                  coffee enthusiasts who were tired of stale, mass-produced beans sitting on shelves for months.
                 </p>
                 <p className="text-lg text-[#6E6658] leading-relaxed font-light">
-                  Today, we've expanded beyond coffee to create a lifestyle brand that celebrates
-                  quality, freshness, and intentional living. Our fashion line embodies the same
-                  principles—crafted with care, made to last, and designed to stand out.
+                  Today, we've expanded beyond coffee to create a lifestyle brand that celebrates quality, freshness,
+                  and intentional living. Our fashion line embodies the same principles—crafted with care, made to last,
+                  and designed to stand out.
                 </p>
               </div>
             </div>
@@ -47,21 +44,16 @@ export default function BrandStory() {
               {[
                 {
                   icon: Heart,
-                  title: 'Passion',
-                  desc: 'Driven by love for quality',
-                  color: 'from-[#4B2E2E] to-[#6E6658]',
+                  title: "Passion",
+                  desc: "Driven by love for quality",
+                  color: "from-[#4B2E2E] to-[#6E6658]",
                 },
-                {
-                  icon: Users,
-                  title: 'Community',
-                  desc: 'Building connections',
-                  color: 'from-[#9E7C83] to-[#6E6658]',
-                },
+                { icon: Users, title: "Community", desc: "Building connections", color: "from-[#9E7C83] to-[#6E6658]" },
                 {
                   icon: Leaf,
-                  title: 'Sustainability',
-                  desc: 'Caring for our planet',
-                  color: 'from-[#D5BFA3] to-[#9E7C83]',
+                  title: "Sustainability",
+                  desc: "Caring for our planet",
+                  color: "from-[#D5BFA3] to-[#9E7C83]",
                 },
               ].map((item, index) => (
                 <div key={index} className="text-center group">

@@ -1,33 +1,25 @@
-'use client'
+"use client"
 
-import { Button } from '@/components/ui/button'
-import { ArrowRight, Coffee, Sparkles, Play } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { ArrowRight, Coffee, Sparkles, Play } from "lucide-react"
 
 export default function Hero() {
   return (
-    <section 
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20"
-      style={{
-        contain: 'layout style paint',
-        willChange: 'scroll-position'
-      }}
-    >
-      {/* Optimized Static Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#D5BFA3]/15 rounded-full"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#4B2E2E]/8 rounded-full"></div>
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-[#E7CFC7]/20 rounded-full"></div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-[#D5BFA3]/20 to-[#9E7C83]/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-br from-[#4B2E2E]/10 to-[#6E6658]/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-gradient-to-br from-[#E7CFC7]/30 to-[#D5BFA3]/30 rounded-full blur-2xl animate-pulse delay-500"></div>
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Content */}
           <div className="space-y-8 lg:pr-8">
-            <div className="inline-flex items-center space-x-3 bg-white/90 rounded-full px-6 py-3 border border-white/30 shadow-lg">
+            <div className="inline-flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 shadow-lg">
               <div className="w-2 h-2 bg-[#D5BFA3] rounded-full animate-pulse"></div>
-              <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">
-                FRESHLY ROASTED DAILY
-              </span>
+              <span className="text-[#4B2E2E] text-sm font-semibold tracking-wide">FRESHLY ROASTED DAILY</span>
             </div>
 
             <div className="space-y-6">
@@ -36,15 +28,13 @@ export default function Hero() {
                 <span className="block bg-gradient-to-r from-[#9E7C83] to-[#6E6658] bg-clip-text text-transparent">
                   Roasted,
                 </span>
-                <span className="block text-4xl sm:text-5xl lg:text-6xl font-light text-[#6E6658]">
-                  Just for You
-                </span>
+                <span className="block text-4xl sm:text-5xl lg:text-6xl font-light text-[#6E6658]">Just for You</span>
               </h1>
 
               <p className="text-xl text-[#6E6658] max-w-xl leading-relaxed font-light">
-                We don&apos;t believe in shelf-sitters. Every bag of coffee is{' '}
-                <span className="font-semibold text-[#4B2E2E]">roasted after you order</span>—never
-                before. Peak freshness, bold flavor, uncompromising quality.
+                We don't believe in shelf-sitters. Every bag of coffee is{" "}
+                <span className="font-semibold text-[#4B2E2E]">roasted after you order</span>—never before. Peak
+                freshness, bold flavor, uncompromising quality.
               </p>
             </div>
 
@@ -59,7 +49,7 @@ export default function Hero() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-[#4B2E2E] text-[#4B2E2E] hover:bg-[#4B2E2E] hover:text-white px-8 py-6 text-lg rounded-2xl bg-white/90 shadow-lg hover:shadow-xl transition-colors duration-200 group font-semibold"
+                className="border-2 border-[#4B2E2E] text-[#4B2E2E] hover:bg-[#4B2E2E] hover:text-white px-8 py-6 text-lg rounded-2xl backdrop-blur-sm bg-white/50 shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
               >
                 Explore Fashion
                 <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
@@ -69,9 +59,9 @@ export default function Hero() {
             {/* Modern Stats */}
             <div className="grid grid-cols-3 gap-8 pt-12">
               {[
-                { value: '24hrs', label: 'Fresh Roasted', icon: '⚡' },
-                { value: '50+', label: 'Coffee Blends', icon: '☕' },
-                { value: '10k+', label: 'Happy Customers', icon: '❤️' },
+                { value: "24hrs", label: "Fresh Roasted", icon: "⚡" },
+                { value: "50+", label: "Coffee Blends", icon: "☕" },
+                { value: "10k+", label: "Happy Customers", icon: "❤️" },
               ].map((stat, index) => (
                 <div key={index} className="text-center group">
                   <div className="text-3xl mb-2">{stat.icon}</div>
@@ -88,10 +78,7 @@ export default function Hero() {
           <div className="relative lg:pl-8">
             <div className="relative">
               {/* Main Card */}
-              <div 
-                className="relative bg-white/90 rounded-3xl p-8 shadow-2xl border border-white/30"
-                style={{ contain: 'layout style paint' }}
-              >
+              <div className="relative bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
                 <div className="aspect-square bg-gradient-to-br from-[#4B2E2E] via-[#6E6658] to-[#9E7C83] rounded-2xl flex items-center justify-center relative overflow-hidden">
                   {/* Animated Background Pattern */}
                   <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent"></div>
@@ -140,7 +127,9 @@ export default function Hero() {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce"></div>
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        
+      </div>
     </section>
   )
 }

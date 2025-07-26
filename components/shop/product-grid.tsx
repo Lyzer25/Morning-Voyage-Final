@@ -1,12 +1,12 @@
-'use client'
+"use client"
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Star, Heart, ShoppingCart, Eye, Coffee, Shirt, Wrench } from 'lucide-react'
-import { useState } from 'react'
-import { formatPrice } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Star, Heart, ShoppingCart, Eye, Coffee, Shirt, Wrench } from "lucide-react"
+import { useState } from "react"
+import { formatPrice } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 interface Product {
   sku: string
@@ -27,7 +27,7 @@ interface Product {
 
 interface ProductGridProps {
   products: Product[]
-  viewMode: 'grid' | 'list'
+  viewMode: "grid" | "list"
 }
 
 const categoryIcons = {
@@ -37,9 +37,9 @@ const categoryIcons = {
 }
 
 const categoryGradients = {
-  coffee: 'from-[#4B2E2E] to-[#6E6658]',
-  fashion: 'from-[#9E7C83] to-[#6E6658]',
-  equipment: 'from-[#D5BFA3] to-[#9E7C83]',
+  coffee: "from-[#4B2E2E] to-[#6E6658]",
+  fashion: "from-[#9E7C83] to-[#6E6658]",
+  equipment: "from-[#D5BFA3] to-[#9E7C83]",
 }
 
 export default function ProductGrid({ products, viewMode }: ProductGridProps) {
@@ -47,13 +47,13 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
   const [favorites, setFavorites] = useState<string[]>([])
 
   const handleProductClick = (product: Product) => {
-    const slug = product.sku.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const slug = product.sku.toLowerCase().replace(/[^a-z0-9]/g, "-")
     router.push(`/product/${slug}`)
   }
 
   const toggleFavorite = (productSku: string) => {
-    setFavorites(prev =>
-      prev.includes(productSku) ? prev.filter(sku => sku !== productSku) : [...prev, productSku]
+    setFavorites((prev) =>
+      prev.includes(productSku) ? prev.filter((sku) => sku !== productSku) : [...prev, productSku],
     )
   }
 
@@ -69,10 +69,10 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
     )
   }
 
-  if (viewMode === 'list') {
+  if (viewMode === "list") {
     return (
       <div className="space-y-6">
-        {products.map(product => {
+        {products.map((product) => {
           const CategoryIcon = categoryIcons[product.category as keyof typeof categoryIcons]
           const gradient = categoryGradients[product.category as keyof typeof categoryGradients]
 
@@ -111,21 +111,21 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={e => {
+                        onClick={(e) => {
                           e.stopPropagation()
                           toggleFavorite(product.sku)
                         }}
                         className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
                       >
                         <Heart
-                          className={`w-4 h-4 ${favorites.includes(product.sku) ? 'fill-red-500 text-red-500' : 'text-[#6E6658]'}`}
+                          className={`w-4 h-4 ${favorites.includes(product.sku) ? "fill-red-500 text-red-500" : "text-[#6E6658]"}`}
                         />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
-                        onClick={e => {
+                        onClick={(e) => {
                           e.stopPropagation()
                           handleProductClick(product)
                         }}
@@ -140,17 +140,12 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                     <div>
                       {/* Category & Rating */}
                       <div className="flex items-center justify-between mb-3">
-                        <Badge
-                          variant="outline"
-                          className="border-[#D5BFA3] text-[#6E6658] capitalize"
-                        >
+                        <Badge variant="outline" className="border-[#D5BFA3] text-[#6E6658] capitalize">
                           {product.category}
                         </Badge>
                         <div className="flex items-center space-x-1">
                           <Star className="w-4 h-4 fill-[#D5BFA3] text-[#D5BFA3]" />
-                          <span className="text-sm font-semibold text-[#4B2E2E]">
-                            {product.rating || 4.8}
-                          </span>
+                          <span className="text-sm font-semibold text-[#4B2E2E]">{product.rating || 4.8}</span>
                           <span className="text-xs text-[#6E6658]">({product.reviews || 124})</span>
                         </div>
                       </div>
@@ -161,20 +156,14 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                       </h3>
 
                       {/* Description */}
-                      <p className="text-[#6E6658] mb-4 font-light leading-relaxed">
-                        {product.description}
-                      </p>
+                      <p className="text-[#6E6658] mb-4 font-light leading-relaxed">{product.description}</p>
 
                       {/* Additional Info */}
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {product.category === 'coffee' && product.tastingNotes && (
+                        {product.category === "coffee" && product.tastingNotes && (
                           <div className="flex flex-wrap gap-1">
                             {product.tastingNotes.slice(0, 3).map((note: string) => (
-                              <Badge
-                                key={note}
-                                variant="secondary"
-                                className="text-xs bg-[#F6F1EB] text-[#6E6658]"
-                              >
+                              <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658]">
                                 {note}
                               </Badge>
                             ))}
@@ -186,9 +175,7 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                     {/* Price & Actions */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="text-2xl font-bold text-[#4B2E2E]">
-                          {formatPrice(product.price)}
-                        </span>
+                        <span className="text-2xl font-bold text-[#4B2E2E]">{formatPrice(product.price)}</span>
                         {product.originalPrice && product.originalPrice > product.price && (
                           <span className="text-sm text-[#6E6658] line-through">
                             {formatPrice(product.originalPrice)}
@@ -196,7 +183,7 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                         )}
                       </div>
                       <Button
-                        onClick={e => {
+                        onClick={(e) => {
                           e.stopPropagation()
                           // Add to cart logic
                         }}
@@ -218,7 +205,7 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
 
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-      {products.map(product => {
+      {products.map((product) => {
         const CategoryIcon = categoryIcons[product.category as keyof typeof categoryIcons]
         const gradient = categoryGradients[product.category as keyof typeof categoryGradients]
 
@@ -243,14 +230,14 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={e => {
+                  onClick={(e) => {
                     e.stopPropagation()
                     toggleFavorite(product.sku)
                   }}
                   className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg"
                 >
                   <Heart
-                    className={`w-4 h-4 ${favorites.includes(product.sku) ? 'fill-red-500 text-red-500' : 'text-[#6E6658]'}`}
+                    className={`w-4 h-4 ${favorites.includes(product.sku) ? "fill-red-500 text-red-500" : "text-[#6E6658]"}`}
                   />
                 </Button>
               </div>
@@ -273,7 +260,7 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                     <Button
                       size="sm"
                       className="bg-white text-[#4B2E2E] hover:bg-white/90 rounded-full shadow-xl"
-                      onClick={e => {
+                      onClick={(e) => {
                         e.stopPropagation()
                         handleProductClick(product)
                       }}
@@ -290,15 +277,10 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-1">
                     <Star className="w-4 h-4 fill-[#D5BFA3] text-[#D5BFA3]" />
-                    <span className="text-sm font-semibold text-[#4B2E2E]">
-                      {product.rating || 4.8}
-                    </span>
+                    <span className="text-sm font-semibold text-[#4B2E2E]">{product.rating || 4.8}</span>
                     <span className="text-xs text-[#6E6658]">({product.reviews || 124})</span>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="border-[#D5BFA3] text-[#6E6658] capitalize text-xs"
-                  >
+                  <Badge variant="outline" className="border-[#D5BFA3] text-[#6E6658] capitalize text-xs">
                     {product.category}
                   </Badge>
                 </div>
@@ -314,14 +296,10 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                 </p>
 
                 {/* Additional Info */}
-                {product.category === 'coffee' && product.tastingNotes && (
+                {product.category === "coffee" && product.tastingNotes && (
                   <div className="flex flex-wrap gap-1 mb-4">
                     {product.tastingNotes.slice(0, 2).map((note: string) => (
-                      <Badge
-                        key={note}
-                        variant="secondary"
-                        className="text-xs bg-[#F6F1EB] text-[#6E6658]"
-                      >
+                      <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658]">
                         {note}
                       </Badge>
                     ))}
@@ -331,18 +309,14 @@ export default function ProductGrid({ products, viewMode }: ProductGridProps) {
                 {/* Price */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="text-xl font-bold text-[#4B2E2E]">
-                      {formatPrice(product.price)}
-                    </span>
+                    <span className="text-xl font-bold text-[#4B2E2E]">{formatPrice(product.price)}</span>
                     {product.originalPrice && product.originalPrice > product.price && (
-                      <span className="text-sm text-[#6E6658] line-through">
-                        {formatPrice(product.originalPrice)}
-                      </span>
+                      <span className="text-sm text-[#6E6658] line-through">{formatPrice(product.originalPrice)}</span>
                     )}
                   </div>
                   <Button
                     size="sm"
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation()
                       // Add to cart logic
                     }}

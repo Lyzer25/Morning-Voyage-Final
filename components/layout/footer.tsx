@@ -1,5 +1,5 @@
-import Link from 'next/link'
-import { Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from 'lucide-react'
+import Link from "next/link"
+import { Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -24,18 +24,14 @@ export default function Footer() {
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#4B2E2E] rounded-full"></div>
                 </div>
                 <div>
-                  <span className="text-white font-bold text-2xl tracking-tight">
-                    Morning Voyage
-                  </span>
-                  <div className="text-xs text-gray-400 font-medium tracking-wider uppercase">
-                    Premium Coffee
-                  </div>
+                  <span className="text-white font-bold text-2xl tracking-tight">Morning Voyage</span>
+                  <div className="text-xs text-gray-400 font-medium tracking-wider uppercase">Premium Coffee</div>
                 </div>
               </div>
 
               <p className="text-gray-400 leading-relaxed font-light max-w-md">
-                Freshly roasted coffee and premium fashion, crafted with intention and delivered
-                with care. Experience the difference of quality that never sits on shelves.
+                Freshly roasted coffee and premium fashion, crafted with intention and delivered with care. Experience
+                the difference of quality that never sits on shelves.
               </p>
 
               {/* Contact Info */}
@@ -57,18 +53,10 @@ export default function Footer() {
               {/* Social Links */}
               <div className="flex space-x-4">
                 {[
-                  {
-                    icon: Instagram,
-                    href: 'https://www.instagram.com/morningvoyage.co',
-                    label: 'Instagram',
-                  },
-                  {
-                    icon: Facebook,
-                    href: 'https://www.facebook.com/share/1ARzCwokBj/',
-                    label: 'Facebook',
-                  },
-                  { icon: Twitter, href: '#', label: 'Twitter' },
-                  { icon: Youtube, href: '#', label: 'YouTube' },
+                  { icon: Instagram, href: "https://www.instagram.com/morningvoyage.co", label: "Instagram" },
+                  { icon: Facebook, href: "https://www.facebook.com/share/1ARzCwokBj/", label: "Facebook" },
+                  { icon: Twitter, href: "#", label: "Twitter" },
+                  { icon: Youtube, href: "#", label: "YouTube" },
                 ].map((social, index) => (
                   <Link
                     key={index}
@@ -87,13 +75,13 @@ export default function Footer() {
               <h3 className="font-bold text-white mb-6 text-lg">Products</h3>
               <ul className="space-y-3">
                 {[
-                  'Coffee Blends',
-                  'Single Origins',
-                  'Decaf Options',
-                  'Coffee Bundles',
-                  'Fashion Line',
-                  'Accessories',
-                ].map(item => (
+                  "Coffee Blends",
+                  "Single Origins",
+                  "Decaf Options",
+                  "Coffee Bundles",
+                  "Fashion Line",
+                  "Accessories",
+                ].map((item) => (
                   <li key={item}>
                     <Link
                       href="#"
@@ -110,33 +98,7 @@ export default function Footer() {
             <div>
               <h3 className="font-bold text-white mb-6 text-lg">Company</h3>
               <ul className="space-y-3">
-                {['About Us', 'Our Story', 'Sustainability', 'Careers', 'Press Kit', 'Blog'].map(
-                  item => (
-                    <li key={item}>
-                      <Link
-                        href="#"
-                        className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
-                      >
-                        {item}
-                      </Link>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            {/* Support */}
-            <div>
-              <h3 className="font-bold text-white mb-6 text-lg">Support</h3>
-              <ul className="space-y-3">
-                {[
-                  'Help Center',
-                  'Shipping Info',
-                  'Returns',
-                  'Size Guide',
-                  'Brewing Guide',
-                  'Contact Us',
-                ].map(item => (
+                {["About Us", "Our Story", "Sustainability", "Careers", "Press Kit", "Blog"].map((item) => (
                   <li key={item}>
                     <Link
                       href="#"
@@ -146,6 +108,25 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h3 className="font-bold text-white mb-6 text-lg">Support</h3>
+              <ul className="space-y-3">
+                {["Help Center", "Shipping Info", "Returns", "Size Guide", "Brewing Guide", "Contact Us"].map(
+                  (item) => (
+                    <li key={item}>
+                      <Link
+                        href="#"
+                        className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
+                      >
+                        {item}
+                      </Link>
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           </div>
@@ -158,7 +139,7 @@ export default function Footer() {
               © 2024 Morning Voyage. All rights reserved. Made with ☕ in San Francisco.
             </p>
             <div className="flex space-x-8">
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
+              {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
                 <Link
                   key={item}
                   href="#"
