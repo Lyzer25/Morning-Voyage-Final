@@ -55,7 +55,7 @@
 ## 🔍 Verification Checklist
 
 ### **Deployment Verification:**
-```bash
+\`\`\`bash
 # 1. Check API connectivity
 curl https://your-site.vercel.app/api/products?grouped=true
 
@@ -64,7 +64,7 @@ curl -X POST https://your-site.vercel.app/api/admin/sync
 
 # 3. Check coffee page loads
 curl https://your-site.vercel.app/coffee
-```
+\`\`\`
 
 ### **Admin Panel Testing:**
 1. ✅ Upload a CSV file in /admin
@@ -73,20 +73,20 @@ curl https://your-site.vercel.app/coffee
 4. ✅ Confirm new products are visible
 
 ### **Manual Sync (if needed):**
-```bash
+\`\`\`bash
 # Emergency sync trigger
 curl -X POST https://your-site.vercel.app/api/admin/sync \
   -H "Content-Type: application/json" \
   -d '{"force": true}'
-```
+\`\`\`
 
 ## 📊 Production Environment Variables
 
 **Required in Vercel Dashboard:**
-```env
+\`\`\`env
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_4ULLFzohtX5DWya6_5nLLffTP3PF7EwYV2xZ2nP3Nxf3nGX
 NODE_ENV=production
-```
+\`\`\`
 
 **Automatic Vercel Variables:**
 - ✅ `VERCEL=1` (auto-set)
@@ -95,11 +95,11 @@ NODE_ENV=production
 ## 🚀 Deployment Instructions
 
 ### **1. Deploy to Vercel:**
-```bash
+\`\`\`bash
 git add .
 git commit -m "Fix: Vercel production data sync for /coffee page"
 git push origin main
-```
+\`\`\`
 
 ### **2. Verify Environment Variables:**
 - ✅ BLOB_READ_WRITE_TOKEN is set in Vercel dashboard
@@ -114,7 +114,7 @@ git push origin main
 ## 🔧 Troubleshooting
 
 ### **If /coffee page still empty:**
-```bash
+\`\`\`bash
 # 1. Check API connectivity
 curl https://your-site.vercel.app/api/products?grouped=true
 
@@ -123,7 +123,7 @@ curl -X POST https://your-site.vercel.app/api/admin/sync
 
 # 3. Check Vercel function logs
 # Go to Vercel Dashboard > Functions > View logs
-```
+\`\`\`
 
 ### **Debug Information:**
 - ✅ All API calls logged with timestamps

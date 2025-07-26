@@ -52,7 +52,7 @@ All admin actions now trigger:
 ## Implementation Details
 
 ### Cache Revalidation Function
-```typescript
+\`\`\`typescript
 async function triggerCacheRevalidation() {
   // Revalidate Next.js paths
   revalidatePath("/admin", "layout")
@@ -66,7 +66,7 @@ async function triggerCacheRevalidation() {
     body: JSON.stringify({ paths: ["/", "/coffee", "/shop", "/admin"] })
   })
 }
-```
+\`\`\`
 
 ### Development vs Production
 - **Development**: Uses sample products when BLOB_READ_WRITE_TOKEN not set
@@ -141,7 +141,7 @@ async function triggerCacheRevalidation() {
 
 ## Verification Commands
 
-```bash
+\`\`\`bash
 # Start development server
 npm run dev
 
@@ -153,6 +153,6 @@ npm run dev
 # Check API endpoints
 # GET http://localhost:3000/api/products
 # GET http://localhost:3000/api/products?grouped=true
-```
+\`\`\`
 
 The data sync issue has been completely resolved with a production-ready, scalable solution.
