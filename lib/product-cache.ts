@@ -1,25 +1,136 @@
-// Enhanced product cache management system with better variant grouping
-import type { SheetProduct } from "./google-sheets-integration"
+// API-based product cache management system
+import type { Product } from "./types"
 import type { GroupedProduct } from "./product-variants"
-import { groupProductVariants } from "./product-variants"
 
 // In-memory cache for products
-let productCache: SheetProduct[] = []
+let productCache: Product[] = []
 let groupedProductCache: GroupedProduct[] = []
 let lastSyncTime = 0
 let isSyncing = false
 
-// Cache duration (5 minutes)
-const CACHE_DURATION = 5 * 60 * 1000
+// Cache duration (1 minute for development, 5 minutes for production)
+const CACHE_DURATION = process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 60 * 1000
 
-// Get raw products from cache (admin only)
-export function getCachedProductsSync(): SheetProduct[] {
-  return productCache
+// Fetch products from API - Vercel-optimized URL resolution
+async function fetchProducts(grouped: boolean = false, category?: string): Promise<any> {
+  try {
+    // Use different URL resolution strategies for different contexts
+    let baseUrl = ''
+    
+    if (typeof window === 'undefined') {
+      // Server-side: Use relative URLs for internal API calls on Vercel
+      if (process.env.VERCEL) {
+        // On Vercel, use relative URLs for internal API calls
+        baseUrl = ''
+      } else if (process.env.VERCEL_URL) {
+        // Vercel preview/production - construct full URL carefully
+        baseUrl = process.env.VERCEL_URL.startsWith('http') 
+          ? process.env.VERCEL_URL 
+          : `https://${process.env.VERCEL_URL}`
+      } else {
+        // Local development
+        baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+      }
+    }
+    // Client-side: always use relative URLs
+    
+    const params = new URLSearchParams()
+    if (grouped) params.append('grouped', 'true')
+    if (category) params.append('category', category)
+    
+    const url = `${baseUrl}/api/products${params.toString() ? '?' + params.toString() : ''}`
+    console.log(`🔄 Fetching products from API: ${url} (Vercel: ${!!process.env.VERCEL})`)
+    
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Add timeout for production reliability
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    console.log(`✅ API Response: ${data.count || data.products?.length || 0} products`)
+    
+    return data
+  } catch (error) {
+    console.error("❌ Error fetching products from API:", error)
+    // In production, provide more detailed error context
+    if (process.env.VERCEL) {
+      console.error("🔍 Vercel context:", {
+        VERCEL_URL: process.env.VERCEL_URL,
+        NODE_ENV: process.env.NODE_ENV,
+        isServer: typeof window === 'undefined'
+      })
+    }
+    throw error
+  }
 }
 
-// Get grouped products from cache (for end users)
-export function getCachedGroupedProducts(): GroupedProduct[] {
+// Get raw products from cache or API (admin only)
+export async function getCachedProducts(): Promise<Product[]> {
+  const now = Date.now()
+  
+  // Return cached data if fresh
+  if (productCache.length > 0 && now - lastSyncTime < CACHE_DURATION) {
+    console.log("📦 Returning cached raw products")
+    return productCache
+  }
+
+  try {
+    isSyncing = true
+    const data = await fetchProducts(false)
+    productCache = data.products || []
+    lastSyncTime = now
+    console.log(`✅ Updated raw product cache: ${productCache.length} products`)
+    return productCache
+  } catch (error) {
+    console.error("❌ Failed to fetch products, returning cached data:", error)
+    return productCache
+  } finally {
+    isSyncing = false
+  }
+}
+
+// Get grouped products from cache or API (for end users)
+export async function getCachedGroupedProducts(): Promise<GroupedProduct[]> {
+  const now = Date.now()
+  
+  // Return cached data if fresh
+  if (groupedProductCache.length > 0 && now - lastSyncTime < CACHE_DURATION) {
+    console.log("📦 Returning cached grouped products")
+    return groupedProductCache
+  }
+
+  try {
+    isSyncing = true
+    const data = await fetchProducts(true)
+    groupedProductCache = data.products || []
+    lastSyncTime = now
+    console.log(`✅ Updated grouped product cache: ${groupedProductCache.length} products`)
+    return groupedProductCache
+  } catch (error) {
+    console.error("❌ Failed to fetch grouped products, returning cached data:", error)
+    return groupedProductCache
+  } finally {
+    isSyncing = false
+  }
+}
+
+// Synchronous version for immediate access (returns cached data only)
+export function getCachedGroupedProductsSync(): GroupedProduct[] {
   return groupedProductCache
+}
+
+// Get raw products synchronously (returns cached data only)
+export function getCachedProductsSync(): Product[] {
+  return productCache
 }
 
 // Check if cache needs refresh
@@ -28,33 +139,22 @@ export function isCacheStale(): boolean {
   return now - lastSyncTime > CACHE_DURATION
 }
 
-// Update cache with new products (admin only)
-export function updateProductCache(products: SheetProduct[]): void {
-  console.log(`🔄 Updating cache with ${products.length} raw products...`)
+// Force cache refresh
+export async function refreshCache(): Promise<void> {
+  console.log("🔄 Force refreshing product cache...")
+  lastSyncTime = 0 // Force cache refresh
+  await Promise.all([
+    getCachedProducts(),
+    getCachedGroupedProducts()
+  ])
+}
 
-  productCache = products
-
-  // Group products into variants
-  console.log(`🔄 Grouping products into variants...`)
-  groupedProductCache = groupProductVariants(products)
-
-  lastSyncTime = Date.now()
-
-  console.log(`✅ Product cache updated:`)
-  console.log(`   - Raw products: ${products.length}`)
-  console.log(`   - Grouped products: ${groupedProductCache.length}`)
-  console.log(`   - Sync time: ${new Date(lastSyncTime).toLocaleString()}`)
-
-  // Log some examples for debugging
-  if (groupedProductCache.length > 0) {
-    console.log(`📊 Sample grouped products:`)
-    groupedProductCache.slice(0, 3).forEach((product, index) => {
-      console.log(`   ${index + 1}. ${product.productName}:`)
-      console.log(`      - Variants: ${product.variants.length}`)
-      console.log(`      - Formats: ${product.availableFormats.join(", ")}`)
-      console.log(`      - Price range: $${product.priceRange.min} - $${product.priceRange.max}`)
-    })
-  }
+// Invalidate cache (force next request to fetch fresh data)
+export function invalidateCache(): void {
+  console.log("🗑️ Invalidating product cache")
+  lastSyncTime = 0
+  productCache = []
+  groupedProductCache = []
 }
 
 // Get cache status
@@ -62,7 +162,7 @@ export function getCacheStatus() {
   return {
     rawProductCount: productCache.length,
     groupedProductCount: groupedProductCache.length,
-    lastSync: new Date(lastSyncTime).toISOString(),
+    lastSync: lastSyncTime > 0 ? new Date(lastSyncTime).toISOString() : null,
     isStale: isCacheStale(),
     isSyncing,
     nextSyncIn: Math.max(0, CACHE_DURATION - (Date.now() - lastSyncTime)),
@@ -75,98 +175,30 @@ export function setSyncingStatus(status: boolean): void {
   console.log(`🔄 Sync status: ${status ? "SYNCING" : "IDLE"}`)
 }
 
-// Initialize cache with static data if empty
-export function initializeCache(): void {
-  if (productCache.length === 0) {
-    console.log("🚀 Initializing product cache with sample products...")
+// Trigger cache revalidation via API
+export async function revalidateCache(paths?: string[]): Promise<void> {
+  try {
+    console.log("🔄 Triggering cache revalidation...")
+    
+    const response = await fetch('/api/products/revalidate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ paths })
+    })
 
-    // Initialize with sample products that demonstrate variants
-    productCache = [
-      {
-        sku: "COFFEE-MORNING-12OZ-WHOLE",
-        productName: "Morning Blend",
-        category: "coffee",
-        subcategory: "signature-blend",
-        status: "active",
-        price: 16.99,
-        description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
-        roastLevel: "medium",
-        origin: "Colombia & Brazil",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Chocolate", "Caramel", "Nuts"],
-        featured: true,
-      },
-      {
-        sku: "COFFEE-MORNING-12OZ-GROUND",
-        productName: "Morning Blend",
-        category: "coffee",
-        subcategory: "signature-blend",
-        status: "active",
-        price: 16.99,
-        description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
-        roastLevel: "medium",
-        origin: "Colombia & Brazil",
-        weight: "12 oz",
-        format: "ground",
-        tastingNotes: ["Chocolate", "Caramel", "Nuts"],
-        featured: true,
-      },
-      {
-        sku: "COFFEE-DARK-12OZ-WHOLE",
-        productName: "Dark Roast Supreme",
-        category: "coffee",
-        subcategory: "dark-roast",
-        status: "active",
-        price: 17.99,
-        description: "Bold and intense dark roast with rich, smoky flavors",
-        roastLevel: "dark",
-        origin: "Guatemala",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
-        featured: true,
-      },
-      {
-        sku: "COFFEE-DARK-12OZ-GROUND",
-        productName: "Dark Roast Supreme",
-        category: "coffee",
-        subcategory: "dark-roast",
-        status: "active",
-        price: 17.99,
-        description: "Bold and intense dark roast with rich, smoky flavors",
-        roastLevel: "dark",
-        origin: "Guatemala",
-        weight: "12 oz",
-        format: "ground",
-        tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
-        featured: true,
-      },
-      {
-        sku: "COFFEE-LIGHT-12OZ-WHOLE",
-        productName: "Ethiopian Single Origin",
-        category: "coffee",
-        subcategory: "single-origin",
-        status: "active",
-        price: 19.99,
-        description: "Bright and fruity single origin from Ethiopia",
-        roastLevel: "light",
-        origin: "Ethiopia",
-        weight: "12 oz",
-        format: "whole-bean",
-        tastingNotes: ["Blueberry", "Floral", "Citrus"],
-        featured: false,
-      },
-    ] as SheetProduct[]
+    if (!response.ok) {
+      throw new Error(`Revalidation failed: ${response.statusText}`)
+    }
 
-    groupedProductCache = groupProductVariants(productCache)
-    lastSyncTime = Date.now()
-
-    console.log(`✅ Initialized cache:`)
-    console.log(`   - Raw products: ${productCache.length}`)
-    console.log(`   - Grouped products: ${groupedProductCache.length}`)
+    const result = await response.json()
+    console.log("✅ Cache revalidation triggered:", result.revalidatedPaths)
+    
+    // Also invalidate local cache
+    invalidateCache()
+    
+  } catch (error) {
+    console.error("❌ Failed to trigger cache revalidation:", error)
   }
 }
-
-// Auto-initialize cache
-initializeCache()

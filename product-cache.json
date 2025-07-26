@@ -1,0 +1,11 @@
+{
+  "products": [],
+  "stats": {
+    "rawProducts": 0,
+    "groupedProducts": 0,
+    "activeProducts": 0,
+    "timestamp": "2025-06-30T05:06:07.497Z",
+    "syncDuration": 6265,
+    "note": "No products found in Google Sheets"
+  }
+}

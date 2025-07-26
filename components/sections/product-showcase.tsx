@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import CoffeeGrid from "@/components/coffee/coffee-grid"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import type { GroupedProduct } from "@/lib/product-variants"
 import Link from "next/link"
 
-export default function ProductShowcase() {
-  const allProducts = getCachedGroupedProducts()
-  const featuredProducts = allProducts.filter((p) => p.featured)
+interface ProductShowcaseProps {
+  products: GroupedProduct[]
+}
+
+export default function ProductShowcase({ products }: ProductShowcaseProps) {
+  const featuredProducts = products.filter((p) => p.featured)
 
   return (
     <section className="py-32 bg-gradient-to-b from-white via-[#F6F1EB]/30 to-white">

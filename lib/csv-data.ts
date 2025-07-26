@@ -10,13 +10,83 @@ let productCache: Product[] | null = null
 let lastFetchTime = 0
 const CACHE_DURATION = 60 * 1000 // 1 minute
 
+// Sample products for development when Vercel Blob is not configured
+const SAMPLE_PRODUCTS: Product[] = [
+  {
+    sku: "COFFEE-MORNING-12OZ-WHOLE",
+    productName: "Morning Blend",
+    category: "coffee",
+    subcategory: "signature-blend",
+    status: "active",
+    price: 16.99,
+    description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
+    roastLevel: "medium",
+    origin: "Colombia & Brazil",
+    weight: "12 oz",
+    format: "whole-bean",
+    tastingNotes: "Chocolate, Caramel, Nuts",
+    featured: true,
+  },
+  {
+    sku: "COFFEE-MORNING-12OZ-GROUND",
+    productName: "Morning Blend",
+    category: "coffee",
+    subcategory: "signature-blend", 
+    status: "active",
+    price: 16.99,
+    description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
+    roastLevel: "medium",
+    origin: "Colombia & Brazil",
+    weight: "12 oz",
+    format: "ground",
+    tastingNotes: "Chocolate, Caramel, Nuts",
+    featured: true,
+  },
+  {
+    sku: "COFFEE-DARK-12OZ-WHOLE",
+    productName: "Dark Roast Supreme",
+    category: "coffee",
+    subcategory: "dark-roast",
+    status: "active",
+    price: 17.99,
+    description: "Bold and intense dark roast with rich, smoky flavors",
+    roastLevel: "dark",
+    origin: "Guatemala",
+    weight: "12 oz",
+    format: "whole-bean",
+    tastingNotes: "Dark Chocolate, Smoky, Robust",
+    featured: true,
+  },
+  {
+    sku: "COFFEE-LIGHT-12OZ-WHOLE",
+    productName: "Ethiopian Single Origin",
+    category: "coffee",
+    subcategory: "single-origin",
+    status: "active",
+    price: 19.99,
+    description: "Bright and fruity single origin from Ethiopia",
+    roastLevel: "light", 
+    origin: "Ethiopia",
+    weight: "12 oz",
+    format: "whole-bean",
+    tastingNotes: "Blueberry, Floral, Citrus",
+    featured: false,
+  }
+]
+
 async function fetchAndParseCsv(): Promise<Product[]> {
   console.log("Fetching products from Vercel Blob...")
   try {
+    // Check if we have a Vercel Blob token
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.log("⚠️ No BLOB_READ_WRITE_TOKEN found, using sample products for development")
+      return SAMPLE_PRODUCTS
+    }
+
     const blob = await list({ prefix: BLOB_FILENAME, limit: 1 })
     if (blob.blobs.length === 0) {
-      console.log("No products.csv found in blob storage.")
-      return []
+      console.log("No products.csv found in blob storage, using sample products")
+      return SAMPLE_PRODUCTS
     }
 
     const fileUrl = blob.blobs[0].url
@@ -44,7 +114,8 @@ async function fetchAndParseCsv(): Promise<Product[]> {
     return productsWithStatus
   } catch (error) {
     console.error("Error fetching or parsing CSV from blob:", error)
-    return [] // Return empty array on error
+    console.log("Falling back to sample products")
+    return SAMPLE_PRODUCTS
   }
 }
 
