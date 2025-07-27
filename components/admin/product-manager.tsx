@@ -61,12 +61,30 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
-  const filteredProducts = products.filter(
-    (p) =>
-      p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // Enhanced filtering state
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [roastFilter, setRoastFilter] = useState<string>('all') 
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  const filteredProducts = products.filter((p) => {
+    // Existing search logic
+    const matchesSearch = p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // NEW: Category filter
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
+    
+    // NEW: Roast level filter (only for coffee)
+    const matchesRoast = roastFilter === 'all' || 
+      (p.category === 'coffee' && p.roastLevel === roastFilter) ||
+      p.category !== 'coffee' // Non-coffee products pass roast filter
+    
+    // NEW: Status filter  
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
+    
+    return matchesSearch && matchesCategory && matchesRoast && matchesStatus
+  })
 
   const handleExport = async () => {
     const { csv, error } = await exportCsvAction()
@@ -202,6 +220,100 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           <CheckCircle className="h-4 w-4" /> {uploadState.success}
         </div>
       )}
+
+      {/* Advanced Filters */}
+      <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+        <div className="flex flex-wrap gap-4">
+          {/* Category Filter */}
+          <div className="flex flex-col min-w-40">
+            <label className="text-sm font-medium mb-1">Category</label>
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="border rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="all">All Categories ({products.length})</option>
+              <option value="coffee">Coffee ({products.filter(p => p.category === 'coffee').length})</option>
+              <option value="subscription">Subscription ({products.filter(p => p.category === 'subscription').length})</option>
+              <option value="gift-set">Gift Set ({products.filter(p => p.category === 'gift-set').length})</option>
+            </select>
+          </div>
+
+          {/* Roast Level Filter - Show only when coffee selected */}
+          {categoryFilter === 'coffee' && (
+            <div className="flex flex-col min-w-40">
+              <label className="text-sm font-medium mb-1">Roast Level</label>
+              <select 
+                value={roastFilter} 
+                onChange={(e) => setRoastFilter(e.target.value)}
+                className="border rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="all">All Roasts</option>
+                <option value="light">Light</option>
+                <option value="medium">Medium</option>
+                <option value="medium-dark">Medium-Dark</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+          )}
+
+          {/* Status Filter */}
+          <div className="flex flex-col min-w-40">
+            <label className="text-sm font-medium mb-1">Status</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="all">All Status ({products.length})</option>
+              <option value="active">Active ({products.filter(p => p.status === 'active').length})</option>
+              <option value="draft">Draft ({products.filter(p => p.status === 'draft').length})</option>
+              <option value="archived">Archived ({products.filter(p => p.status === 'archived').length})</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Quick Action Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setCategoryFilter('coffee')}
+            className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+          >
+            Coffee Only ({products.filter(p => p.category === 'coffee').length})
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setStatusFilter('draft')}
+            className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
+          >
+            Drafts ({products.filter(p => p.status === 'draft').length})
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setStatusFilter('active')}
+            className="bg-green-50 hover:bg-green-100 border-green-200"
+          >
+            Active ({products.filter(p => p.status === 'active').length})
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {setCategoryFilter('all'); setRoastFilter('all'); setStatusFilter('all'); setSearchTerm('')}}
+            className="bg-gray-50 hover:bg-gray-100 border-gray-200"
+          >
+            Clear All Filters
+          </Button>
+          
+          {/* Results Count */}
+          <div className="flex items-center px-3 py-1 bg-white rounded-md border text-sm ml-auto">
+            <strong>Showing {filteredProducts.length} of {products.length} products</strong>
+          </div>
+        </div>
+      </div>
 
       {/* Bulk Actions Bar */}
       {selectedSkus.length > 0 && (
