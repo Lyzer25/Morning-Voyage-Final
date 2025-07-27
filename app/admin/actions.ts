@@ -274,3 +274,49 @@ export async function toggleFeaturedAction(sku: string, isFeatured: boolean): Pr
     return { error: "Failed to update product feature status." }
   }
 }
+
+export async function bulkDeleteProductsAction(skus: string[]): Promise<FormState> {
+  try {
+    if (!skus || skus.length === 0) {
+      return { error: "No products selected for deletion." }
+    }
+
+    console.log(`🗑️ Bulk deleting ${skus.length} products:`, skus)
+    
+    const products = await getProducts()
+    const filteredProducts = products.filter((p) => !skus.includes(p.sku))
+    
+    if (filteredProducts.length === products.length) {
+      return { error: "No matching products found to delete." }
+    }
+
+    await updateProducts(filteredProducts)
+    await triggerCacheRevalidation()
+    
+    const deletedCount = products.length - filteredProducts.length
+    return { success: `Successfully deleted ${deletedCount} product${deletedCount === 1 ? '' : 's'}. Changes will appear on the live site shortly.` }
+  } catch (error) {
+    console.error("Error in bulk delete:", error)
+    return { error: "Failed to delete selected products." }
+  }
+}
+
+export async function toggleStatusAction(sku: string, status: "active" | "draft" | "archived"): Promise<FormState> {
+  try {
+    const products = await getProducts()
+    const productIndex = products.findIndex((p) => p.sku === sku)
+
+    if (productIndex === -1) {
+      return { error: "Product not found." }
+    }
+
+    products[productIndex].status = status
+    await updateProducts(products)
+
+    await triggerCacheRevalidation()
+    return { success: `Product status updated to ${status} for SKU: ${sku}. Changes will appear on the live site shortly.` }
+  } catch (error) {
+    console.error("Error toggling status:", error)
+    return { error: "Failed to update product status." }
+  }
+}

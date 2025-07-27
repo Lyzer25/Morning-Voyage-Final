@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Download,
 } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -31,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction } from "@/app/admin/actions"
+import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction } from "@/app/admin/actions"
 import type { Product } from "@/lib/types"
 import ProductForm from "./product-form"
 
@@ -55,6 +56,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingSku, setDeletingSku] = useState<string | null>(null)
+  
+  // Bulk delete state
+  const [selectedSkus, setSelectedSkus] = useState<string[]>([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const filteredProducts = products.filter(
     (p) =>
@@ -108,6 +113,55 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     })
   }
 
+  const handleToggleStatus = (sku: string, isActive: boolean) => {
+    const newStatus = isActive ? "active" : "draft"
+    startTransition(async () => {
+      const result = await toggleStatusAction(sku, newStatus)
+      if (result.error) {
+        alert(`Failed to update product status: ${result.error}`)
+      } else {
+        setProducts(products.map((p) => (p.sku === sku ? { ...p, status: newStatus } : p)))
+        // No full router.refresh() to keep the UI state, revalidation will handle data
+      }
+    })
+  }
+
+  // Bulk delete handlers
+  const handleSelectProduct = (sku: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSkus([...selectedSkus, sku])
+    } else {
+      setSelectedSkus(selectedSkus.filter(s => s !== sku))
+    }
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSkus(filteredProducts.map(p => p.sku))
+    } else {
+      setSelectedSkus([])
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedSkus.length === 0) return
+    
+    startTransition(async () => {
+      const result = await bulkDeleteProductsAction(selectedSkus)
+      if (result.error) {
+        alert(`Bulk deletion failed: ${result.error}`)
+      } else {
+        setProducts(products.filter(p => !selectedSkus.includes(p.sku)))
+        setSelectedSkus([])
+        router.refresh()
+      }
+      setIsBulkDeleting(false)
+    })
+  }
+
+  const isAllSelected = filteredProducts.length > 0 && selectedSkus.length === filteredProducts.length
+  const isIndeterminate = selectedSkus.length > 0 && selectedSkus.length < filteredProducts.length
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -149,10 +203,47 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         </div>
       )}
 
+      {/* Bulk Actions Bar */}
+      {selectedSkus.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-blue-900">
+              {selectedSkus.length} product{selectedSkus.length === 1 ? '' : 's'} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedSkus([])}
+              disabled={isPending}
+            >
+              Clear Selection
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsBulkDeleting(true)}
+              disabled={isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                  aria-label="Select all products"
+                />
+              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Product Name</TableHead>
               <TableHead>SKU</TableHead>
@@ -165,14 +256,29 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             {filteredProducts.map((product) => (
               <TableRow key={product.sku}>
                 <TableCell>
-                  <Badge
-                    variant={product.status === "active" ? "default" : "secondary"}
-                    className={
-                      product.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                    }
-                  >
-                    {product.status}
-                  </Badge>
+                  <Checkbox
+                    checked={selectedSkus.includes(product.sku)}
+                    onCheckedChange={(checked) => handleSelectProduct(product.sku, !!checked)}
+                    aria-label={`Select ${product.productName}`}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={product.status === "active"}
+                      onCheckedChange={(checked) => handleToggleStatus(product.sku, checked)}
+                      disabled={isPending}
+                      aria-label="Toggle active status"
+                    />
+                    <Badge
+                      variant={product.status === "active" ? "default" : "secondary"}
+                      className={
+                        product.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                      }
+                    >
+                      {product.status === "active" ? "Active" : "Draft"}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell className="font-medium">{product.productName}</TableCell>
                 <TableCell>{product.sku}</TableCell>
@@ -236,6 +342,39 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-red-600 hover:bg-red-700">
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={isBulkDeleting} onOpenChange={(isOpen) => !isOpen && setIsBulkDeleting(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedSkus.length} products?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{" "}
+              <strong>{selectedSkus.length} product{selectedSkus.length === 1 ? '' : 's'}</strong> from your inventory.
+              {selectedSkus.length <= 5 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">Products to be deleted:</p>
+                  <ul className="text-sm text-gray-800 list-disc list-inside mt-1">
+                    {selectedSkus.slice(0, 5).map(sku => {
+                      const product = products.find(p => p.sku === sku)
+                      return (
+                        <li key={sku}>{product?.productName || sku}</li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} disabled={isPending} className="bg-red-600 hover:bg-red-700">
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete {selectedSkus.length} Product{selectedSkus.length === 1 ? '' : 's'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
