@@ -56,6 +56,32 @@ export default async function CoffeePage() {
       );
     }
     
+    // Handle empty product state
+    if (allProducts.length === 0) {
+      console.log('☕ Empty product state detected - showing appropriate empty state');
+      return (
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+            <Header />
+            <div className="container mx-auto px-4 py-16 text-center">
+              <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Coffee Collection</h1>
+              <div className="max-w-md mx-auto bg-blue-50 p-8 rounded-lg border">
+                <div className="text-6xl mb-4">☕</div>
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">No Coffee Products Available</h2>
+                <p className="text-gray-600 mb-4">
+                  Our coffee collection is currently empty. We're working on restocking our amazing blends!
+                </p>
+                <p className="text-sm text-gray-500">
+                  Check back soon or contact us for updates on new arrivals.
+                </p>
+              </div>
+            </div>
+            <Footer />
+          </div>
+        </PageTransition>
+      );
+    }
+
     // Debug the filtering process
     console.log('☕ All product categories:', allProducts.map(p => p.category));
     const uniqueCategories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
@@ -77,6 +103,35 @@ export default async function CoffeePage() {
     console.log('☕ Coffee products sample:', coffeeProducts.slice(0, 2));
 
     console.log(`☕ Coffee page: Found ${coffeeProducts.length} coffee products out of ${allProducts.length} total`)
+    
+    // Handle case where we have products but no coffee products
+    if (coffeeProducts.length === 0 && allProducts.length > 0) {
+      console.log('☕ No coffee products found, but other products exist');
+      return (
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+            <Header />
+            <div className="container mx-auto px-4 py-16 text-center">
+              <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Coffee Collection</h1>
+              <div className="max-w-md mx-auto bg-orange-50 p-8 rounded-lg border">
+                <div className="text-6xl mb-4">☕</div>
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">No Coffee Products Found</h2>
+                <p className="text-gray-600 mb-4">
+                  We have {allProducts.length} products total, but no coffee products at the moment.
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Available categories: {uniqueCategories.join(', ')}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Check our other collections or contact us about coffee availability.
+                </p>
+              </div>
+            </div>
+            <Footer />
+          </div>
+        </PageTransition>
+      );
+    }
     
     // Add performance logging for Vercel
     if (process.env.VERCEL) {

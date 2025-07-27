@@ -6,14 +6,18 @@ import Papa from "papaparse"
 import { getProducts, updateProducts, addProduct, updateProduct, deleteProduct } from "@/lib/csv-data"
 import type { Product } from "@/lib/types"
 import { transformHeader } from "@/lib/csv-helpers"
+import { forceInvalidateCache } from "@/lib/product-cache"
 
 // Helper function to trigger cache revalidation after product changes - Vercel optimized
 async function triggerCacheRevalidation() {
   try {
     console.log("🔄 Triggering cache revalidation after product update...")
     
+    // CRITICAL: Force invalidate all product caches immediately
+    forceInvalidateCache()
+    
     // Revalidate Next.js paths (this is sufficient for Vercel)
-    const pathsToRevalidate = ["/", "/coffee", "/shop", "/admin"]
+    const pathsToRevalidate = ["/", "/coffee", "/subscriptions", "/shop", "/admin"]
     
     for (const path of pathsToRevalidate) {
       revalidatePath(path, "page")
@@ -23,6 +27,7 @@ async function triggerCacheRevalidation() {
     // Also revalidate layout-level cache
     revalidatePath("/", "layout")
     revalidatePath("/coffee", "layout")
+    revalidatePath("/subscriptions", "layout")
     
     // Note: Removed problematic API fetch call that was causing URL errors
     // Next.js revalidatePath() is sufficient for cache clearing in Vercel
@@ -265,11 +270,25 @@ export async function bulkDeleteProductsAction(skus: string[]): Promise<FormStat
       return { error: "No matching products found to delete." }
     }
 
+    const deletedCount = products.length - filteredProducts.length
+    console.log(`🗑️ Will delete ${deletedCount} products, leaving ${filteredProducts.length} remaining`)
+
+    // Special handling for "delete all" scenario
+    if (filteredProducts.length === 0) {
+      console.log("🗑️ BULK DELETE ALL: User is deleting all products - this is allowed")
+      await updateProducts(filteredProducts) // This will call handleEmptyProductState()
+      await triggerCacheRevalidation()
+      
+      return { 
+        success: `Successfully deleted all ${deletedCount} products! The product catalog is now empty. You can upload a new CSV file to restore or add products. Changes will appear on the live site shortly.` 
+      }
+    }
+
+    // Normal bulk delete (some products remain)
     await updateProducts(filteredProducts)
     await triggerCacheRevalidation()
     
-    const deletedCount = products.length - filteredProducts.length
-    return { success: `Successfully deleted ${deletedCount} product${deletedCount === 1 ? '' : 's'}. Changes will appear on the live site shortly.` }
+    return { success: `Successfully deleted ${deletedCount} product${deletedCount === 1 ? '' : 's'}. ${filteredProducts.length} product${filteredProducts.length === 1 ? '' : 's'} remaining. Changes will appear on the live site shortly.` }
   } catch (error) {
     console.error("Error in bulk delete:", error)
     return { error: "Failed to delete selected products." }

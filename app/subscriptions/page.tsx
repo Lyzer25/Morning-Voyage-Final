@@ -62,6 +62,34 @@ export default async function SubscriptionsPage() {
       )
     }
     
+    // Handle empty product state
+    if (allProducts.length === 0) {
+      console.log('📦 Empty product state detected on subscriptions page');
+      return (
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
+            <Header />
+            <main className="relative overflow-hidden pt-24">
+              <SubscriptionHero />
+              <div className="container mx-auto px-4 py-16 text-center">
+                <div className="max-w-md mx-auto bg-blue-50 p-8 rounded-lg border">
+                  <div className="text-6xl mb-4">📦</div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">No Subscription Plans Available</h2>
+                  <p className="text-gray-600 mb-4">
+                    Our subscription service is currently being updated. We're working on new subscription options!
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Check back soon for our coffee subscription plans.
+                  </p>
+                </div>
+              </div>
+            </main>
+            <Footer />
+          </div>
+        </PageTransition>
+      )
+    }
+    
     // CRITICAL FIX: Safe filter operations with null checks
     const subscriptionProducts = allProducts.filter((p) => 
       p && p.category && p.category.toLowerCase().includes('subscription')

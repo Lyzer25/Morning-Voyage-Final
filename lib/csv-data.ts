@@ -218,11 +218,22 @@ async function fetchAndParseCsv(): Promise<Product[]> {
     }
 
     if (parseResult.data.length === 0) {
-      console.error('❌ ISSUE FOUND: CSV parsed successfully but contains 0 data rows!');
+      console.log('📊 CSV parsed successfully but contains 0 data rows - this may be intentional empty state');
       console.log('📊 Headers found:', parseResult.meta?.fields);
-      console.log('📊 CSV had lines but no data rows after parsing');
-      console.log('📊 Falling back to sample products');
-      return SAMPLE_PRODUCTS;
+      console.log('📊 CSV content was:', csvText.substring(0, 200));
+      
+      // Check if this is intentional empty state (headers only) vs parsing issue
+      const hasValidHeaders = parseResult.meta?.fields && parseResult.meta.fields.length > 0;
+      
+      if (hasValidHeaders && csvText.includes('sku') && csvText.includes('productName')) {
+        console.log('📊 This appears to be intentional empty state (user deleted all products)');
+        console.log('📊 Returning empty array to maintain empty state');
+        return []; // Return empty array for intentional empty state
+      } else {
+        console.error('❌ ISSUE FOUND: CSV parsing failed - no valid headers or structure');
+        console.log('📊 Falling back to sample products');
+        return SAMPLE_PRODUCTS;
+      }
     }
 
     console.log('📊 Raw parsed data sample:', parseResult.data.slice(0, 2));
@@ -291,6 +302,60 @@ export async function getProducts(): Promise<Product[]> {
   return productCache
 }
 
+// Handle empty product state when user deletes all products
+export async function handleEmptyProductState(): Promise<void> {
+  try {
+    console.log('🗑️ Handling empty product state - user deleted all products')
+    
+    // Create a valid empty CSV with just headers (prevents parsing errors)
+    const emptyProductTemplate: Partial<Product> = {
+      sku: '',
+      productName: '',
+      category: '',
+      status: 'active',
+      price: 0,
+      description: '',
+      roastLevel: '',
+      origin: '',
+      weight: '',
+      format: '',
+      tastingNotes: '',
+      featured: false,
+    }
+    
+    // Generate CSV with headers only (no data rows)
+    const csvText = Papa.unparse([emptyProductTemplate], { header: true }).split('\n')[0] + '\n'
+    
+    console.log('🗑️ Generated empty CSV structure:', {
+      csvLength: csvText.length,
+      content: csvText,
+      hasHeaders: csvText.includes('sku,productName,category')
+    })
+    
+    console.log('🗑️ Saving empty state to Vercel Blob...')
+    await put(BLOB_FILENAME, csvText, {
+      access: "public",
+      contentType: "text/csv",
+      allowOverwrite: true,
+    })
+    
+    // Invalidate cache after successful upload
+    productCache = null
+    console.log("✅ Empty product state saved successfully - ready for CSV re-upload.")
+    
+  } catch (error) {
+    console.error("❌ CRITICAL ERROR in handleEmptyProductState:", error)
+    if (error instanceof Error) {
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+    }
+    throw error
+  }
+}
+
 export async function updateProducts(products: Product[]): Promise<void> {
   try {
     console.log(`🔄 Updating products.csv with ${products.length} products...`)
@@ -305,11 +370,14 @@ export async function updateProducts(products: Product[]): Promise<void> {
       throw new Error("Products must be an array")
     }
     
+    // CRITICAL FIX: Handle empty state by delegating to special function
     if (products.length === 0) {
-      console.warn("⚠️ Warning: Attempting to save empty products array")
+      console.log("🗑️ Empty products array detected - delegating to handleEmptyProductState()")
+      await handleEmptyProductState()
+      return
     }
 
-    // Generate CSV with validation
+    // Generate CSV with validation for non-empty products
     console.log('🔄 Generating CSV content...')
     const csvText = Papa.unparse(products, { header: true })
     
@@ -320,7 +388,7 @@ export async function updateProducts(products: Product[]): Promise<void> {
       preview: csvText.substring(0, 200)
     })
     
-    // CRITICAL: Validate CSV content before upload
+    // CRITICAL: Validate CSV content before upload (for non-empty products)
     if (!csvText || csvText.trim().length === 0) {
       console.error('❌ CRITICAL: Generated CSV content is empty!')
       console.error('❌ Products data:', products.slice(0, 2))

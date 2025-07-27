@@ -171,6 +171,20 @@ export function invalidateCache(): void {
   groupedProductCache = []
 }
 
+// CRITICAL FIX: Force cache refresh after admin changes
+export function forceInvalidateCache(): void {
+  console.log("🔄 FORCE: Invalidating ALL product caches immediately")
+  lastSyncTime = 0
+  productCache = []
+  groupedProductCache = []
+  
+  // Also clear any potential in-memory caches elsewhere
+  if (typeof global !== 'undefined') {
+    // Clear any global cache references
+    delete (global as any).__MORNING_VOYAGE_PRODUCT_CACHE__
+  }
+}
+
 // Get cache status
 export function getCacheStatus() {
   return {
