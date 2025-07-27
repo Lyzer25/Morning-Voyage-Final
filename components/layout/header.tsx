@@ -33,8 +33,8 @@ export default function Header() {
     { name: "Coffee", href: "/coffee", badge: "New" },
     { name: "Equipment", href: "/equipment", badge: null },
     { name: "Subscriptions", href: "/subscriptions", badge: "Up to 50% Off" },
-    { name: "About", href: "/about", badge: null },
-    { name: "Contact", href: "/contact", badge: null },
+    { name: "About", href: "/about-us", badge: null },
+    { name: "Contact", href: "/contact-us", badge: null },
   ]
 
   return (

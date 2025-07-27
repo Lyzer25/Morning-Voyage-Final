@@ -164,7 +164,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
 
   result.forEach((product, index) => {
     console.log(
-      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats.join(", ")})`,
+      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats ? product.availableFormats.join(", ") : "N/A"})`,
     )
   })
 
@@ -202,11 +202,14 @@ export function getFormatDescription(format: string): string {
 
 // Check if product has multiple formats
 export function hasMultipleFormats(product: GroupedProduct): boolean {
-  return product.availableFormats.length > 1
+  return product && Array.isArray(product.availableFormats) && product.availableFormats.length > 1
 }
 
 // Get price display for grouped product
 export function getPriceDisplay(product: GroupedProduct): string {
+  if (!product || !product.priceRange) {
+    return "$0.00" // Return a fallback value
+  }
   if (product.priceRange.min === product.priceRange.max) {
     return `$${product.priceRange.min.toFixed(2)}`
   }
@@ -222,7 +225,8 @@ export function searchGroupedProducts(products: GroupedProduct[], query: string)
       product.description.toLowerCase().includes(lowercaseQuery) ||
       product.tastingNotes?.some((note) => note.toLowerCase().includes(lowercaseQuery)) ||
       product.origin?.toLowerCase().includes(lowercaseQuery) ||
-      product.availableFormats.some((format) => format.toLowerCase().includes(lowercaseQuery)),
+      (product.availableFormats &&
+        product.availableFormats.some((format) => format.toLowerCase().includes(lowercaseQuery))),
   )
 }
 
@@ -233,5 +237,7 @@ export function filterGroupedProductsByCategory(products: GroupedProduct[], cate
 
 export function filterGroupedProductsByFormat(products: GroupedProduct[], format: string): GroupedProduct[] {
   if (format === "all") return products
-  return products.filter((product) => product.availableFormats.includes(format))
+  return products.filter(
+    (product) => product && Array.isArray(product.availableFormats) && product.availableFormats.includes(format),
+  )
 }

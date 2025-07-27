@@ -17,41 +17,41 @@
 
 #### **On-Page Debug Panel (Yellow Box)**
 Look for this yellow warning box that shows:
-```
+\`\`\`
 🔍 DEBUG INFO (Remove after fixing):
 - Total products loaded: X
 - Coffee products found: X  
 - All categories: [list of categories]
 - Sample products: [list of actual products with categories]
-```
+\`\`\`
 
 #### **Console Logs to Check**
 Open browser console and look for these debug messages:
 
 **A. Coffee Page Loading:**
-```
+\`\`\`
 ☕ CoffeePage: Starting to load...
 ☕ Raw products received: X
 ☕ Products sample: [product data]
 ☕ Unique categories found: [category list]
 ☕ Coffee products found: X
-```
+\`\`\`
 
 **B. API Calls:**
-```
+\`\`\`
 🔍 API DEBUG: /api/products called
 🔍 Raw products from CSV: X
 🔍 All product categories found: [categories]
 🔍 Final API response: {...}
-```
+\`\`\`
 
 **C. CSV Data Fetching:**
-```
+\`\`\`
 📊 fetchAndParseCsv: Starting...
 📊 Environment check: {hasToken: true/false, ...}
 📊 Successfully parsed and processed X products
 📊 Final products sample categories: [categories]
-```
+\`\`\`
 
 ## 🕵️ **WHAT TO LOOK FOR**
 
@@ -96,51 +96,51 @@ Open browser console and look for these debug messages:
 ## 📊 **EXPECTED DEBUG OUTPUT**
 
 ### **IF WORKING CORRECTLY:**
-```
+\`\`\`
 ☕ CoffeePage: Starting to load...
 ☕ Raw products received: 45
 🔍 All product categories found: ["coffee", "subscription", "gift-set"]
 ☕ Coffee products found: 12
-```
+\`\`\`
 
 ### **IF CATEGORY MISMATCH:**
-```
+\`\`\`
 ☕ Raw products received: 45
 🔍 All product categories found: ["Coffee", "Subscription", "Gift-Set"]
 ☕ Coffee products found: 0
 ☕ Checking product: {category: "Coffee", includesCoffee: false}
-```
+\`\`\`
 
 ### **IF NO REAL DATA:**
-```
+\`\`\`
 📊 No BLOB_READ_WRITE_TOKEN found, using sample products
 📊 Returning sample products count: 4
 ☕ Raw products received: 4
-```
+\`\`\`
 
 ## 🔧 **MOST LIKELY FIXES**
 
 ### **Fix 1: Category Case Sensitivity**
 If categories are "Coffee" instead of "coffee":
-```typescript
+\`\`\`typescript
 // Change from:
 product.category.toLowerCase().includes('coffee')
 // To:
 product.category.toLowerCase() === 'coffee'
-```
+\`\`\`
 
 ### **Fix 2: Environment Variable Missing**
 If using sample data, add to Vercel dashboard:
-```env
+\`\`\`env
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_4ULLFzohtX5DWya6_5nLLffTP3PF7EwYV2xZ2nP3Nxf3nGX
-```
+\`\`\`
 
 ### **Fix 3: Different Category Values**
 If categories are something else entirely, update the filter:
-```typescript
+\`\`\`typescript
 // Change filter to match actual category values
 product.category.toLowerCase().includes('your-actual-category')
-```
+\`\`\`
 
 ## 📋 **REPORT BACK WITH**
 

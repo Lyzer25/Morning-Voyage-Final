@@ -4,11 +4,11 @@
 
 **Result**: Build completed successfully with all critical errors resolved!
 
-```
+\`\`\`
 ✓ Compiled successfully
 ✓ Generating static pages (8/8)
 ✓ Finalizing page optimization
-```
+\`\`\`
 
 ## 🔧 **Critical Fixes Implemented**
 
@@ -41,13 +41,13 @@
 ## 📊 **Build Output Analysis**
 
 ### **Static Generation Success:**
-```
+\`\`\`
 Route (app)                Size     Revalidate  Status
 ├ ○ /                      3.36 kB  1m         ✅ Static
 ├ ○ /coffee                9.31 kB  1h         ✅ Static + ISR  
 ├ ● /product/[slug]        5.19 kB  -          ✅ SSG
 └ ○ /subscriptions         3.55 kB  1h         ✅ Static + ISR
-```
+\`\`\`
 
 **Legend:**
 - ○ (Static) = Prerendered as static content
@@ -88,7 +88,7 @@ Route (app)                Size     Revalidate  Status
 
 **Add to Vercel Dashboard → Project Settings → Environment Variables:**
 
-```env
+\`\`\`env
 # Production URL (replace with your actual domain)
 NEXT_PUBLIC_BASE_URL=https://morningvoyage.co
 
@@ -97,18 +97,18 @@ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_4ULLFzohtX5DWya6_5nLLffTP3PF7EwYV2xZ2nP3Nxf
 
 # Production environment
 NODE_ENV=production
-```
+\`\`\`
 
 **Note**: `VERCEL_URL` is automatically provided by Vercel during build.
 
 ## 🎯 **Deployment Instructions**
 
 ### **1. Commit and Push:**
-```bash
+\`\`\`bash
 git add .
 git commit -m "Fix: Critical Vercel build errors - URL resolution and async/await"
 git push origin main
-```
+\`\`\`
 
 ### **2. Vercel Will Automatically:**
 - ✅ Detect the push and start building
