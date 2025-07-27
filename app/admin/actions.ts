@@ -152,7 +152,11 @@ export async function uploadCsvAction(prevState: FormState, formData: FormData):
       isVercel: !!process.env.VERCEL
     });
 
-    await put(BLOB_FILENAME, standardizedCsvText, { access: "public", contentType: "text/csv" })
+    await put(BLOB_FILENAME, standardizedCsvText, { 
+      access: "public", 
+      contentType: "text/csv",
+      allowOverwrite: true
+    })
     console.log('🔧 ADMIN: Successfully saved to blob storage!');
 
     // Trigger comprehensive cache revalidation

@@ -297,6 +297,7 @@ export async function updateProducts(products: Product[]): Promise<void> {
   await put(BLOB_FILENAME, csvText, {
     access: "public",
     contentType: "text/csv",
+    allowOverwrite: true,
   })
   productCache = null // Invalidate cache
   console.log("Product update complete.")
