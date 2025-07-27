@@ -26,7 +26,7 @@ export async function uploadProductImages(files: File[]): Promise<ProductImage[]
         id: crypto.randomUUID(),
         url: blob.url,
         alt: file.name.replace(/\.[^/.]+$/, ""), // Remove extension for alt text
-        primary: index === 0, // First image is primary
+        type: index === 0 ? 'main' : 'gallery', // First image is main, rest are gallery
         order: index
       };
 

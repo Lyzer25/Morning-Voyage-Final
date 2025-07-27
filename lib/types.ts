@@ -2,7 +2,7 @@ export interface ProductImage {
   id: string
   url: string
   alt: string
-  primary: boolean
+  type: 'thumbnail' | 'main' | 'gallery'
   order: number
 }
 
