@@ -212,43 +212,41 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  const handleDelete = async () => {
+  // STAGING SYSTEM: Delete product (staging only)
+  const handleDelete = () => {
     if (!deletingSku) return
-    startTransition(async () => {
-      const result = await deleteProductAction(deletingSku)
-      if (result.error) {
-        alert(`Deletion failed: ${result.error}`)
-      } else {
-        setProducts(products.filter((p) => p.sku !== deletingSku))
-        router.refresh()
-      }
-      setDeletingSku(null)
-    })
+    console.log(`🗑️ Removing product ${deletingSku} from staging area`)
+    
+    // Remove from staging immediately (no server call)
+    setStagedProducts(prev => prev.filter(p => p.sku !== deletingSku))
+    setDeletingSku(null)
+    
+    console.log(`✅ Product ${deletingSku} removed from staging area`)
   }
 
+  // STAGING SYSTEM: Toggle featured (staging only)
   const handleToggleFeatured = (sku: string, isFeatured: boolean) => {
-    startTransition(async () => {
-      const result = await toggleFeaturedAction(sku, isFeatured)
-      if (result.error) {
-        alert(`Failed to update featured status: ${result.error}`)
-      } else {
-        setProducts(products.map((p) => (p.sku === sku ? { ...p, featured: isFeatured } : p)))
-        // No full router.refresh() to keep the UI state, revalidation will handle data
-      }
-    })
+    console.log(`⭐ Toggling featured status for ${sku} to ${isFeatured} in staging`)
+    
+    // Update staging immediately (no server call)
+    setStagedProducts(prev => 
+      prev.map(p => p.sku === sku ? { ...p, featured: isFeatured } : p)
+    )
+    
+    console.log(`✅ Featured status updated in staging for ${sku}`)
   }
 
+  // STAGING SYSTEM: Toggle status (staging only)  
   const handleToggleStatus = (sku: string, isActive: boolean) => {
     const newStatus = isActive ? "active" : "draft"
-    startTransition(async () => {
-      const result = await toggleStatusAction(sku, newStatus)
-      if (result.error) {
-        alert(`Failed to update product status: ${result.error}`)
-      } else {
-        setProducts(products.map((p) => (p.sku === sku ? { ...p, status: newStatus } : p)))
-        // No full router.refresh() to keep the UI state, revalidation will handle data
-      }
-    })
+    console.log(`🔄 Toggling status for ${sku} to ${newStatus} in staging`)
+    
+    // Update staging immediately (no server call)
+    setStagedProducts(prev => 
+      prev.map(p => p.sku === sku ? { ...p, status: newStatus } : p)
+    )
+    
+    console.log(`✅ Status updated in staging for ${sku}`)
   }
 
   // Bulk delete handlers
@@ -268,20 +266,18 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  const handleBulkDelete = async () => {
+  // STAGING SYSTEM: Bulk delete (staging only)
+  const handleBulkDelete = () => {
     if (selectedSkus.length === 0) return
     
-    startTransition(async () => {
-      const result = await bulkDeleteProductsAction(selectedSkus)
-      if (result.error) {
-        alert(`Bulk deletion failed: ${result.error}`)
-      } else {
-        setProducts(products.filter(p => !selectedSkus.includes(p.sku)))
-        setSelectedSkus([])
-        router.refresh()
-      }
-      setIsBulkDeleting(false)
-    })
+    console.log(`🗑️ Bulk removing ${selectedSkus.length} products from staging area`)
+    
+    // Remove from staging immediately (no server call)
+    setStagedProducts(prev => prev.filter(p => !selectedSkus.includes(p.sku)))
+    setSelectedSkus([])
+    setIsBulkDeleting(false)
+    
+    console.log(`✅ ${selectedSkus.length} products removed from staging area`)
   }
 
   const isAllSelected = filteredProducts.length > 0 && selectedSkus.length === filteredProducts.length
@@ -399,10 +395,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="border rounded-md px-3 py-2 text-sm bg-white"
             >
-              <option value="all">All Categories ({products.length})</option>
-              <option value="coffee">Coffee ({products.filter(p => p.category === 'coffee').length})</option>
-              <option value="subscription">Subscription ({products.filter(p => p.category === 'subscription').length})</option>
-              <option value="gift-set">Gift Set ({products.filter(p => p.category === 'gift-set').length})</option>
+              <option value="all">All Categories ({stagedProducts.length})</option>
+              <option value="coffee">Coffee ({stagedProducts.filter(p => p.category === 'coffee').length})</option>
+              <option value="subscription">Subscription ({stagedProducts.filter(p => p.category === 'subscription').length})</option>
+              <option value="gift-set">Gift Set ({stagedProducts.filter(p => p.category === 'gift-set').length})</option>
             </select>
           </div>
 
@@ -432,10 +428,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               onChange={(e) => setStatusFilter(e.target.value)}
               className="border rounded-md px-3 py-2 text-sm bg-white"
             >
-              <option value="all">All Status ({products.length})</option>
-              <option value="active">Active ({products.filter(p => p.status === 'active').length})</option>
-              <option value="draft">Draft ({products.filter(p => p.status === 'draft').length})</option>
-              <option value="archived">Archived ({products.filter(p => p.status === 'archived').length})</option>
+              <option value="all">All Status ({stagedProducts.length})</option>
+              <option value="active">Active ({stagedProducts.filter(p => p.status === 'active').length})</option>
+              <option value="draft">Draft ({stagedProducts.filter(p => p.status === 'draft').length})</option>
+              <option value="archived">Archived ({stagedProducts.filter(p => p.status === 'archived').length})</option>
             </select>
           </div>
         </div>
@@ -448,7 +444,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             onClick={() => setCategoryFilter('coffee')}
             className="bg-blue-50 hover:bg-blue-100 border-blue-200"
           >
-            Coffee Only ({products.filter(p => p.category === 'coffee').length})
+            Coffee Only ({stagedProducts.filter(p => p.category === 'coffee').length})
           </Button>
           <Button 
             variant="outline" 
@@ -456,7 +452,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             onClick={() => setStatusFilter('draft')}
             className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
           >
-            Drafts ({products.filter(p => p.status === 'draft').length})
+            Drafts ({stagedProducts.filter(p => p.status === 'draft').length})
           </Button>
           <Button 
             variant="outline" 
@@ -464,7 +460,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             onClick={() => setStatusFilter('active')}
             className="bg-green-50 hover:bg-green-100 border-green-200"
           >
-            Active ({products.filter(p => p.status === 'active').length})
+            Active ({stagedProducts.filter(p => p.status === 'active').length})
           </Button>
           <Button 
             variant="outline" 
@@ -477,7 +473,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           
           {/* Results Count */}
           <div className="flex items-center px-3 py-1 bg-white rounded-md border text-sm ml-auto">
-            <strong>Showing {filteredProducts.length} of {products.length} products</strong>
+            <strong>Showing {filteredProducts.length} of {stagedProducts.length} products</strong>
           </div>
         </div>
       </div>
