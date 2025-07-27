@@ -314,3 +314,30 @@ export async function toggleStatusAction(sku: string, status: "active" | "draft"
     return { error: "Failed to update product status." }
   }
 }
+
+// NEW: Save all staged changes to production in a single atomic operation
+export async function saveToProductionAction(products: Product[]): Promise<FormState> {
+  try {
+    console.log(`🚀 Saving ${products.length} products to production...`)
+    
+    // Validate products array
+    if (!Array.isArray(products)) {
+      return { error: "Invalid product data provided." }
+    }
+    
+    // Use existing updateProducts function for atomic write
+    await updateProducts(products)
+    
+    // Trigger comprehensive cache revalidation
+    await triggerCacheRevalidation()
+    
+    return { 
+      success: `Successfully saved ${products.length} products to production! Changes are now live on customer pages.` 
+    }
+  } catch (error) {
+    console.error("❌ Error saving to production:", error)
+    return { 
+      error: "Failed to save changes to production. Please try again." 
+    }
+  }
+}

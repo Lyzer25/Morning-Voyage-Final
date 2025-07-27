@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useActionState } from "react"
+import { useState, useTransition, useActionState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction } from "@/app/admin/actions"
+import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
 import type { Product } from "@/lib/types"
 import ProductForm from "./product-form"
 
@@ -66,7 +66,114 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [roastFilter, setRoastFilter] = useState<string>('all') 
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
-  const filteredProducts = products.filter((p) => {
+  // STAGING SYSTEM: Core state management
+  const [stagedProducts, setStagedProducts] = useState<Product[]>([])
+  const [originalProducts, setOriginalProducts] = useState<Product[]>([])
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [savingError, setSavingError] = useState<string | null>(null)
+
+  // STAGING SYSTEM: Initialize staging data
+  useEffect(() => {
+    if (initialProducts.length > 0) {
+      setStagedProducts([...initialProducts])
+      setOriginalProducts([...initialProducts])
+      setHasUnsavedChanges(false)
+      console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
+    }
+  }, [initialProducts])
+
+  // STAGING SYSTEM: Detect changes
+  useEffect(() => {
+    const hasChanges = JSON.stringify(stagedProducts) !== JSON.stringify(originalProducts)
+    setHasUnsavedChanges(hasChanges)
+    if (hasChanges) {
+      console.log('🎭 Unsaved changes detected')
+    }
+  }, [stagedProducts, originalProducts])
+
+  // STAGING SYSTEM: Prevent navigation with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  // STAGING SYSTEM: Change detection helpers
+  const getChangedProducts = () => {
+    const changes: { [key: string]: 'new' | 'modified' | 'deleted' } = {}
+    
+    stagedProducts.forEach(staged => {
+      const original = originalProducts.find(p => p.sku === staged.sku)
+      
+      if (!original) {
+        changes[staged.sku] = 'new'
+      } else if (JSON.stringify(staged) !== JSON.stringify(original)) {
+        changes[staged.sku] = 'modified'
+      }
+    })
+    
+    // Check for deleted products
+    originalProducts.forEach(original => {
+      if (!stagedProducts.find(p => p.sku === original.sku)) {
+        changes[original.sku] = 'deleted'
+      }
+    })
+    
+    return changes
+  }
+
+  // STAGING SYSTEM: Save to production
+  const saveToProduction = async () => {
+    setIsSaving(true)
+    setSavingError(null)
+    
+    try {
+      console.log('🚀 Saving', stagedProducts.length, 'products to production...')
+      const result = await saveToProductionAction(stagedProducts)
+      
+      if (result.error) {
+        setSavingError(result.error)
+        return
+      }
+      
+      // Success - update original state to match staged
+      setOriginalProducts([...stagedProducts])
+      setProducts([...stagedProducts]) // Also update local products state
+      setHasUnsavedChanges(false)
+      setLastSaved(new Date())
+      
+      console.log('✅ Successfully saved to production!')
+      alert(result.success || 'Changes saved successfully!')
+      
+    } catch (error) {
+      console.error('❌ Save error:', error)
+      setSavingError('An unexpected error occurred while saving.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // STAGING SYSTEM: Discard changes
+  const discardChanges = () => {
+    const changeCount = Object.keys(getChangedProducts()).length
+    
+    if (confirm(`Are you sure you want to discard ${changeCount} unsaved changes?`)) {
+      setStagedProducts([...originalProducts])
+      setHasUnsavedChanges(false)
+      setSavingError(null)
+      console.log('🗑️ Discarded all staged changes')
+    }
+  }
+
+  const filteredProducts = stagedProducts.filter((p) => {
     // Existing search logic
     const matchesSearch = p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -218,6 +325,66 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       {uploadState?.success && (
         <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg flex items-center gap-2">
           <CheckCircle className="h-4 w-4" /> {uploadState.success}
+        </div>
+      )}
+
+      {/* STAGING SYSTEM: Unsaved Changes Banner */}
+      {hasUnsavedChanges && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div>
+                <h3 className="font-medium text-yellow-800">Unsaved Changes</h3>
+                <p className="text-sm text-yellow-600">
+                  You have {Object.keys(getChangedProducts()).length} unsaved changes that haven't been published to the live site.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={discardChanges}
+                disabled={isSaving}
+                className="text-yellow-700 hover:bg-yellow-100"
+              >
+                Discard Changes
+              </Button>
+              <Button
+                onClick={saveToProduction}
+                disabled={isSaving}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Save to Production
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STAGING SYSTEM: Success indicator */}
+      {lastSaved && !hasUnsavedChanges && (
+        <div className="mb-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          Last saved to production: {lastSaved.toLocaleTimeString()}
+        </div>
+      )}
+
+      {/* STAGING SYSTEM: Error indicator */}
+      {savingError && (
+        <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          {savingError}
         </div>
       )}
 
