@@ -11,34 +11,15 @@ let isSyncing = false
 // Cache duration (1 minute for development, 5 minutes for production)
 const CACHE_DURATION = process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 60 * 1000
 
-// Fetch products from API - FIXED: Vercel build-time URL resolution
+// Fetch products from API - FIXED: Use relative URLs to bypass Vercel Deployment Protection
 async function fetchProducts(grouped: boolean = false, category?: string): Promise<any> {
   try {
-    // CRITICAL FIX: Proper URL construction for Vercel build environment
-    let baseUrl = ''
-    
-    if (typeof window === 'undefined') {
-      // Server-side: Need full URLs for Vercel build time
-      if (process.env.VERCEL_URL) {
-        // Vercel environment - use full URL
-        baseUrl = process.env.VERCEL_URL.startsWith('http') 
-          ? process.env.VERCEL_URL 
-          : `https://${process.env.VERCEL_URL}`
-      } else if (process.env.NEXT_PUBLIC_BASE_URL) {
-        // Use explicit base URL from environment
-        baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-      } else {
-        // Local development fallback
-        baseUrl = 'http://localhost:3000'
-      }
-    }
-    // Client-side: use relative URLs
-    
+    // CRITICAL FIX: Use relative URLs to avoid Vercel Deployment Protection 401 errors
     const params = new URLSearchParams()
     if (grouped) params.append('grouped', 'true')
     if (category) params.append('category', category)
     
-    const url = `${baseUrl}/api/products${params.toString() ? '?' + params.toString() : ''}`
+    const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`
     console.log(`🔄 Fetching products from API: ${url} (Vercel: ${!!process.env.VERCEL})`)
     
     // CRITICAL FIX: Use build-appropriate cache settings
