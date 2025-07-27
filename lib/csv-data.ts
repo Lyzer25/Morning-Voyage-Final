@@ -292,15 +292,75 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function updateProducts(products: Product[]): Promise<void> {
-  console.log(`Updating products.csv with ${products.length} products...`)
-  const csvText = Papa.unparse(products, { header: true })
-  await put(BLOB_FILENAME, csvText, {
-    access: "public",
-    contentType: "text/csv",
-    allowOverwrite: true,
-  })
-  productCache = null // Invalidate cache
-  console.log("Product update complete.")
+  try {
+    console.log(`🔄 Updating products.csv with ${products.length} products...`)
+    console.log('🔄 Product validation:', {
+      isArray: Array.isArray(products),
+      length: products.length,
+      hasValidItems: products.length > 0 && products[0] && typeof products[0] === 'object'
+    })
+
+    // Validate products array
+    if (!Array.isArray(products)) {
+      throw new Error("Products must be an array")
+    }
+    
+    if (products.length === 0) {
+      console.warn("⚠️ Warning: Attempting to save empty products array")
+    }
+
+    // Generate CSV with validation
+    console.log('🔄 Generating CSV content...')
+    const csvText = Papa.unparse(products, { header: true })
+    
+    console.log('🔄 CSV generation result:', {
+      csvLength: csvText.length,
+      isEmpty: !csvText || csvText.trim().length === 0,
+      firstLine: csvText.split('\n')[0] || 'EMPTY',
+      preview: csvText.substring(0, 200)
+    })
+    
+    // CRITICAL: Validate CSV content before upload
+    if (!csvText || csvText.trim().length === 0) {
+      console.error('❌ CRITICAL: Generated CSV content is empty!')
+      console.error('❌ Products data:', products.slice(0, 2))
+      throw new Error("Generated CSV content is empty - cannot save to blob storage")
+    }
+
+    // Additional validation for minimum content
+    if (csvText.length < 10) {
+      console.error('❌ CRITICAL: Generated CSV content is too short:', csvText)
+      throw new Error("Generated CSV content is too short - likely malformed")
+    }
+
+    console.log('🔄 Uploading to Vercel Blob...', {
+      filename: BLOB_FILENAME,
+      contentLength: csvText.length,
+      contentType: 'text/csv'
+    })
+
+    await put(BLOB_FILENAME, csvText, {
+      access: "public",
+      contentType: "text/csv",
+      allowOverwrite: true,
+    })
+    
+    // Invalidate cache after successful upload
+    productCache = null
+    console.log("✅ Product update complete successfully.")
+    
+  } catch (error) {
+    console.error("❌ CRITICAL ERROR in updateProducts:", error)
+    if (error instanceof Error) {
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+    }
+    console.error('❌ Failed products data:', products.slice(0, 2))
+    throw error // Re-throw to be handled by calling function
+  }
 }
 
 export async function addProduct(product: Product): Promise<void> {

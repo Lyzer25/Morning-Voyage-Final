@@ -10,9 +10,9 @@ import { transformHeader } from "@/lib/csv-helpers"
 // Helper function to trigger cache revalidation after product changes - Vercel optimized
 async function triggerCacheRevalidation() {
   try {
-    console.log("🔄 Triggering comprehensive cache revalidation after product update...")
+    console.log("🔄 Triggering cache revalidation after product update...")
     
-    // 1. Revalidate Next.js paths (works on Vercel)
+    // Revalidate Next.js paths (this is sufficient for Vercel)
     const pathsToRevalidate = ["/", "/coffee", "/shop", "/admin"]
     
     for (const path of pathsToRevalidate) {
@@ -20,38 +20,13 @@ async function triggerCacheRevalidation() {
       console.log(`✅ Revalidated path: ${path}`)
     }
     
-    // 2. Also revalidate layout-level cache
+    // Also revalidate layout-level cache
     revalidatePath("/", "layout")
     revalidatePath("/coffee", "layout")
     
-    // 3. Trigger API-level cache clearing with better error handling
-    try {
-      const response = await fetch('/api/products/revalidate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          paths: pathsToRevalidate,
-          timestamp: new Date().toISOString()
-        }),
-        // Add timeout for production reliability
-        signal: AbortSignal.timeout(5000)
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        console.log("✅ API cache revalidation successful:", result.revalidatedPaths)
-      } else {
-        const errorText = await response.text().catch(() => 'Unknown error')
-        console.warn("⚠️ API cache revalidation failed:", response.status, errorText)
-      }
-    } catch (apiError) {
-      console.warn("⚠️ API cache revalidation request failed:", apiError)
-      // Not critical - Next.js revalidation is more important
-    }
+    // Note: Removed problematic API fetch call that was causing URL errors
+    // Next.js revalidatePath() is sufficient for cache clearing in Vercel
     
-    // 4. Add specific Vercel revalidation if available
     if (process.env.VERCEL) {
       console.log("🔍 Vercel environment detected - revalidation should be immediate")
     }
