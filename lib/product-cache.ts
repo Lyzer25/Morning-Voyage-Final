@@ -14,13 +14,18 @@ const CACHE_DURATION = process.env.NODE_ENV === 'development' ? 60 * 1000 : 5 * 
 // Fetch products from API - FIXED: Use relative URLs to bypass Vercel Deployment Protection
 async function fetchProducts(grouped: boolean = false, category?: string): Promise<any> {
   try {
-    // CRITICAL FIX: Use relative URLs to avoid Vercel Deployment Protection 401 errors
+    // CRITICAL FIX: Handle server vs client-side URLs
     const params = new URLSearchParams()
     if (grouped) params.append('grouped', 'true')
     if (category) params.append('category', category)
     
-    const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`
-    console.log(`🔄 Fetching products from API: ${url} (Vercel: ${!!process.env.VERCEL})`)
+    const isServer = typeof window === 'undefined'
+    const baseUrl = isServer 
+      ? (process.env.NEXT_PUBLIC_BASE_URL || 'https://morningvoyage.co')
+      : ''
+    
+    const url = `${baseUrl}/api/products${params.toString() ? '?' + params.toString() : ''}`
+    console.log(`🔄 Fetching products from API: ${url} (Server: ${isServer})`)
     
     // CRITICAL FIX: Use build-appropriate cache settings
     const response = await fetch(url, {
