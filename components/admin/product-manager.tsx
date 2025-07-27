@@ -74,14 +74,19 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [savingError, setSavingError] = useState<string | null>(null)
 
-  // STAGING SYSTEM: Initialize staging data
+  // STAGING SYSTEM: Initialize staging data (including empty state)
   useEffect(() => {
-    if (initialProducts.length > 0) {
-      setStagedProducts([...initialProducts])
-      setOriginalProducts([...initialProducts])
-      setHasUnsavedChanges(false)
-      console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
-    }
+    console.log('🔍 initialProducts changed:', {
+      length: initialProducts.length,
+      first: initialProducts[0]?.productName || 'EMPTY',
+      timestamp: new Date().toISOString()
+    })
+    
+    // Always initialize with server data (including empty state)
+    setStagedProducts([...initialProducts])
+    setOriginalProducts([...initialProducts])
+    setHasUnsavedChanges(false)
+    console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
   }, [initialProducts])
 
   // STAGING SYSTEM: Detect changes
@@ -598,7 +603,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           if (!isOpen) {
             setEditingProduct(null)
             setIsAddModalOpen(false)
-            router.refresh()
+            // Only refresh if no unsaved changes (don't interfere with save workflow)
+            if (!hasUnsavedChanges && !isSaving) {
+              console.log('🔄 ProductForm closed - refreshing router (no unsaved changes)')
+              router.refresh()
+            } else {
+              console.log('🚫 ProductForm closed - skipping router refresh (unsaved changes or saving in progress)')
+            }
           }
         }}
       />
