@@ -122,18 +122,21 @@ export async function uploadCsvAction(prevState: FormState, formData: FormData):
       return { error: "CSV must contain 'sku' and 'productName' columns." }
     }
 
-    console.log('🔧 ADMIN: Processing data...');
-    const processedData = parsed.data.map((p: any) => ({
-      ...p,
-      status: p.status || "active",
-      price: typeof p.price === "number" ? p.price : 0,
-      featured: p.featured === true || p.featured === "true" || p.featured === "TRUE",
-    }))
+    console.log('🔧 ADMIN: Processing data with enhanced format handling...');
+    
+    // Import the enhanced processing function
+    const { processCSVData } = await import("@/lib/csv-helpers");
+    const processedData = processCSVData(parsed.data);
 
     console.log('🔧 ADMIN: Processed data sample:', processedData.slice(0, 2));
     console.log('🔧 ADMIN: Categories in processed data:', 
       [...new Set(processedData.map(p => p.category).filter(Boolean))]
     );
+    console.log('🔧 ADMIN: Data types check:', {
+      firstProductPrice: typeof processedData[0]?.price,
+      firstProductFeatured: typeof processedData[0]?.featured,
+      sampleProduct: processedData[0]
+    });
 
     const standardizedCsvText = Papa.unparse(processedData, { header: true })
     console.log('🔧 ADMIN: Generated CSV text:', {
