@@ -57,6 +57,63 @@ export const transformHeader = (header: string): string => {
   return headerMapping[lowerHeader] || lowerHeader
 }
 
+// Normalize category values for dropdown compatibility
+const normalizeCategory = (category: string): string => {
+  if (!category) return 'coffee';
+  
+  const normalized = category.toLowerCase().trim();
+  
+  // Map your CSV values to dropdown values
+  const categoryMap: { [key: string]: string } = {
+    'coffee': 'coffee',
+    'subscription': 'subscription',
+    'gift-set': 'gift-set',
+    'gift set': 'gift-set',
+    'equipment': 'gift-set'  // Map old equipment to gift-set
+  };
+  
+  return categoryMap[normalized] || 'coffee';
+}
+
+// Normalize format values for dropdown compatibility  
+const normalizeFormat = (format: string): string => {
+  if (!format) return 'whole-bean';
+  
+  const normalized = format.toLowerCase().trim();
+  
+  // Map your CSV values to dropdown values
+  const formatMap: { [key: string]: string } = {
+    'whole bean': 'whole-bean',
+    'whole-bean': 'whole-bean',
+    'ground': 'ground',
+    'instant': 'instant',
+    'pods': 'pods',
+    'pod': 'pods',
+    'k-cup': 'pods',
+    'k-cups': 'pods'
+  };
+  
+  return formatMap[normalized] || 'whole-bean';
+}
+
+// Normalize roast level values for dropdown compatibility
+const normalizeRoastLevel = (roastLevel: string): string => {
+  if (!roastLevel) return 'medium';
+  
+  const normalized = roastLevel.toLowerCase().trim();
+  
+  // Map variations to dropdown values
+  const roastMap: { [key: string]: string } = {
+    'light': 'light',
+    'medium': 'medium',
+    'medium-dark': 'medium-dark',
+    'medium dark': 'medium-dark',
+    'dark': 'dark'
+  };
+  
+  return roastMap[normalized] || 'medium';
+}
+
 // Enhanced CSV data processing for your specific format
 export const processCSVData = (rawData: any[]): Product[] => {
   return rawData.map((row: any, index: number) => {
@@ -65,11 +122,20 @@ export const processCSVData = (rawData: any[]): Product[] => {
       console.log(`🔧 Processing row ${index + 1}:`, row);
     }
 
+    const price = typeof row.price === 'string' ? parseFloat(row.price) || 0 : (row.price || 0);
+
     const processed = {
       ...row,
       // CRITICAL: Convert your specific data formats
-      price: typeof row.price === 'string' ? parseFloat(row.price) || 0 : (row.price || 0),
-      originalPrice: row.originalPrice ? parseFloat(row.originalPrice) : undefined,
+      price: price,
+      
+      // AUTO-POPULATE original price from CSV price (as requested)
+      originalPrice: row.originalPrice ? parseFloat(row.originalPrice) : price,
+      
+      // NORMALIZE dropdown values for form compatibility
+      category: normalizeCategory(row.category),
+      format: normalizeFormat(row.format),
+      roastLevel: normalizeRoastLevel(row.roastLevel),
       
       // Handle boolean conversion for FEATURED field
       featured: row.featured === 'TRUE' || row.featured === true || row.featured === 'true' || row.featured === 1,
@@ -77,10 +143,19 @@ export const processCSVData = (rawData: any[]): Product[] => {
       // Ensure status is set
       status: row.status || 'active',
       
-      // Handle tasting notes (split if comma-separated string)
-      tastingNotes: typeof row.tastingNotes === 'string' 
-        ? row.tastingNotes.split(',').map((note: string) => note.trim()).filter(Boolean)
-        : (Array.isArray(row.tastingNotes) ? row.tastingNotes : []),
+      // ENHANCED tasting notes processing
+      tastingNotes: (() => {
+        if (!row.tastingNotes) return [];
+        
+        if (typeof row.tastingNotes === 'string') {
+          return row.tastingNotes
+            .split(',')
+            .map((note: string) => note.trim())
+            .filter(Boolean);
+        }
+        
+        return Array.isArray(row.tastingNotes) ? row.tastingNotes : [];
+      })(),
 
       // Initialize empty images array for new products
       images: row.images || []
@@ -91,8 +166,11 @@ export const processCSVData = (rawData: any[]): Product[] => {
       console.log(`✅ Processed row ${index + 1}:`, {
         sku: processed.sku,
         productName: processed.productName,
-        category: processed.category,
+        category: `"${row.category}" → "${processed.category}"`,
+        format: `"${row.format}" → "${processed.format}"`,
+        roastLevel: `"${row.roastLevel}" → "${processed.roastLevel}"`,
         price: processed.price,
+        originalPrice: processed.originalPrice,
         featured: processed.featured,
         tastingNotes: processed.tastingNotes
       });

@@ -121,7 +121,7 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price">Current Price</Label>
                 <Input id="price" name="price" type="number" step="0.01" defaultValue={product?.price} required />
               </div>
               <div className="space-y-2">
@@ -145,7 +145,7 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
                   <SelectContent>
                     <SelectItem value="coffee">Coffee</SelectItem>
                     <SelectItem value="subscription">Subscription</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="gift-set">Gift Set</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -174,6 +174,7 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
                     <SelectItem value="whole-bean">Whole Bean</SelectItem>
                     <SelectItem value="ground">Ground</SelectItem>
                     <SelectItem value="instant">Instant</SelectItem>
+                    <SelectItem value="pods">Pods</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
