@@ -1,32 +1,21 @@
 "use client"
 
-import { useActionState, useEffect, useRef } from "react"
-import { Mail, Gift, Sparkles, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { subscribeToNewsletter } from "@/app/newsletter/actions"
-
-const initialState = {
-  message: "",
-  success: false,
-}
+import { Mail, Gift, Sparkles } from "lucide-react"
+import { useState } from "react"
 
 export default function Newsletter() {
-  const [state, formAction, isPending] = useActionState(subscribeToNewsletter, initialState)
-  const formRef = useRef<HTMLFormElement>(null)
+  const [email, setEmail] = useState("")
 
-  useEffect(() => {
-    if (state.message) {
-      if (state.success) {
-        toast.success(state.message)
-        formRef.current?.reset()
-      } else {
-        toast.error(state.message)
-      }
-    }
-  }, [state])
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Handle newsletter signup
+    console.log("Newsletter signup:", email)
+    setEmail("")
+  }
 
   return (
     <section className="py-32 relative overflow-hidden">
@@ -61,14 +50,15 @@ export default function Newsletter() {
           </p>
 
           {/* Form */}
-          <form ref={formRef} action={formAction} className="max-w-lg mx-auto mb-8">
+          <form onSubmit={handleSubmit} className="max-w-lg mx-auto mb-8">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6E6658]" />
                 <Input
                   type="email"
-                  name="email"
                   placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-12 h-14 bg-white/95 backdrop-blur-sm border-0 text-[#4B2E2E] placeholder:text-[#6E6658] rounded-2xl shadow-lg font-medium text-lg"
                   required
                 />
@@ -76,15 +66,10 @@ export default function Newsletter() {
               <Button
                 type="submit"
                 size="lg"
-                className="bg-white hover:bg-white/90 text-[#4B2E2E] font-bold h-14 px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group disabled:opacity-70"
-                disabled={isPending}
+                className="bg-white hover:bg-white/90 text-[#4B2E2E] font-bold h-14 px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 group"
               >
-                {isPending ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
-                )}
-                {isPending ? "Subscribing..." : "Subscribe & Save"}
+                <Sparkles className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+                Subscribe & Save
               </Button>
             </div>
           </form>
@@ -94,7 +79,7 @@ export default function Newsletter() {
             {[
               { icon: "🎁", text: "50% Off First Order" },
               { icon: "☕", text: "Exclusive Coffee Tips" },
-              { icon: "💸", text: "Save With Exclusive Product deals" },
+              { icon: "👕", text: "Early Fashion Access" },
             ].map((benefit, index) => (
               <div key={index} className="flex items-center justify-center space-x-2 text-white/90">
                 <span className="text-2xl">{benefit.icon}</span>

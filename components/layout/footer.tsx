@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import { Instagram, Facebook, Twitter, Youtube, Mail, MapPin } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -38,15 +38,11 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 text-gray-400">
                   <Mail className="w-4 h-4" />
-                  <span className="text-sm">hello@morningvoyage.co</span>
-                </div>
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <Phone className="w-4 h-4" />
-                  <span className="text-sm">1-800-MORNING</span>
+                  <span className="text-sm">morningvoyagebusiness@gmail.com</span>
                 </div>
                 <div className="flex items-center space-x-3 text-gray-400">
                   <MapPin className="w-4 h-4" />
-                  <span className="text-sm">San Francisco, CA</span>
+                  <span className="text-sm">FT Worth, TX</span>
                 </div>
               </div>
 
@@ -74,23 +70,22 @@ export default function Footer() {
             <div>
               <h3 className="font-bold text-white mb-6 text-lg">Products</h3>
               <ul className="space-y-3">
-                {[
-                  "Coffee Blends",
-                  "Single Origins",
-                  "Decaf Options",
-                  "Coffee Bundles",
-                  "Fashion Line",
-                  "Accessories",
-                ].map((item) => (
-                  <li key={item}>
-                    <Link
-                      href="#"
-                      className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                ))}
+                <li>
+                  <Link
+                    href="/coffee"
+                    className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
+                  >
+                    Coffee Blends
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/subscriptions"
+                    className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
+                  >
+                    Subscriptions
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -98,16 +93,14 @@ export default function Footer() {
             <div>
               <h3 className="font-bold text-white mb-6 text-lg">Company</h3>
               <ul className="space-y-3">
-                {["About Us", "Our Story", "Sustainability", "Careers", "Press Kit", "Blog"].map((item) => (
-                  <li key={item}>
-                    <Link
-                      href="#"
-                      className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                ))}
+                <li>
+                  <Link
+                    href="/about-us"
+                    className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
+                  >
+                    About Us
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -115,18 +108,21 @@ export default function Footer() {
             <div>
               <h3 className="font-bold text-white mb-6 text-lg">Support</h3>
               <ul className="space-y-3">
-                {["Help Center", "Shipping Info", "Returns", "Size Guide", "Brewing Guide", "Contact Us"].map(
-                  (item) => (
-                    <li key={item}>
-                      <Link
-                        href="#"
-                        className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
-                      >
-                        {item}
-                      </Link>
-                    </li>
-                  ),
-                )}
+                {[
+                  { name: "Help Center", href: "/contact-us" },
+                  { name: "Shipping Info", href: "#" },
+                  { name: "Brewing Guide", href: "#" },
+                  { name: "Contact Us", href: "/contact-us" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      className="text-gray-400 hover:text-white transition-colors font-light hover:translate-x-1 inline-block transition-transform duration-300"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
