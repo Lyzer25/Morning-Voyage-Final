@@ -1,6 +1,5 @@
 "use server"
 
-import { google } from "googleapis"
 import { z } from "zod"
 
 const emailSchema = z.string().email({ message: "Please enter a valid email address." })
@@ -21,48 +20,50 @@ export async function subscribeToNewsletter(
   }
 
   const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID
-  const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY
+  const API_KEY = process.env.GOOGLE_SHEETS_API_KEY
+  const SHEET_NAME = "Sheet1" // Default sheet name for gid=0
 
-  if (!SPREADSHEET_ID || !SERVICE_ACCOUNT_EMAIL || !PRIVATE_KEY) {
-    console.error("Google Sheets service account credentials are not configured.")
+  if (!SPREADSHEET_ID || !API_KEY) {
+    console.error("Google Sheets API credentials are not configured in environment variables.")
     return {
       message: "Service is currently unavailable. Please try again later.",
       success: false,
     }
   }
 
+  const range = `${SHEET_NAME}!A:A`
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&key=${API_KEY}`
+
   try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: SERVICE_ACCOUNT_EMAIL,
-        // Vercel automatically handles newlines in environment variables, but this ensures it works locally too.
-        private_key: PRIVATE_KEY.replace(/\\n/g, "\n"),
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    })
-
-    const sheets = google.sheets({ version: "v4", auth })
-
-    const range = "Sheet1!A:A"
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: range,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
+      body: JSON.stringify({
         values: [[validatedEmail.data]],
-      },
+      }),
+      cache: "no-store",
     })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error("Google Sheets API Error:", data?.error?.message)
+      return {
+        message: `Failed to subscribe. ${data?.error?.message || "Please try again."}`,
+        success: false,
+      }
+    }
 
     return {
       message: "Success! You are now subscribed to our newsletter.",
       success: true,
     }
-  } catch (error: any) {
-    console.error("Google Sheets API Error:", error.message)
+  } catch (error) {
+    console.error("Error subscribing to newsletter:", error)
     return {
-      message: "Failed to subscribe. The API returned an error. Please check server logs.",
+      message: "An unexpected error occurred. Please try again.",
       success: false,
     }
   }
