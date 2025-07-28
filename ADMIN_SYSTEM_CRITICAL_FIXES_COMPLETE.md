@@ -29,7 +29,7 @@
 **Solution**: All display counts now consistently use `stagedProducts`
 
 **Fixed Locations**:
-```typescript
+\`\`\`typescript
 // ✅ BEFORE (BROKEN):
 <option value="all">All Categories ({products.length})</option>
 <strong>Showing {filteredProducts.length} of {products.length} products</strong>
@@ -37,7 +37,7 @@
 // ✅ AFTER (FIXED):
 <option value="all">All Categories ({stagedProducts.length})</option>
 <strong>Showing {filteredProducts.length} of {stagedProducts.length} products</strong>
-```
+\`\`\`
 
 ### ✅ **Issue 2: Professional Staging System IMPLEMENTED**
 **Problem**: No visible save system, changes not persisting
@@ -54,7 +54,7 @@
 **Solution**: All actions now update staging immediately
 
 **Converted Actions**:
-```typescript
+\`\`\`typescript
 // ✅ DELETE (STAGING ONLY):
 const handleDelete = () => {
   setStagedProducts(prev => prev.filter(p => p.sku !== deletingSku))
@@ -78,14 +78,14 @@ const handleToggleStatus = (sku: string, isActive: boolean) => {
 const handleBulkDelete = () => {
   setStagedProducts(prev => prev.filter(p => !selectedSkus.includes(p.sku)))
 }
-```
+\`\`\`
 
 ### ✅ **Issue 4: Atomic Save Operation IMPLEMENTED**
 **Problem**: Multiple simultaneous API calls caused data corruption
 **Solution**: Single atomic save operation
 
 **New Save System**:
-```typescript
+\`\`\`typescript
 const saveToProduction = async () => {
   try {
     // Single atomic write to blob storage
@@ -101,7 +101,7 @@ const saveToProduction = async () => {
     setSavingError('Save failed. Please try again.')
   }
 }
-```
+\`\`\`
 
 ## 📊 TRANSFORMATION ACHIEVED
 

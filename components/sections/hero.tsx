@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Coffee, Sparkles, Play } from "lucide-react"
+import Link from "next/link"
 
 export default function Hero() {
   return (
@@ -39,28 +40,32 @@ export default function Hero() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white px-8 py-6 text-lg rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 group font-semibold"
-              >
-                Shop Coffee
-                <Coffee className="ml-3 h-6 w-6 group-hover:rotate-12 transition-transform duration-300" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-[#4B2E2E] text-[#4B2E2E] hover:bg-[#4B2E2E] hover:text-white px-8 py-6 text-lg rounded-2xl backdrop-blur-sm bg-white/50 shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
-              >
-                Explore Fashion
-                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
-              </Button>
+              <Link href="/coffee">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-[#4B2E2E] to-[#6E6658] hover:from-[#6E6658] hover:to-[#4B2E2E] text-white px-8 py-6 text-lg rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 group font-semibold"
+                >
+                  Shop Coffee
+                  <Coffee className="ml-3 h-6 w-6 group-hover:rotate-12 transition-transform duration-300" />
+                </Button>
+              </Link>
+              <Link href="/subscriptions">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-[#4B2E2E] text-[#4B2E2E] hover:bg-[#4B2E2E] hover:text-white px-8 py-6 text-lg rounded-2xl backdrop-blur-sm bg-white/50 shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
+                >
+                  Explore Deals
+                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                </Button>
+              </Link>
             </div>
 
             {/* Modern Stats */}
             <div className="grid grid-cols-3 gap-8 pt-12">
               {[
                 { value: "24hrs", label: "Fresh Roasted", icon: "⚡" },
-                { value: "50+", label: "Coffee Blends", icon: "☕" },
+                { value: "15+", label: "Coffee Blends", icon: "☕" },
                 { value: "10k+", label: "Happy Customers", icon: "❤️" },
               ].map((stat, index) => (
                 <div key={index} className="text-center group">
@@ -127,9 +132,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        
-      </div>
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce"></div>
     </section>
   )
 }

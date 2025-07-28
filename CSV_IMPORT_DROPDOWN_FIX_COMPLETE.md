@@ -27,45 +27,45 @@
 ### **✅ CSV DATA MAPPING FIXES**
 
 **Category Normalization:**
-```typescript
+\`\`\`typescript
 "COFFEE" → "coffee" ✅
 "SUBSCRIPTION" → "subscription" ✅  
 "GIFT-SET" → "gift-set" ✅
-```
+\`\`\`
 
 **Format Normalization:**
-```typescript
+\`\`\`typescript
 "Whole Bean" → "whole-bean" ✅
 "Ground" → "ground" ✅
 "Pods" → "pods" ✅
 "Instant" → "instant" ✅
-```
+\`\`\`
 
 **Roast Level Normalization:**
-```typescript
+\`\`\`typescript
 "Medium" → "medium" ✅
 "Light" → "light" ✅
 "Dark" → "dark" ✅
-```
+\`\`\`
 
 **Price Auto-Population:**
-```typescript
+\`\`\`typescript
 // During CSV import:
 price: 21.60,
 originalPrice: 21.60  // Auto-copied from CSV price ✅
-```
+\`\`\`
 
 **Enhanced Tasting Notes:**
-```typescript
+\`\`\`typescript
 "Savory, Cocoa, Smooth" → ["Savory", "Cocoa", "Smooth"] ✅
-```
+\`\`\`
 
 ## 🎯 **EXACT CSV MAPPING RESULTS**
 
 ### **Your CSV Row:**
-```csv
+\`\`\`csv
 COFFEE-FLATHEAD-VALLEY-12PK-PODS,Flathead Valley,COFFEE,21.60,...,Pods,12-pack,"Toffee, Full Body, Cocoa"
-```
+\`\`\`
 
 ### **Form Fields Now Populate:**
 ✅ **Category**: "Coffee" (from "COFFEE")  
@@ -94,7 +94,7 @@ COFFEE-FLATHEAD-VALLEY-12PK-PODS,Flathead Valley,COFFEE,21.60,...,Pods,12-pack,"
 ## 🔍 **DEBUG LOGS TO EXPECT**
 
 **During successful CSV import:**
-```
+\`\`\`
 🔧 Header mapping: "CATEGORY" → "category"
 🔧 Header mapping: "FORMAT" → "format"
 🔧 Header mapping: "TASTING NOTES" → "tastingNotes"
@@ -102,7 +102,7 @@ COFFEE-FLATHEAD-VALLEY-12PK-PODS,Flathead Valley,COFFEE,21.60,...,Pods,12-pack,"
 ✅ Processed row: format: "Pods" → "pods"
 ✅ Processed row: originalPrice: 21.60 (auto-filled)
 ✅ Processed row: tastingNotes: ["Toffee", "Full Body", "Cocoa"]
-```
+\`\`\`
 
 ## 🎊 **COMPLETE SOLUTION DELIVERED**
 

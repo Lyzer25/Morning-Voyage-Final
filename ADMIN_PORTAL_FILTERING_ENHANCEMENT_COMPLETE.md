@@ -20,11 +20,11 @@
 - **Status**: LIVE on morningvoyage.co/admin
 
 ### Git History:
-```
+\`\`\`
 a1d3450 (HEAD -> main, origin/main) 🚀 ADMIN PORTAL ENHANCEMENT: Professional Filtering System Complete
 905bdd9 🚨 CRITICAL FIX: Server-Side Fetch URL Resolution
 3e9896a 🚨 CRITICAL FIX: Use relative API URLs to bypass Vercel Deployment Protection
-```
+\`\`\`
 
 ## 📊 FEATURES IMPLEMENTED
 
@@ -89,15 +89,15 @@ a1d3450 (HEAD -> main, origin/main) 🚀 ADMIN PORTAL ENHANCEMENT: Professional 
 ### **File Modified**: `components/admin/product-manager.tsx`
 
 #### **State Management**:
-```typescript
+\`\`\`typescript
 // Enhanced filtering state
 const [categoryFilter, setCategoryFilter] = useState<string>('all')
 const [roastFilter, setRoastFilter] = useState<string>('all') 
 const [statusFilter, setStatusFilter] = useState<string>('all')
-```
+\`\`\`
 
 #### **Multi-Criteria Filtering Logic**:
-```typescript
+\`\`\`typescript
 const filteredProducts = products.filter((p) => {
   // Existing search logic
   const matchesSearch = p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,10 +117,10 @@ const filteredProducts = products.filter((p) => {
   
   return matchesSearch && matchesCategory && matchesRoast && matchesStatus
 })
-```
+\`\`\`
 
 #### **Dynamic UI Components**:
-```typescript
+\`\`\`typescript
 {/* Roast Level Filter - Show only when coffee selected */}
 {categoryFilter === 'coffee' && (
   <div className="flex flex-col min-w-40">
@@ -138,7 +138,7 @@ const filteredProducts = products.filter((p) => {
     </select>
   </div>
 )}
-```
+\`\`\`
 
 ## 📈 BUSINESS IMPACT
 
@@ -182,7 +182,7 @@ const filteredProducts = products.filter((p) => {
 ### ✅ **Issues Already Resolved** (Confirmed in `lib/csv-helpers.ts`):
 
 #### **Tasting Notes Parsing**:
-```typescript
+\`\`\`typescript
 // ENHANCED tasting notes processing
 tastingNotes: (() => {
   if (!row.tastingNotes) return [];
@@ -196,13 +196,13 @@ tastingNotes: (() => {
   
   return Array.isArray(row.tastingNotes) ? row.tastingNotes : [];
 })(),
-```
+\`\`\`
 
 #### **Original Price Auto-Fill**:
-```typescript
+\`\`\`typescript
 // AUTO-POPULATE original price from CSV price (as requested)
 originalPrice: row.originalPrice ? parseFloat(row.originalPrice) : price,
-```
+\`\`\`
 
 **Status**: ✅ Both features were already implemented correctly and are working as designed.
 

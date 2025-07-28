@@ -9,9 +9,9 @@
 
 ### ✅ Issue 1: Mass Delete System - "Delete All Products" Edge Case
 **Problem**: When users deleted ALL 33 products to test CSV re-upload workflow, system threw error:
-```
+\`\`\`
 Error in bulk delete: Generated CSV content is empty - cannot save to blob storage
-```
+\`\`\`
 
 **Root Cause**: `updateProducts()` function blocked saving empty arrays to prevent "empty CSV" errors, but this prevented legitimate "delete all" workflows.
 
@@ -105,12 +105,12 @@ Error in bulk delete: Generated CSV content is empty - cannot save to blob stora
 - **🔄 Cache Operations**: Cache invalidation and revalidation tracking
 
 ### Key Log Patterns to Monitor:
-```
+\`\`\`
 🗑️ BULK DELETE ALL: User is deleting all products - this is allowed
 🗑️ Handling empty product state - user deleted all products
 ☕ Empty product state detected - showing appropriate empty state
 🔄 FORCE: Invalidating ALL product caches immediately
-```
+\`\`\`
 
 ## 🎯 SUCCESS METRICS
 

@@ -13,7 +13,7 @@
 **Triggers**: When visiting `/coffee` page or any API call to `/api/products`
 
 **What it logs**:
-```
+\`\`\`
 📊 ========== CSV DATA FLOW DEBUG START ==========
 📊 Environment check: {BLOB_READ_WRITE_TOKEN: 'EXISTS/MISSING', ...}
 📊 Looking for blob file with name: products.csv
@@ -21,21 +21,21 @@
 📊 CSV file contents analysis: {totalLength: X, firstLine: '...', preview: '...'}
 📊 Papa Parse complete: {rowCount: X, errors: [...]}
 📊 Categories found in processed data: [...]
-```
+\`\`\`
 
 ### **2. Admin-Side CSV Upload Debug**
 **Location**: `app/admin/actions.ts` → Admin CSV upload  
 **Triggers**: When uploading CSV files in admin panel
 
 **What it logs**:
-```
+\`\`\`
 🔧 ========== ADMIN CSV UPLOAD DEBUG START ==========
 🔧 ADMIN: File details: {name: 'products.csv', size: X, type: 'text/csv'}
 🔧 ADMIN: Parse results: {dataRows: X, errors: X, headers: [...]}
 🔧 ADMIN: Categories in processed data: [...]
 🔧 ADMIN: Target filename: products.csv
 🔧 ADMIN: Successfully saved to blob storage!
-```
+\`\`\`
 
 ### **3. Visual Debug Panel**
 **Location**: Yellow box on `/coffee` page  
@@ -87,40 +87,40 @@
 ## 🚨 **EXPECTED SCENARIOS**
 
 ### **SCENARIO A: No Blob Files** 
-```
+\`\`\`
 ❌ NO BLOB FILES FOUND with prefix: products.csv
 📊 ALL blob files found: {totalCount: 0, files: []}
 ❌ ISSUE FOUND: No blob files exist at all in storage!
-```
+\`\`\`
 **Diagnosis**: Admin uploads aren't actually saving to blob storage
 
 ### **SCENARIO B: Wrong Filename**
-```
+\`\`\`
 ❌ NO BLOB FILES FOUND with prefix: products.csv
 📊 ALL blob files found: {files: [{pathname: 'products-v2.csv'}, ...]}
 ❌ ISSUE FOUND: Blob files exist but not with expected name!
-```
+\`\`\`
 **Diagnosis**: Admin and customer using different filenames
 
 ### **SCENARIO C: Empty CSV**
-```
+\`\`\`
 📊 Found target blob file: {pathname: 'products.csv', size: 0}
 ❌ ISSUE FOUND: CSV file exists but is completely empty!
-```
+\`\`\`
 **Diagnosis**: File exists but has no content
 
 ### **SCENARIO D: Environment Issue**
-```
+\`\`\`
 ❌ CRITICAL: No BLOB_READ_WRITE_TOKEN found in environment!
 📊 Falling back to sample products
-```
+\`\`\`
 **Diagnosis**: Customer API can't access blob storage
 
 ### **SCENARIO E: Category Mismatch**
-```
+\`\`\`
 📊 Categories found in processed data: ['Coffee', 'Subscription']
 ☕ Coffee products found: 0
-```
+\`\`\`
 **Diagnosis**: Case sensitivity - products have "Coffee" but code filters for "coffee"
 
 ## 🔧 **WHAT TO REPORT BACK**

@@ -20,36 +20,36 @@
 - **Status**: LIVE on morningvoyage.co/admin
 
 ### Git History:
-```
+\`\`\`
 e8c72be (HEAD -> main, origin/main) 🚨 CRITICAL FIX: Professional Staging & Save System Implementation
 a1d3450 🚀 ADMIN PORTAL ENHANCEMENT: Professional Filtering System Complete
 905bdd9 🚨 CRITICAL FIX: Server-Side Fetch URL Resolution
-```
+\`\`\`
 
 ## 🔍 ROOT CAUSE ANALYSIS RESOLVED
 
 ### ❌ **Previous Problematic Architecture**:
-```
+\`\`\`
 Admin Changes → Immediate Blob Write → Race Conditions → Data Loss
      ↓              ↓                    ↓              ↓
 Local State    Multiple API Calls    Sync Issues    Lost Changes
    Updates      Per Operation        Cache Miss     Frustration
-```
+\`\`\`
 
 ### ✅ **New Professional Architecture**:
-```
+\`\`\`
 Admin Changes → Staging Area → Review → Save to Production → Reliable Sync
      ↓              ↓           ↓            ↓                ↓
 Visual Feedback  Accumulation  Preview   Single Atomic     Immediate
 Change Count     All Changes   Changes   Blob Operation    Customer Sync
-```
+\`\`\`
 
 ## 📊 COMPREHENSIVE FEATURES IMPLEMENTED
 
 ### ✅ **Professional Staging System**
 
 #### **Staging State Management**:
-```typescript
+\`\`\`typescript
 // Core staging state
 const [stagedProducts, setStagedProducts] = useState<Product[]>([])
 const [originalProducts, setOriginalProducts] = useState<Product[]>([])
@@ -57,7 +57,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 const [isSaving, setIsSaving] = useState(false)
 const [lastSaved, setLastSaved] = useState<Date | null>(null)
 const [savingError, setSavingError] = useState<string | null>(null)
-```
+\`\`\`
 
 #### **Automatic Initialization**:
 - Staging area initializes with current production data
@@ -65,7 +65,7 @@ const [savingError, setSavingError] = useState<string | null>(null)
 - Visual indicators update in real-time
 
 #### **Change Detection Algorithm**:
-```typescript
+\`\`\`typescript
 const getChangedProducts = () => {
   const changes: { [key: string]: 'new' | 'modified' | 'deleted' } = {}
   
@@ -88,12 +88,12 @@ const getChangedProducts = () => {
   
   return changes
 }
-```
+\`\`\`
 
 ### ✅ **Professional User Interface**
 
 #### **Unsaved Changes Banner**:
-```tsx
+\`\`\`tsx
 {hasUnsavedChanges && (
   <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
     <div className="flex items-center justify-between">
@@ -115,7 +115,7 @@ const getChangedProducts = () => {
     </div>
   </div>
 )}
-```
+\`\`\`
 
 #### **Success/Error Feedback**:
 - **Success Indicator**: Green banner with timestamp after successful save
@@ -123,7 +123,7 @@ const getChangedProducts = () => {
 - **Loading States**: Spinner and disabled state during save operation
 
 #### **Navigation Protection**:
-```typescript
+\`\`\`typescript
 useEffect(() => {
   const handleBeforeUnload = (e: BeforeUnloadEvent) => {
     if (hasUnsavedChanges) {
@@ -135,12 +135,12 @@ useEffect(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   return () => window.removeEventListener('beforeunload', handleBeforeUnload)
 }, [hasUnsavedChanges])
-```
+\`\`\`
 
 ### ✅ **Atomic Save Operation**
 
 #### **New Server Action**:
-```typescript
+\`\`\`typescript
 export async function saveToProductionAction(products: Product[]): Promise<FormState> {
   try {
     console.log(`🚀 Saving ${products.length} products to production...`)
@@ -166,10 +166,10 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     }
   }
 }
-```
+\`\`\`
 
 #### **Client-Side Save Function**:
-```typescript
+\`\`\`typescript
 const saveToProduction = async () => {
   setIsSaving(true)
   setSavingError(null)
@@ -196,7 +196,7 @@ const saveToProduction = async () => {
     setIsSaving(false)
   }
 }
-```
+\`\`\`
 
 ## 🔧 WORKFLOW TRANSFORMATION
 

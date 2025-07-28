@@ -11,23 +11,23 @@
 
 ### **FIX 1: lib/csv-data.ts** ✅
 **Function**: `updateProducts()` - Used by individual product operations
-```typescript
+\`\`\`typescript
 await put(BLOB_FILENAME, csvText, {
   access: "public",
   contentType: "text/csv",
   allowOverwrite: true,  // ← ADDED
 })
-```
+\`\`\`
 
 ### **FIX 2: app/admin/actions.ts** ✅
 **Function**: `uploadCsvAction()` - Used by CSV file uploads
-```typescript
+\`\`\`typescript
 await put(BLOB_FILENAME, standardizedCsvText, { 
   access: "public", 
   contentType: "text/csv",
   allowOverwrite: true  // ← ADDED
 })
-```
+\`\`\`
 
 ## 🚀 **YOUR CSV UPLOAD IS NOW READY**
 
@@ -47,14 +47,14 @@ await put(BLOB_FILENAME, standardizedCsvText, {
 ## 🔍 **DEBUGGING LOGS TO EXPECT**
 
 **During successful CSV upload:**
-```
+\`\`\`
 🔧 ADMIN: File details: {name: "PRODUCT LIST Sheet1 2.csv", size: X}
 🔧 Header mapping: "CATEGORY" → "category"
 🔧 Header mapping: "ROAST LEVEL" → "roastLevel"
 🔧 ADMIN: Processing data with enhanced format handling...
 🔧 ADMIN: Successfully saved to blob storage!
 ✅ SUCCESS: Successfully uploaded and updated 33 products!
-```
+\`\`\`
 
 **No more blob errors!**
 

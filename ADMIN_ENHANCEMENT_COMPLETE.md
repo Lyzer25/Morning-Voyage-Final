@@ -46,10 +46,10 @@
 6. **Export Functionality** - Download products as CSV
 
 ### **CSV Format Now Supported:**
-```csv
+\`\`\`csv
 sku,productName,CATEGORY,PRICE,DESCRIPTION,FEATURED,ROAST LEVEL,ORIGIN,FORMAT,WEIGHT,TASTING NOTES
 COFFEE-COLOMBIA-12OZ-WB,Colombian Single Origin,COFFEE,19.99,Premium single origin coffee,TRUE,Medium,Colombia,Whole Bean,12oz,"Chocolate, Caramel, Nuts"
-```
+\`\`\`
 
 ## 📋 **IMMEDIATE TESTING INSTRUCTIONS**
 
@@ -74,13 +74,13 @@ COFFEE-COLOMBIA-12OZ-WB,Colombian Single Origin,COFFEE,19.99,Premium single orig
 
 ### **Console Logs to Look For:**
 **During CSV Upload:**
-```
+\`\`\`
 🔧 Header mapping: "CATEGORY" → "category"
 🔧 Header mapping: "ROAST LEVEL" → "roastLevel"
 🔧 Processing row 1: {category: "COFFEE", price: "19.99", featured: "TRUE"}
 ✅ Processed row 1: {category: "coffee", price: 19.99, featured: true}
 🔧 ADMIN: Successfully saved to blob storage!
-```
+\`\`\`
 
 **If Issues Occur:**
 - ❌ `Missing required columns` = CSV headers not recognized
@@ -90,7 +90,7 @@ COFFEE-COLOMBIA-12OZ-WB,Colombian Single Origin,COFFEE,19.99,Premium single orig
 ## 🎯 **NEXT STEPS (OPTIONAL ENHANCEMENTS)**
 
 ### **Phase 2: Add Image Upload UI (Future)**
-```typescript
+\`\`\`typescript
 // Future enhancement: Add to product-form.tsx
 <div className="space-y-2">
   <Label htmlFor="images">Product Images</Label>
@@ -102,7 +102,7 @@ COFFEE-COLOMBIA-12OZ-WB,Colombian Single Origin,COFFEE,19.99,Premium single orig
     className="border rounded px-3 py-2 w-full"
   />
 </div>
-```
+\`\`\`
 
 ### **Phase 3: Enhanced Product Display (Future)**
 - Display product images on coffee page

@@ -3,14 +3,14 @@ import { Truck, Award, Zap, Heart } from "lucide-react"
 const features = [
   {
     icon: Zap,
-    title: "Roasted to Order",
+    title: "Roasted to Order", // Reverted this line
     description: "Every bag is roasted fresh after you place your order, ensuring maximum flavor and aroma.",
     gradient: "from-[#4B2E2E] to-[#6E6658]",
   },
   {
     icon: Truck,
-    title: "Lightning Fast Delivery",
-    description: "Free shipping on orders over $35. Get your coffee delivered within 2-3 business days.",
+    title: "Priority Fulfillment",
+    description: "Subscribe and get 2-day fulfillment guaranteed—your coffee is roasted and out the door within 2 business days, every time. Freshness and speed you can count on",
     gradient: "from-[#9E7C83] to-[#6E6658]",
   },
   {

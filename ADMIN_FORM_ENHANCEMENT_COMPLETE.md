@@ -44,7 +44,7 @@
 ## 🎯 **UPDATED PRODUCT IMAGE STRUCTURE**
 
 ### **ProductImage Interface:**
-```typescript
+\`\`\`typescript
 interface ProductImage {
   id: string
   url: string
@@ -52,7 +52,7 @@ interface ProductImage {
   type: 'thumbnail' | 'main' | 'gallery'  // ← Enhanced categorization
   order: number
 }
-```
+\`\`\`
 
 ### **Image Types:**
 - **thumbnail**: Used in coffee grid cards

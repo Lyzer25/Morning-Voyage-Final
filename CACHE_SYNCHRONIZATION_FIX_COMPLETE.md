@@ -24,7 +24,7 @@
 ### ✅ **Issue 1: Conditional Initialization Bug FIXED**
 
 **Problem**: Staging area wouldn't accept empty states
-```typescript
+\`\`\`typescript
 // ❌ BROKEN CODE:
 useEffect(() => {
   if (initialProducts.length > 0) { // Blocked empty state updates!
@@ -32,12 +32,12 @@ useEffect(() => {
     setOriginalProducts([...initialProducts])
   }
 }, [initialProducts])
-```
+\`\`\`
 
 **Root Cause**: The `length > 0` condition prevented the staging system from updating when empty state was the correct state (after deleting all products).
 
 **Solution**: Always initialize with server data, including empty states
-```typescript
+\`\`\`typescript
 // ✅ FIXED CODE:
 useEffect(() => {
   console.log('🔍 initialProducts changed:', {
@@ -52,12 +52,12 @@ useEffect(() => {
   setHasUnsavedChanges(false)
   console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
 }, [initialProducts])
-```
+\`\`\`
 
 ### ✅ **Issue 2: Router Refresh Interference FIXED**
 
 **Problem**: Unwanted router refresh was fetching stale cache data
-```typescript
+\`\`\`typescript
 // ❌ PROBLEMATIC CODE:
 <ProductForm
   onOpenChange={(isOpen) => {
@@ -66,12 +66,12 @@ useEffect(() => {
     }
   }}
 />
-```
+\`\`\`
 
 **Root Cause**: `router.refresh()` was always called when closing the ProductForm, causing the component to re-render with potentially stale server data that overwrote the correct staging state.
 
 **Solution**: Conditional router refresh that respects save workflow
-```typescript
+\`\`\`typescript
 // ✅ FIXED CODE:
 <ProductForm
   onOpenChange={(isOpen) => {
@@ -88,19 +88,19 @@ useEffect(() => {
     }
   }}
 />
-```
+\`\`\`
 
 ### ✅ **Issue 3: Enhanced Debugging ADDED**
 
 **Addition**: Comprehensive logging to track state changes
-```typescript
+\`\`\`typescript
 // ✅ NEW DEBUGGING:
 console.log('🔍 initialProducts changed:', {
   length: initialProducts.length,
   first: initialProducts[0]?.productName || 'EMPTY',
   timestamp: new Date().toISOString()
 })
-```
+\`\`\`
 
 **Benefit**: Clear visibility into when and why staging state changes, making future debugging easier.
 

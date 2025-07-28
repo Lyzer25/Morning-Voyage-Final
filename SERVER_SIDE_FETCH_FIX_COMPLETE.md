@@ -9,21 +9,21 @@
 
 ### ❌ Root Cause Identified
 **Problem**: Server-side `fetch()` calls cannot use relative URLs - they require absolute URLs
-```
+\`\`\`
 ❌ BROKEN: const url = `/api/products?grouped=true`
 ❌ ERROR: TypeError: Failed to parse URL from /api/products?grouped=true with ERR_INVALID_URL
-```
+\`\`\`
 
 ### ✅ Solution Implemented
 **Fix**: Dynamic URL construction based on server vs client context
-```typescript
+\`\`\`typescript
 // ✅ FIXED: Server/client detection with appropriate URLs
 const isServer = typeof window === 'undefined'
 const baseUrl = isServer 
   ? (process.env.NEXT_PUBLIC_BASE_URL || 'https://morningvoyage.co')
   : ''
 const url = `${baseUrl}/api/products?grouped=true`
-```
+\`\`\`
 
 ## 🔧 TECHNICAL IMPLEMENTATION
 
@@ -31,7 +31,7 @@ const url = `${baseUrl}/api/products?grouped=true`
 **Function**: `fetchProducts()` - Lines 16-25
 
 **BEFORE** (Causing ERR_INVALID_URL):
-```typescript
+\`\`\`typescript
 // CRITICAL FIX: Use relative URLs to avoid Vercel Deployment Protection 401 errors
 const params = new URLSearchParams()
 if (grouped) params.append('grouped', 'true')
@@ -39,10 +39,10 @@ if (category) params.append('category', category)
 
 const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`
 console.log(`🔄 Fetching products from API: ${url} (Vercel: ${!!process.env.VERCEL})`)
-```
+\`\`\`
 
 **AFTER** (Server/Client URL Resolution):
-```typescript
+\`\`\`typescript
 // CRITICAL FIX: Handle server vs client-side URLs
 const params = new URLSearchParams()
 if (grouped) params.append('grouped', 'true')
@@ -55,7 +55,7 @@ const baseUrl = isServer
 
 const url = `${baseUrl}/api/products${params.toString() ? '?' + params.toString() : ''}`
 console.log(`🔄 Fetching products from API: ${url} (Server: ${isServer})`)
-```
+\`\`\`
 
 ## 🚀 DEPLOYMENT STATUS
 
@@ -66,11 +66,11 @@ console.log(`🔄 Fetching products from API: ${url} (Server: ${isServer})`)
 - **Status**: LIVE on morningvoyage.co
 
 ### Git History:
-```
+\`\`\`
 905bdd9 (HEAD -> main, origin/main) 🚨 CRITICAL FIX: Server-Side Fetch URL Resolution
 3e9896a 🚨 CRITICAL FIX: Use relative API URLs to bypass Vercel Deployment Protection
 d799439 🚨 CRITICAL FIX: Mass Delete System + Product Display Issues
-```
+\`\`\`
 
 ## 🎯 URL RESOLUTION LOGIC
 
@@ -91,18 +91,18 @@ d799439 🚨 CRITICAL FIX: Mass Delete System + Product Display Issues
 ## 🔍 EXPECTED LOG PATTERNS
 
 ### ✅ Success Indicators (Vercel Logs):
-```
+\`\`\`
 🔄 Fetching products from API: https://morningvoyage.co/api/products?grouped=true (Server: true)
 ✅ API Response: 33 products
 📦 Returning cached grouped products
 ✅ Updated grouped product cache: 33 products
-```
+\`\`\`
 
 ### ❌ Previous Error Patterns (Now Fixed):
-```
+\`\`\`
 ❌ Error fetching products from API: [TypeError: Failed to parse URL from /api/products?grouped=true]
 ERR_INVALID_URL, input: '/api/products?grouped=true'
-```
+\`\`\`
 
 ## 🎯 IMMEDIATE IMPACT
 

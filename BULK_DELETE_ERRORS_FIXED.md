@@ -23,7 +23,7 @@
 ### **Fix 1: Enhanced Blob Storage Validation**
 
 **Added Pre-Upload Validation:**
-```typescript
+\`\`\`typescript
 // Validate products array
 if (!Array.isArray(products)) {
   throw new Error("Products must be an array")
@@ -43,7 +43,7 @@ if (csvText.length < 10) {
   console.error('❌ CRITICAL: Generated CSV content is too short:', csvText)
   throw new Error("Generated CSV content is too short - likely malformed")
 }
-```
+\`\`\`
 
 **Added Comprehensive Logging:**
 - Products array validation logging
@@ -54,13 +54,13 @@ if (csvText.length < 10) {
 ### **Fix 2: Simplified Cache Revalidation**
 
 **Removed Problematic API Call:**
-```typescript
+\`\`\`typescript
 // OLD (causing errors):
 const response = await fetch('/api/products/revalidate', {...})
 
 // NEW (working solution):
 // Next.js revalidatePath() is sufficient for cache clearing in Vercel
-```
+\`\`\`
 
 **Streamlined Approach:**
 - Kept working Next.js `revalidatePath()` calls
