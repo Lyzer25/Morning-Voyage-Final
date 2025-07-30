@@ -38,9 +38,9 @@ export default function Newsletter() {
 
           {/* Heading */}
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight">
-            Get 50% Off Your
+            SUBSCRIBE NOW
             <span className="block bg-gradient-to-r from-[#D5BFA3] to-[#E7CFC7] bg-clip-text text-transparent">
-              First Order
+              Explore the Depths of Morning Brew
             </span>
           </h2>
 
@@ -77,7 +77,7 @@ export default function Newsletter() {
           {/* Benefits */}
           <div className="grid sm:grid-cols-3 gap-6 max-w-2xl mx-auto mb-8">
             {[
-              { icon: "🎁", text: "50% Off First Order" },
+              { icon: "✨", text: "New Release Alerts" },
               { icon: "☕", text: "Exclusive Coffee Tips" },
               { icon: "👕", text: "Early Fashion Access" },
             ].map((benefit, index) => (

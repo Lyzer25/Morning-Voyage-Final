@@ -184,7 +184,7 @@ export default function AboutUsPage() {
               size="lg"
               className="bg-gradient-to-r from-[#4B2E2E] via-[#6E6658] to-[#9E7C83] hover:from-[#6E6658] hover:via-[#9E7C83] hover:to-[#4B2E2E] text-white px-8 py-3 rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
             >
-              <Link href="/coffee">Shop All Coffee</Link>
+              <Link href="https://morninvoyage.co/coffee">Shop All Coffee</Link>
             </Button>
           </div>
         </section>
