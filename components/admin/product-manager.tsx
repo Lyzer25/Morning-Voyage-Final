@@ -35,26 +35,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
+import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
 import { getProducts } from "@/lib/csv-data"
+import { transformHeader, processCSVData } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import ProductForm from "./product-form"
-
-function UploadButton() {
-  const { pending } = useFormStatus()
-  return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-      {pending ? "Uploading..." : "Upload & Update"}
-    </Button>
-  )
-}
+import Papa from "papaparse"
+import { toast } from "sonner"
 
 export default function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter()
   const [products, setProducts] = useState(initialProducts)
   const [searchTerm, setSearchTerm] = useState("")
-  const [uploadState, formAction] = useActionState(uploadCsvAction, {})
   const [isPending, startTransition] = useTransition()
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -89,6 +81,105 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     setSaveProgress(progress)
     setSaveMessage(message)
     console.log(`🚀 Deploy Progress: ${stage} - ${progress}% - ${message}`)
+  }, [])
+
+  // NEW: Client-side CSV upload handler
+  const handleCsvUpload = useCallback(async (file: File) => {
+    try {
+      console.log('📂 CSV Upload: Processing file locally...', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      })
+
+      if (!file || file.size === 0) {
+        toast.error("Please select a CSV file to upload.")
+        return
+      }
+
+      if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
+        toast.error("Invalid file type. Please upload a CSV file.")
+        return
+      }
+
+      // Read file content
+      const csvText = await file.text()
+      console.log('📂 CSV content received:', {
+        length: csvText.length,
+        firstLine: csvText.split('\n')[0] || 'EMPTY',
+        preview: csvText.substring(0, 300)
+      })
+
+      // Parse CSV using existing helper
+      const parsed = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+        transformHeader: transformHeader,
+      })
+
+      console.log('📂 CSV parsed:', {
+        dataRows: parsed.data?.length || 0,
+        errors: parsed.errors?.length || 0,
+        headers: parsed.meta?.fields || []
+      })
+
+      if (parsed.errors.length > 0) {
+        console.warn('⚠️ CSV parsing errors:', parsed.errors)
+        toast.error(`CSV parsing error: ${parsed.errors[0].message}`)
+        return
+      }
+
+      if (!parsed.meta.fields?.includes("sku") || !parsed.meta.fields?.includes("productName")) {
+        toast.error("CSV must contain 'sku' and 'productName' columns.")
+        return
+      }
+
+      // Process data using existing helper
+      const processedData = processCSVData(parsed.data || [])
+
+      console.log('📂 CSV processed:', {
+        productsCount: processedData.length,
+        categories: [...new Set(processedData.map(p => p.category).filter(Boolean))],
+        sampleProduct: processedData[0]
+      })
+
+      // Smart merge: Ask user how to handle the CSV data
+      const userChoice = confirm(
+        `Import ${processedData.length} products from CSV.\n\nOK = Replace all products\nCancel = Add new products only`
+      )
+
+      setStagedProducts(prev => {
+        if (userChoice) {
+          // Replace all products with CSV data
+          console.log('📂 Replacing all products with CSV data')
+          return [...processedData]
+        } else {
+          // Add new products, update existing ones
+          const existingSkus = new Set(prev.map(p => p.sku))
+          const newProducts = processedData.filter(p => !existingSkus.has(p.sku))
+          const updatedProducts = prev.map(existing => {
+            const csvProduct = processedData.find(p => p.sku === existing.sku)
+            return csvProduct || existing // Update if found in CSV, keep existing if not
+          })
+          
+          console.log('📂 Merging CSV data:', {
+            existing: prev.length,
+            newFromCsv: newProducts.length,
+            updated: updatedProducts.length
+          })
+          
+          return [...updatedProducts, ...newProducts]
+        }
+      })
+
+      // Show success message
+      toast.success(`📂 CSV processed: ${processedData.length} products added to staging area`)
+
+    } catch (error) {
+      console.error('❌ CSV Upload Error:', error)
+      toast.error(`CSV upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }, [])
 
   // STAGING SYSTEM: Initialize staging data (including empty state)
@@ -404,17 +495,33 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           className="max-w-sm"
         />
         <div className="flex w-full flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
-          <form action={formAction} className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <Input
               id="csvFile"
-              name="csvFile"
               type="file"
               accept=".csv"
               className="w-full file:mr-2 file:rounded-md file:border-0 file:bg-stone-200 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-stone-700 hover:file:bg-stone-300"
-              required
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  handleCsvUpload(file)
+                  // Reset file input after processing
+                  e.target.value = ''
+                }
+              }}
             />
-            <UploadButton />
-          </form>
+            <Button
+              type="button"
+              onClick={() => {
+                const fileInput = document.getElementById('csvFile') as HTMLInputElement
+                fileInput?.click()
+              }}
+              className="w-full sm:w-auto"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Add CSV to Staging
+            </Button>
+          </div>
           <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto bg-transparent">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
@@ -423,17 +530,6 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           </Button>
         </div>
       </div>
-
-      {uploadState?.error && (
-        <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" /> {uploadState.error}
-        </div>
-      )}
-      {uploadState?.success && (
-        <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg flex items-center gap-2">
-          <CheckCircle className="h-4 w-4" /> {uploadState.success}
-        </div>
-      )}
 
       {/* ENHANCED: Professional Save & Deploy Interface */}
       {hasUnsavedChanges && (
