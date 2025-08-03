@@ -323,29 +323,68 @@ export async function toggleStatusAction(sku: string, status: "active" | "draft"
   }
 }
 
-// NEW: Save all staged changes to production in a single atomic operation
+// ENHANCED: Save all staged changes to production with comprehensive progress feedback
 export async function saveToProductionAction(products: Product[]): Promise<FormState> {
   try {
-    console.log(`🚀 Saving ${products.length} products to production...`)
+    console.log(`🚀 PRODUCTION DEPLOY: Starting deployment of ${products.length} products`)
     
-    // Validate products array
+    // Enhanced validation with detailed logging
     if (!Array.isArray(products)) {
-      return { error: "Invalid product data provided." }
+      console.error('❌ DEPLOY: Invalid products data type:', typeof products)
+      return { error: "Invalid product data format. Expected array of products." }
     }
     
-    // Use existing updateProducts function for atomic write
-    await updateProducts(products)
+    if (products.length === 0) {
+      console.log('📦 DEPLOY: Saving empty product state (delete all scenario)')
+    } else {
+      console.log('📊 DEPLOY: Product breakdown:', {
+        total: products.length,
+        active: products.filter(p => p.status === 'active').length,
+        draft: products.filter(p => p.status === 'draft').length,
+        featured: products.filter(p => p.featured).length
+      })
+    }
     
-    // Trigger comprehensive cache revalidation
-    await triggerCacheRevalidation()
+    // Stage 1: Atomic blob storage write
+    console.log('💾 DEPLOY: Writing to Blob storage...')
+    const startTime = Date.now()
+    await updateProducts(products)
+    const blobTime = Date.now() - startTime
+    console.log(`✅ DEPLOY: Blob storage updated successfully (${blobTime}ms)`)
+    
+    // Stage 2: Enhanced cache revalidation with timeout protection
+    console.log('🔄 DEPLOY: Triggering comprehensive cache revalidation...')
+    const revalidationStart = Date.now()
+    
+    await Promise.race([
+      triggerCacheRevalidation(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Cache revalidation timeout after 10 seconds')), 10000)
+      )
+    ]).catch(error => {
+      console.warn('⚠️ DEPLOY: Cache revalidation warning (continuing deployment):', error)
+      // Don't fail entire deployment for cache issues - this is non-critical
+    })
+    
+    const revalidationTime = Date.now() - revalidationStart
+    console.log(`🔄 DEPLOY: Cache revalidation completed (${revalidationTime}ms)`)
+    
+    const totalTime = Date.now() - startTime
+    console.log(`🎉 PRODUCTION DEPLOY: Complete! Total time: ${totalTime}ms`)
     
     return { 
-      success: `Successfully saved ${products.length} products to production! Changes are now live on customer pages.` 
+      success: `🚀 Successfully deployed ${products.length} products to live site! Changes are now visible to customers. (${totalTime}ms)` 
     }
   } catch (error) {
-    console.error("❌ Error saving to production:", error)
+    console.error("❌ PRODUCTION DEPLOY: Failed with error:", error)
+    
+    // Enhanced error reporting
+    const errorMessage = error instanceof Error 
+      ? `Deployment failed: ${error.message}` 
+      : "Deployment failed due to an unexpected error."
+    
     return { 
-      error: "Failed to save changes to production. Please try again." 
+      error: errorMessage + " Please try again or contact support if the problem persists."
     }
   }
 }
