@@ -42,6 +42,11 @@ const headerMapping: { [key: string]: string } = {
   "SHIPPING( FIRST ITEM) ": "shippingFirst",      // Uppercase variant
   "SHIPPING(ADDITIONAL ITEM)": "shippingAdditional", // Uppercase variant
 
+  // NEW: Notification column mappings
+  "NOTIFICATION": "notification",                  // UPPERCASE
+  "Notification": "notification",                  // Title Case
+  "notification": "notification",                  // lowercase
+
   // Additional variations for flexibility
   "Roast Level": "roastLevel",      // Title Case
   "Tasting Notes": "tastingNotes",  // Title Case

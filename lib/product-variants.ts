@@ -1,5 +1,5 @@
 // Enhanced product variant management system
-import type { SheetProduct } from "./google-sheets-integration"
+import type { Product } from "./types"
 
 export interface ProductVariant {
   sku: string
@@ -25,6 +25,7 @@ export interface GroupedProduct {
   featured: boolean
   badge?: string
   status: string
+  notification?: string  // NEW: Notification field for promotional messages
   variants: ProductVariant[]
   defaultVariant: ProductVariant
   availableFormats: string[]
@@ -55,7 +56,7 @@ export function getBaseProductName(name: string): string {
 }
 
 // Group products by base name and format variants
-export function groupProductVariants(products: SheetProduct[]): GroupedProduct[] {
+export function groupProductVariants(products: Product[]): GroupedProduct[] {
   console.log(`🔄 Grouping ${products.length} raw products into variants...`)
 
   // First, let's see what we're working with
@@ -73,7 +74,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
   products.forEach((product, index) => {
     // Use product name as the primary grouping key, not SKU
     const baseName = getBaseProductName(product.productName)
-    const baseKey = `${baseName}-${product.category}-${product.subcategory}`.toLowerCase().replace(/\s+/g, "-")
+    const baseKey = `${baseName}-${product.category}-${product.subcategory || 'default'}`.toLowerCase().replace(/\s+/g, "-")
 
     console.log(`Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`)
 
@@ -114,7 +115,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       // Update default variant if this one is featured or cheaper
       if (product.featured || variant.price < existingProduct.defaultVariant.price) {
         existingProduct.defaultVariant = variant
-        existingProduct.featured = product.featured
+        existingProduct.featured = product.featured || false
       }
 
       console.log(`  ✅ Added variant ${variant.format} to existing product: ${baseName}`)
@@ -124,13 +125,14 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
       const tastingNotes =
         typeof tastingNotesRaw === "string" && tastingNotesRaw.length > 0
           ? tastingNotesRaw.split(",").map((note) => note.trim())
-          : []
+          : Array.isArray(tastingNotesRaw) ? tastingNotesRaw : []
+      
       // Create new grouped product
       const groupedProduct: GroupedProduct = {
         baseSku: getBaseSku(product.sku),
         productName: baseName, // Use the cleaned base name
         category: product.category,
-        subcategory: product.subcategory,
+        subcategory: product.subcategory || 'default',
         description: product.description,
         longDescription: product.longDescription,
         roastLevel: product.roastLevel,
@@ -140,6 +142,7 @@ export function groupProductVariants(products: SheetProduct[]): GroupedProduct[]
         featured: product.featured || false,
         badge: product.badge,
         status: product.status,
+        notification: product.notification, // NEW: Include notification field
         variants: [variant],
         defaultVariant: variant,
         availableFormats: [variant.format],

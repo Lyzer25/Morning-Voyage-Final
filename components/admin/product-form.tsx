@@ -241,6 +241,18 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
               <Label htmlFor="badge">Badge</Label>
               <Input id="badge" name="badge" defaultValue={product?.badge} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="notification">Notification (for subscription cards)</Label>
+              <Input 
+                id="notification" 
+                name="notification" 
+                placeholder="e.g., $10 for the first month!"
+                defaultValue={product?.notification || ""} 
+              />
+              <p className="text-xs text-gray-500">
+                Add promotional text that will appear on subscription cards (50 characters recommended)
+              </p>
+            </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="featured" name="featured" defaultChecked={product?.featured} />
               <Label htmlFor="featured">Featured Product</Label>

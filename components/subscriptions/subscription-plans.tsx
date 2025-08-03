@@ -39,6 +39,13 @@ export default function SubscriptionPlans({ products }: SubscriptionPlansProps) 
                 product.badge === "Best Value" ? "ring-2 ring-[#D5BFA3] ring-opacity-50" : ""
               }`}
             >
+              {/* Notification Banner */}
+              {product.notification && (
+                <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-center py-2 px-4 font-bold text-sm animate-pulse">
+                  🎉 {product.notification}
+                </div>
+              )}
+
               {/* Popular Badge */}
               {product.badge === "Best Value" && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">

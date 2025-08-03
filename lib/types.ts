@@ -31,5 +31,8 @@ export interface Product {
   shippingFirst?: number        // Cost for first item shipping
   shippingAdditional?: number   // Cost for additional item shipping
   
+  // NEW: Notification field for promotional messages
+  notification?: string         // Optional promotional notification text
+  
   [key: string]: any // Allow other properties from the full CSV
 }

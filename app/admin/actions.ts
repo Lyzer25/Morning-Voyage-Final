@@ -96,6 +96,9 @@ function formDataToProduct(formData: FormData): Product {
     // NEW: Add shipping fields with validation
     shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
     shippingAdditional: (shippingAdditional && !isNaN(shippingAdditional)) ? shippingAdditional : undefined,
+    
+    // NEW: Add notification field
+    notification: formData.get("notification") as string || undefined,
   }
 }
 
