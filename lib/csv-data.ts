@@ -74,10 +74,10 @@ const SAMPLE_PRODUCTS: Product[] = [
   }
 ]
 
-async function fetchAndParseCsv(): Promise<Product[]> {
+async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
   try {
     console.log('📊 ========== CSV DATA FLOW DEBUG START ==========');
-    console.log('📊 fetchAndParseCsv: Starting comprehensive trace...');
+    console.log('📊 fetchAndParseCsv: Starting comprehensive trace...', { bustCache });
     console.log('📊 Environment check:', {
       BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN ? 'EXISTS' : 'MISSING',
       NODE_ENV: process.env.NODE_ENV,
@@ -85,14 +85,17 @@ async function fetchAndParseCsv(): Promise<Product[]> {
       allBlobEnvKeys: Object.keys(process.env).filter(key => key.includes('BLOB'))
     });
     
-    // Check if we have a Vercel Blob token
+    // CRITICAL FIX: Handle build-time vs runtime
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.log("❌ CRITICAL: No BLOB_READ_WRITE_TOKEN found in environment!");
-      console.log("📊 Available environment variables:", Object.keys(process.env).filter(k => k.includes('BLOB')));
-      console.log('📊 Falling back to sample products');
-      console.log('📊 Sample products count:', SAMPLE_PRODUCTS.length);
-      console.log('📊 Sample products categories:', SAMPLE_PRODUCTS.map(p => p.category));
-      return SAMPLE_PRODUCTS
+      console.log('📊 No blob token available - returning empty array (build time)')
+      return []
+    }
+
+    // CRITICAL FIX: Detect build-time and return empty array
+    const isBuildTime = process.env.NODE_ENV === 'production' && !process.env.VERCEL
+    if (isBuildTime) {
+      console.log('📊 Build time detected - returning empty array')
+      return []
     }
 
     console.log('📊 BLOB_READ_WRITE_TOKEN exists, proceeding to fetch...');
@@ -290,16 +293,37 @@ async function fetchAndParseCsv(): Promise<Product[]> {
   }
 }
 
-export async function getProducts(): Promise<Product[]> {
-  const now = Date.now()
-  if (productCache && now - lastFetchTime < CACHE_DURATION) {
-    console.log("Returning products from cache.")
-    return productCache
-  }
+// ENHANCED: getProducts with cache-busting for verification
+export async function getProducts(bustCache = false): Promise<Product[]> {
+  try {
+    console.log('🔍 getProducts called', { bustCache })
+    
+    const now = Date.now()
+    
+    // Skip cache if busting or cache is expired
+    if (!bustCache && productCache && now - lastFetchTime < CACHE_DURATION) {
+      console.log("Returning products from cache.")
+      return productCache
+    }
 
-  productCache = await fetchAndParseCsv()
-  lastFetchTime = now
-  return productCache
+    console.log(bustCache ? '💥 Cache busting requested - fetching fresh data' : '⏰ Cache expired - fetching fresh data')
+    
+    productCache = await fetchAndParseCsv(bustCache)
+    lastFetchTime = now
+    
+    console.log(`✅ getProducts returning ${productCache.length} products`, { bustCache })
+    return productCache
+    
+  } catch (error) {
+    console.error('❌ Error in getProducts:', error)
+    // Fallback to cached data if available, otherwise empty array
+    if (productCache) {
+      console.log('⚠️ Using cached data as fallback')
+      return productCache
+    }
+    console.log('⚠️ No cached data available - returning empty array')
+    return []
+  }
 }
 
 // Handle empty product state when user deletes all products

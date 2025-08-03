@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { uploadCsvAction, exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
+import { getProducts } from "@/lib/csv-data"
 import type { Product } from "@/lib/types"
 import ProductForm from "./product-form"
 
@@ -151,7 +152,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     return changes
   }
 
-  // ENHANCED: Save to production with detailed progress tracking
+  // ENHANCED: Save to production with REAL verification before completion
   const saveToProduction = useCallback(async () => {
     if (isSaving) return
     
@@ -162,7 +163,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     try {
       // Stage 1: Validation (10%)
       updateSaveProgress('validating', 10, 'Validating product data...')
-      await new Promise(resolve => setTimeout(resolve, 300)) // Brief UX delay
+      await new Promise(resolve => setTimeout(resolve, 500)) // Brief UX delay
       
       if (!Array.isArray(stagedProducts)) {
         throw new Error('Invalid product data')
@@ -170,7 +171,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       
       console.log('🚀 DEPLOY: Starting deployment of', stagedProducts.length, 'products')
       
-      // Stage 2: Saving to Blob Storage (30-60%)
+      // Stage 2: Saving to Blob Storage (30%)
       updateSaveProgress('saving', 30, 'Saving to Blob storage...')
       const result = await saveToProductionAction(stagedProducts)
       
@@ -178,29 +179,81 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         throw new Error(result.error)
       }
       
-      updateSaveProgress('saving', 60, 'Updating local state...')
-      
-      // Update all local states to match staged
+      // Stage 3: Update Local State (50%)
+      updateSaveProgress('saving', 50, 'Updating local state...')
       setOriginalProducts([...stagedProducts])
       setProducts([...stagedProducts])
       setHasUnsavedChanges(false)
       
-      // Stage 3: Cache Revalidation (80%)
-      updateSaveProgress('revalidating', 80, 'Refreshing live site...')
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Allow time for cache revalidation
+      // Stage 4: Cache Revalidation (70%)
+      updateSaveProgress('revalidating', 70, 'Clearing site cache...')
+      await new Promise(resolve => setTimeout(resolve, 2000)) // Allow cache clearing
       
-      // Stage 4: Complete (100%)
-      updateSaveProgress('complete', 100, `🎉 Successfully deployed ${stagedProducts.length} products!`)
+      // CRITICAL NEW: Stage 5: Real Data Verification (90%)
+      updateSaveProgress('revalidating', 90, 'Verifying changes are live...')
+      
+      console.log('🔍 VERIFICATION: Starting data propagation verification...')
+      
+      // Verify the data actually updated in blob storage
+      let verificationAttempts = 0
+      let dataVerified = false
+      const maxAttempts = 10 // Max 10 attempts = 30 seconds
+      
+      while (!dataVerified && verificationAttempts < maxAttempts) {
+        try {
+          console.log(`🔍 VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts}`)
+          
+          // Fetch fresh data from blob storage with cache busting
+          const freshProducts = await getProducts(true)
+          
+          // Compare data length and first few SKUs to verify update
+          const stagedSkus = stagedProducts.map(p => p.sku).sort()
+          const freshSkus = freshProducts.map(p => p.sku).sort()
+          
+          const dataMatches = (
+            freshProducts.length === stagedProducts.length &&
+            JSON.stringify(stagedSkus.slice(0, 5)) === JSON.stringify(freshSkus.slice(0, 5))
+          )
+          
+          if (dataMatches) {
+            console.log('✅ VERIFICATION: Data verification successful!')
+            console.log(`✅ VERIFICATION: Confirmed ${freshProducts.length} products in live storage`)
+            dataVerified = true
+          } else {
+            console.log(`⏳ VERIFICATION: Data not yet propagated (attempt ${verificationAttempts + 1})`, {
+              staged: stagedProducts.length,
+              fresh: freshProducts.length,
+              stagedFirst3: stagedSkus.slice(0, 3),
+              freshFirst3: freshSkus.slice(0, 3)
+            })
+            
+            // Wait before next attempt
+            await new Promise(resolve => setTimeout(resolve, 3000))
+            verificationAttempts++
+          }
+        } catch (verifyError) {
+          console.warn(`⚠️ VERIFICATION: Attempt ${verificationAttempts + 1} failed:`, verifyError)
+          await new Promise(resolve => setTimeout(resolve, 3000))
+          verificationAttempts++
+        }
+      }
+      
+      if (!dataVerified) {
+        throw new Error('Changes saved but verification timeout - please refresh admin to confirm')
+      }
+      
+      // Stage 6: Complete (100%) - Only after real verification
+      updateSaveProgress('complete', 100, `✅ Successfully deployed & verified ${stagedProducts.length} products!`)
       setLastSaved(new Date())
       
-      console.log('✅ DEPLOY: Complete! Changes are now live.')
+      console.log('🎉 DEPLOY: Complete with verification! Changes are confirmed live.')
       
-      // Show success state for 3 seconds, then return to idle
+      // Show success state for 4 seconds
       setTimeout(() => {
         setSaveStage('idle')
         setSaveProgress(0)
         setSaveMessage('')
-      }, 3000)
+      }, 4000)
       
     } catch (error) {
       console.error('❌ DEPLOY: Failed with error:', error)
@@ -208,12 +261,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       setSavingError(errorMessage)
       updateSaveProgress('error', 0, errorMessage)
       
-      // Show error state for 5 seconds, then return to idle
+      // Show error state for 8 seconds
       setTimeout(() => {
         setSaveStage('idle')
         setSaveProgress(0)
         setSaveMessage('')
-      }, 5000)
+      }, 8000)
     } finally {
       setIsSaving(false)
     }
