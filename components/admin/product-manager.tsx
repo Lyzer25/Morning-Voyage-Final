@@ -280,57 +280,79 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       updateSaveProgress('revalidating', 70, 'Clearing site cache...')
       await new Promise(resolve => setTimeout(resolve, 2000)) // Allow cache clearing
       
-      // CRITICAL NEW: Stage 5: Real Data Verification (90%)
-      updateSaveProgress('revalidating', 90, 'Verifying changes are live...')
+      // CRITICAL NEW: Stage 5: Customer-Facing Data Verification (90%)
+      updateSaveProgress('revalidating', 90, 'Verifying customer pages are updated...')
       
-      console.log('🔍 VERIFICATION: Starting data propagation verification...')
+      console.log('🔍 CUSTOMER VERIFICATION: Starting customer-facing data pipeline verification...')
       
-      // Verify the data actually updated in blob storage
+      // Verify the CUSTOMER-FACING data pipeline (not just blob storage)
       let verificationAttempts = 0
-      let dataVerified = false
+      let customerDataVerified = false
       const maxAttempts = 10 // Max 10 attempts = 30 seconds
       
-      while (!dataVerified && verificationAttempts < maxAttempts) {
+      while (!customerDataVerified && verificationAttempts < maxAttempts) {
         try {
-          console.log(`🔍 VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts}`)
+          console.log(`🔍 CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts}`)
           
-          // Fetch fresh data from blob storage with cache busting
-          const freshProducts = await getProducts(true)
+          // CRITICAL: Test the same API that customer pages use
+          const response = await fetch('/api/products?grouped=true', {
+            cache: 'no-store',
+            headers: { 
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          })
           
-          // Compare data length and first few SKUs to verify update
-          const stagedSkus = stagedProducts.map(p => p.sku).sort()
-          const freshSkus = freshProducts.map(p => p.sku).sort()
+          if (!response.ok) {
+            throw new Error(`Customer API returned ${response.status}`)
+          }
           
-          const dataMatches = (
-            freshProducts.length === stagedProducts.length &&
-            JSON.stringify(stagedSkus.slice(0, 5)) === JSON.stringify(freshSkus.slice(0, 5))
-          )
+          const { products: customerProducts } = await response.json()
           
-          if (dataMatches) {
-            console.log('✅ VERIFICATION: Data verification successful!')
-            console.log(`✅ VERIFICATION: Confirmed ${freshProducts.length} products in live storage`)
-            dataVerified = true
+          // Filter coffee products (like customer pages do)
+          const customerCoffeeProducts = Array.isArray(customerProducts) 
+            ? customerProducts.filter(p => p.category?.toLowerCase().includes('coffee'))
+            : []
+          
+          const stagedCoffeeProducts = stagedProducts.filter(p => p.category?.toLowerCase().includes('coffee'))
+          
+          // Compare coffee product counts (primary verification)
+          const countsMatch = customerCoffeeProducts.length === stagedCoffeeProducts.length
+          
+          // Compare a few SKUs for additional verification
+          const stagedSkus = stagedCoffeeProducts.map(p => p.sku).sort()
+          const customerSkus = customerCoffeeProducts.map(p => p.sku).sort()
+          const skusMatch = JSON.stringify(stagedSkus.slice(0, 3)) === JSON.stringify(customerSkus.slice(0, 3))
+          
+          console.log(`🔍 CUSTOMER VERIFICATION: Customer API check`, {
+            stagedTotal: stagedProducts.length,
+            stagedCoffee: stagedCoffeeProducts.length,
+            customerTotal: customerProducts?.length || 0,
+            customerCoffee: customerCoffeeProducts.length,
+            countsMatch,
+            skusMatch,
+            stagedFirst3: stagedSkus.slice(0, 3),
+            customerFirst3: customerSkus.slice(0, 3)
+          })
+          
+          if (countsMatch && (stagedCoffeeProducts.length === 0 || skusMatch)) {
+            console.log('✅ CUSTOMER VERIFICATION: Customer-facing data verified!')
+            console.log(`✅ CUSTOMER VERIFICATION: Customers will see ${customerCoffeeProducts.length} coffee products`)
+            customerDataVerified = true
           } else {
-            console.log(`⏳ VERIFICATION: Data not yet propagated (attempt ${verificationAttempts + 1})`, {
-              staged: stagedProducts.length,
-              fresh: freshProducts.length,
-              stagedFirst3: stagedSkus.slice(0, 3),
-              freshFirst3: freshSkus.slice(0, 3)
-            })
-            
-            // Wait before next attempt
+            console.log(`⏳ CUSTOMER VERIFICATION: Customer cache still updating...`)
             await new Promise(resolve => setTimeout(resolve, 3000))
             verificationAttempts++
           }
         } catch (verifyError) {
-          console.warn(`⚠️ VERIFICATION: Attempt ${verificationAttempts + 1} failed:`, verifyError)
+          console.warn(`⚠️ CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1} failed:`, verifyError)
           await new Promise(resolve => setTimeout(resolve, 3000))
           verificationAttempts++
         }
       }
       
-      if (!dataVerified) {
-        throw new Error('Changes saved but verification timeout - please refresh admin to confirm')
+      if (!customerDataVerified) {
+        throw new Error('Changes saved but customer page verification timeout - customers may need to wait a moment longer for updates')
       }
       
       // Stage 6: Complete (100%) - Only after real verification

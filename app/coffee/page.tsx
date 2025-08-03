@@ -4,8 +4,8 @@ import PageTransition from "@/components/ui/page-transition"
 import { getCachedGroupedProducts } from "@/lib/product-cache"
 import CoffeePageClient from "@/components/coffee/coffee-page-client"
 
-// CRITICAL FIX: ISR Configuration for Vercel build consistency
-export const revalidate = 3600 // Revalidate every hour instead of 60 seconds for build stability
+// CRITICAL FIX: ISR Configuration for fast customer updates
+export const revalidate = 60 // Revalidate every minute for fast customer updates
 export const dynamic = 'force-static' // Enable ISR
 export const dynamicParams = true
 

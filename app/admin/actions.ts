@@ -8,38 +8,39 @@ import type { Product } from "@/lib/types"
 import { transformHeader } from "@/lib/csv-helpers"
 import { forceInvalidateCache } from "@/lib/product-cache"
 
-// Helper function to trigger cache revalidation after product changes - Vercel optimized
+// ENHANCED: Aggressive cache clearing for all layers
 async function triggerCacheRevalidation() {
   try {
-    console.log("🔄 Triggering cache revalidation after product update...")
+    console.log("🔄 ENHANCED: Triggering aggressive cache revalidation after product update...")
     
-    // CRITICAL: Force invalidate all product caches immediately
+    // CRITICAL: Force invalidate ALL cache layers immediately
     forceInvalidateCache()
     
-    // Revalidate Next.js paths (this is sufficient for Vercel)
+    // Revalidate all customer-facing pages (ISR cache)
     const pathsToRevalidate = ["/", "/coffee", "/subscriptions", "/shop", "/admin"]
     
     for (const path of pathsToRevalidate) {
       revalidatePath(path, "page")
-      console.log(`✅ Revalidated path: ${path}`)
+      console.log(`✅ Revalidated ISR page: ${path}`)
     }
     
     // Also revalidate layout-level cache
     revalidatePath("/", "layout")
     revalidatePath("/coffee", "layout")
     revalidatePath("/subscriptions", "layout")
+    console.log("✅ Revalidated layout caches")
     
-    // Note: Removed problematic API fetch call that was causing URL errors
-    // Next.js revalidatePath() is sufficient for cache clearing in Vercel
+    // ENHANCED: Add small delay to allow revalidation to propagate
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
     if (process.env.VERCEL) {
-      console.log("🔍 Vercel environment detected - revalidation should be immediate")
+      console.log("🔍 Vercel environment detected - enhanced revalidation completed")
     }
     
-    console.log("✅ Cache revalidation completed successfully")
+    console.log("✅ ENHANCED: All cache layers cleared successfully")
     
   } catch (error) {
-    console.error("❌ Error during cache revalidation:", error)
+    console.error("❌ Error during enhanced cache revalidation:", error)
     // Don't throw - we still want the main operation to succeed
   }
 }
