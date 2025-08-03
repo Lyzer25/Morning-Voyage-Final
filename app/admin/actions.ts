@@ -177,6 +177,10 @@ export async function exportCsvAction(): Promise<{ error?: string; csv?: string 
 function formDataToProduct(formData: FormData): Product {
   const price = Number(formData.get("price"))
   const originalPrice = formData.get("originalPrice") ? Number(formData.get("originalPrice")) : undefined
+  
+  // NEW: Parse shipping fields
+  const shippingFirst = formData.get("shippingFirst") ? Number(formData.get("shippingFirst")) : undefined
+  const shippingAdditional = formData.get("shippingAdditional") ? Number(formData.get("shippingAdditional")) : undefined
 
   return {
     sku: formData.get("sku") as string,
@@ -193,6 +197,10 @@ function formDataToProduct(formData: FormData): Product {
     tastingNotes: formData.get("tastingNotes") as string,
     featured: formData.get("featured") === "on",
     badge: formData.get("badge") as string,
+    
+    // NEW: Add shipping fields with validation
+    shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
+    shippingAdditional: (shippingAdditional && !isNaN(shippingAdditional)) ? shippingAdditional : undefined,
   }
 }
 

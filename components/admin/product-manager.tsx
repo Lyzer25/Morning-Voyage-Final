@@ -528,6 +528,8 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               <TableHead>Product Name</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Shipping (1st)</TableHead>
+              <TableHead>Shipping (Add'l)</TableHead>
               <TableHead>Featured</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -563,6 +565,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 <TableCell className="font-medium">{product.productName}</TableCell>
                 <TableCell>{product.sku}</TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
+                <TableCell>
+                  {product.shippingFirst ? formatPrice(product.shippingFirst) : "—"}
+                </TableCell>
+                <TableCell>
+                  {product.shippingAdditional ? formatPrice(product.shippingAdditional) : "—"}
+                </TableCell>
                 <TableCell>
                   <Switch
                     checked={product.featured}

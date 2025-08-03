@@ -26,5 +26,10 @@ export interface Product {
   featured?: boolean
   badge?: string
   images?: ProductImage[] // Add images support
+  
+  // NEW: Shipping cost fields
+  shippingFirst?: number        // Cost for first item shipping
+  shippingAdditional?: number   // Cost for additional item shipping
+  
   [key: string]: any // Allow other properties from the full CSV
 }

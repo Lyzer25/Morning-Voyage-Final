@@ -36,6 +36,12 @@ const headerMapping: { [key: string]: string } = {
   "WEIGHT": "weight",               // UPPERCASE → lowercase
   "TASTING NOTES": "tastingNotes",  // UPPERCASE with space → camelCase
 
+  // NEW: Shipping column mappings (handle exact format from CSV)
+  "Shipping( First Item) ": "shippingFirst",      // Note the trailing space
+  "Shipping(Additional Item)": "shippingAdditional",
+  "SHIPPING( FIRST ITEM) ": "shippingFirst",      // Uppercase variant
+  "SHIPPING(ADDITIONAL ITEM)": "shippingAdditional", // Uppercase variant
+
   // Additional variations for flexibility
   "Roast Level": "roastLevel",      // Title Case
   "Tasting Notes": "tastingNotes",  // Title Case
@@ -124,6 +130,12 @@ export const processCSVData = (rawData: any[]): Product[] => {
 
     const price = typeof row.price === 'string' ? parseFloat(row.price) || 0 : (row.price || 0);
 
+    // NEW: Process shipping fields with dollar sign removal
+    const shippingFirst = row.shippingFirst ? 
+      parseFloat(row.shippingFirst.toString().replace('$', '')) : undefined;
+    const shippingAdditional = row.shippingAdditional ? 
+      parseFloat(row.shippingAdditional.toString().replace('$', '')) : undefined;
+
     const processed = {
       ...row,
       // CRITICAL: Convert your specific data formats
@@ -158,7 +170,11 @@ export const processCSVData = (rawData: any[]): Product[] => {
       })(),
 
       // Initialize empty images array for new products
-      images: row.images || []
+      images: row.images || [],
+
+      // NEW: Add processed shipping fields
+      shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
+      shippingAdditional: (shippingAdditional && !isNaN(shippingAdditional)) ? shippingAdditional : undefined,
     };
 
     // Log processed result for first few rows
@@ -173,6 +189,22 @@ export const processCSVData = (rawData: any[]): Product[] => {
         originalPrice: processed.originalPrice,
         featured: processed.featured,
         tastingNotes: processed.tastingNotes
+      });
+      
+      // Enhanced shipping fields debug logging
+      console.log('🚢 Shipping data processed:', {
+        raw: { 
+          first: row.shippingFirst, 
+          additional: row.shippingAdditional 
+        },
+        parsed: { 
+          first: shippingFirst, 
+          additional: shippingAdditional 
+        },
+        final: { 
+          first: processed.shippingFirst, 
+          additional: processed.shippingAdditional 
+        }
       });
     }
 

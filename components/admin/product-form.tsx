@@ -137,6 +137,30 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="shippingFirst">Shipping (First Item)</Label>
+                <Input 
+                  id="shippingFirst" 
+                  name="shippingFirst" 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="4.75"
+                  defaultValue={product?.shippingFirst || ""} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingAdditional">Shipping (Additional Item)</Label>
+                <Input 
+                  id="shippingAdditional" 
+                  name="shippingAdditional" 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="1.35"
+                  defaultValue={product?.shippingAdditional || ""} 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select name="category" defaultValue={product?.category || "coffee"}>
                   <SelectTrigger>
