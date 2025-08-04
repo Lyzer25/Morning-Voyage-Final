@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useActionState, useState } from "react"
-import { useFormStatus } from "react-dom"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,41 +10,111 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Loader2, Save, Upload, X, Image as ImageIcon } from "lucide-react"
 import type { Product, ProductImage } from "@/lib/types"
-import { addProductAction, updateProductAction } from "@/app/admin/actions"
 import { validateImageFiles } from "@/lib/blob-storage"
+import { toast } from "sonner"
 
 interface ProductFormProps {
   product?: Product | null
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
+  onSubmit: (productData: Product) => boolean
 }
 
-function SubmitButton({ isEditing }: { isEditing: boolean }) {
-  const { pending } = useFormStatus()
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-      {pending ? (isEditing ? "Saving..." : "Adding...") : isEditing ? "Save Changes" : "Add Product"}
-    </Button>
-  )
-}
-
-export default function ProductForm({ product, isOpen, onOpenChange }: ProductFormProps) {
+export default function ProductForm({ product, isOpen, onOpenChange, onSubmit }: ProductFormProps) {
   const isEditing = !!product
-  const action = isEditing ? updateProductAction : addProductAction
-  const [state, formAction] = useActionState(action, {})
-
+  
+  // Form state management
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  
   // Image upload state
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [galleryFiles, setGalleryFiles] = useState<File[]>([])
   const [imageErrors, setImageErrors] = useState<string[]>([])
 
+  // Reset form when modal opens/closes
   useEffect(() => {
-    if (state?.success) {
-      onOpenChange(false)
+    if (!isOpen) {
+      setIsSubmitting(false)
+      setFormError(null)
+      setThumbnailFile(null)
+      setMainImageFile(null)
+      setGalleryFiles([])
+      setImageErrors([])
     }
-  }, [state, onOpenChange])
+  }, [isOpen])
+
+  // Client-side form submission handler
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
+    setFormError(null)
+    
+    try {
+      const formData = new FormData(e.currentTarget)
+      
+      // Convert FormData to Product object
+      const productData: Product = {
+        sku: formData.get("sku") as string,
+        productName: formData.get("productName") as string,
+        description: formData.get("description") as string || "",
+        category: formData.get("category") as string,
+        status: formData.get("status") as "active" | "draft" | "archived",
+        format: formData.get("format") as string || "",
+        price: parseFloat(formData.get("price") as string) || 0,
+        originalPrice: formData.get("originalPrice") ? parseFloat(formData.get("originalPrice") as string) : undefined,
+        weight: formData.get("weight") as string || "",
+        roastLevel: formData.get("roastLevel") as string || "",
+        origin: formData.get("origin") as string || "",
+        tastingNotes: formData.get("tastingNotes") ? (formData.get("tastingNotes") as string).split(",").map(s => s.trim()).filter(Boolean) : [],
+        featured: formData.get("featured") === "on",
+        badge: formData.get("badge") as string || "",
+        notification: formData.get("notification") as string || undefined,
+        shippingFirst: formData.get("shippingFirst") ? parseFloat(formData.get("shippingFirst") as string) : undefined,
+        shippingAdditional: formData.get("shippingAdditional") ? parseFloat(formData.get("shippingAdditional") as string) : undefined,
+        
+        // Preserve existing fields for editing or set defaults for new products
+        id: product?.id || crypto.randomUUID(),
+        createdAt: product?.createdAt || new Date(),
+        updatedAt: new Date(),
+        inStock: product?.inStock ?? true,
+        images: product?.images || []
+      }
+      
+      // Validate required fields
+      if (!productData.sku.trim()) {
+        throw new Error("SKU is required")
+      }
+      if (!productData.productName.trim()) {
+        throw new Error("Product name is required")
+      }
+      if (productData.price <= 0) {
+        throw new Error("Price must be greater than 0")
+      }
+      
+      console.log(`📝 Form Submit: ${isEditing ? 'Updating' : 'Adding'} product`, productData)
+      
+      // Call the parent handler
+      const success = onSubmit(productData)
+      
+      if (success) {
+        // Close modal on success
+        onOpenChange(false)
+      } else {
+        throw new Error("Failed to save product - check for duplicate SKU")
+      }
+      
+    } catch (error) {
+      console.error("❌ Form submission error:", error)
+      setFormError(error instanceof Error ? error.message : "Failed to save product")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleImageUpload = (files: File[], type: 'thumbnail' | 'main' | 'gallery') => {
     const validation = validateImageFiles(files)
@@ -81,7 +150,7 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Product" : "Add New Product"}</DialogTitle>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="sku" className="text-right">
@@ -467,12 +536,15 @@ export default function ProductForm({ product, isOpen, onOpenChange }: ProductFo
               )}
             </div>
           </div>
-          {state?.error && <p className="text-sm text-red-600 bg-red-100 p-2 rounded-lg mb-4">{state.error}</p>}
+          {formError && <p className="text-sm text-red-600 bg-red-100 p-2 rounded-lg mb-4">{formError}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <SubmitButton isEditing={isEditing} />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {isSubmitting ? (isEditing ? "Saving..." : "Adding...") : isEditing ? "Save Changes" : "Add Product"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

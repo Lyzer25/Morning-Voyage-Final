@@ -504,6 +504,50 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     console.log(`✅ ${selectedSkus.length} products removed from staging area`)
   }
 
+  // STAGING SYSTEM: Add product (staging only) - NEW
+  const handleAddProduct = useCallback((productData: Product) => {
+    console.log(`➕ Adding new product ${productData.sku} to staging area`, productData)
+    
+    // Check for duplicate SKU in staging
+    const existingSku = stagedProducts.find(p => p.sku === productData.sku)
+    if (existingSku) {
+      toast.error(`Product with SKU '${productData.sku}' already exists in staging`)
+      return false
+    }
+    
+    // Add to staging immediately (no server call)
+    const newProduct: Product = {
+      ...productData,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      inStock: true, // Default to in stock for new products
+    }
+    
+    setStagedProducts(prev => [...prev, newProduct])
+    
+    console.log(`✅ Product ${productData.sku} added to staging area`)
+    toast.success(`Product '${productData.productName}' added to staging area`)
+    return true
+  }, [stagedProducts])
+
+  // STAGING SYSTEM: Update product (staging only) - NEW
+  const handleUpdateProduct = useCallback((productData: Product) => {
+    console.log(`✏️ Updating product ${productData.sku} in staging area`, productData)
+    
+    // Update in staging immediately (no server call)
+    setStagedProducts(prev => 
+      prev.map(p => p.sku === productData.sku 
+        ? { ...productData, updatedAt: new Date() } 
+        : p
+      )
+    )
+    
+    console.log(`✅ Product ${productData.sku} updated in staging area`)
+    toast.success(`Product '${productData.productName}' updated in staging area`)
+    return true
+  }, [])
+
   const isAllSelected = filteredProducts.length > 0 && selectedSkus.length === filteredProducts.length
   const isIndeterminate = selectedSkus.length > 0 && selectedSkus.length < filteredProducts.length
 
@@ -944,15 +988,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           if (!isOpen) {
             setEditingProduct(null)
             setIsAddModalOpen(false)
-            // Only refresh if no unsaved changes (don't interfere with save workflow)
-            if (!hasUnsavedChanges && !isSaving) {
-              console.log('🔄 ProductForm closed - refreshing router (no unsaved changes)')
-              router.refresh()
-            } else {
-              console.log('🚫 ProductForm closed - skipping router refresh (unsaved changes or saving in progress)')
-            }
+            // No router refresh needed - staging system handles UI updates
+            console.log('🔄 ProductForm closed - staging system will handle updates')
           }
         }}
+        onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
       />
 
       <AlertDialog open={!!deletingSku} onOpenChange={(isOpen) => !isOpen && setDeletingSku(null)}>
