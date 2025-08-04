@@ -66,21 +66,38 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [stagedProducts, setStagedProducts] = useState<Product[]>([])
   const [originalProducts, setOriginalProducts] = useState<Product[]>([])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [savingError, setSavingError] = useState<string | null>(null)
 
-  // NEW: Enhanced progress tracking state
-  const [saveProgress, setSaveProgress] = useState(0)
-  const [saveStage, setSaveStage] = useState<'idle' | 'validating' | 'saving' | 'revalidating' | 'complete' | 'error'>('idle')
-  const [saveMessage, setSaveMessage] = useState<string>('')
+  // ENHANCED: Unified progress state management (FIXES DISAPPEARING PROGRESS BAR)
+  const [saveState, setSaveState] = useState<{
+    isActive: boolean
+    stage: 'idle' | 'validating' | 'saving' | 'revalidating' | 'verifying' | 'complete' | 'error'
+    progress: number
+    message: string
+    error?: string
+    startTime?: Date
+  }>({
+    isActive: false,
+    stage: 'idle',
+    progress: 0,
+    message: '',
+    error: undefined,
+    startTime: undefined
+  })
 
-  // NEW: Progress tracking helper
-  const updateSaveProgress = useCallback((stage: string, progress: number, message: string) => {
-    setSaveStage(stage as any)
-    setSaveProgress(progress)
-    setSaveMessage(message)
-    console.log(`🚀 Deploy Progress: ${stage} - ${progress}% - ${message}`)
+  // FIXED: Consistent progress updater that never resets unexpectedly
+  const updateSaveProgress = useCallback((stage: string, progress: number, message: string, error?: string) => {
+    console.log(`🚀 Save Progress: ${stage} - ${progress}% - ${message}`, error ? { error } : '')
+    
+    setSaveState(prev => ({
+      ...prev,
+      isActive: stage !== 'idle',
+      stage: stage as any,
+      progress,
+      message,
+      error,
+      startTime: prev.startTime || new Date()
+    }))
   }, [])
 
   // NEW: Client-side CSV upload handler
@@ -245,11 +262,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
 
   // ENHANCED: Save to production with REAL verification before completion
   const saveToProduction = useCallback(async () => {
-    if (isSaving) return
+    if (saveState.isActive) {
+      console.log('🚫 Save already in progress, ignoring duplicate call')
+      return
+    }
     
-    setIsSaving(true)
-    setSavingError(null)
-    setSaveStage('validating')
+    console.log('🚀 Starting save to production...')
+    updateSaveProgress('validating', 0, 'Starting deployment...')
     
     try {
       // Stage 1: Validation (10%)
@@ -363,27 +382,20 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       
       // Show success state for 4 seconds
       setTimeout(() => {
-        setSaveStage('idle')
-        setSaveProgress(0)
-        setSaveMessage('')
+        updateSaveProgress('idle', 0, '')
       }, 4000)
       
     } catch (error) {
       console.error('❌ DEPLOY: Failed with error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Deployment failed'
-      setSavingError(errorMessage)
-      updateSaveProgress('error', 0, errorMessage)
+      updateSaveProgress('error', 0, errorMessage, errorMessage)
       
       // Show error state for 8 seconds
       setTimeout(() => {
-        setSaveStage('idle')
-        setSaveProgress(0)
-        setSaveMessage('')
+        updateSaveProgress('idle', 0, '')
       }, 8000)
-    } finally {
-      setIsSaving(false)
     }
-  }, [stagedProducts, updateSaveProgress, isSaving])
+  }, [stagedProducts, updateSaveProgress, saveState.isActive])
 
   // STAGING SYSTEM: Discard changes
   const discardChanges = () => {
@@ -392,7 +404,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     if (confirm(`Are you sure you want to discard ${changeCount} unsaved changes?`)) {
       setStagedProducts([...originalProducts])
       setHasUnsavedChanges(false)
-      setSavingError(null)
+      updateSaveProgress('idle', 0, '') // Clear any error states
       console.log('🗑️ Discarded all staged changes')
     }
   }
@@ -637,24 +649,24 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             <div className="ml-6 min-w-80">
               <div className="space-y-4">
                 {/* Progress Bar - Show during save/deploy */}
-                {saveStage !== 'idle' && (
+                {saveState.stage !== 'idle' && (
                   <div className="space-y-2">
                     <Progress 
-                      value={saveProgress} 
+                      value={saveState.progress} 
                       className={`w-full ${
-                        saveStage === 'error' ? 'bg-red-100' : 'bg-gray-100'
+                        saveState.stage === 'error' ? 'bg-red-100' : 'bg-gray-100'
                       }`}
                     />
                     <div className="flex items-center justify-between text-sm">
                       <span className={`${
-                        saveStage === 'error' ? 'text-red-600' : 'text-gray-600'
+                        saveState.stage === 'error' ? 'text-red-600' : 'text-gray-600'
                       }`}>
-                        {saveMessage}
+                        {saveState.message}
                       </span>
                       <span className={`font-mono ${
-                        saveStage === 'error' ? 'text-red-600' : 'text-gray-500'
+                        saveState.stage === 'error' ? 'text-red-600' : 'text-gray-500'
                       }`}>
-                        {saveProgress}%
+                        {saveState.progress}%
                       </span>
                     </div>
                   </div>
@@ -663,50 +675,50 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 {/* Deploy Button */}
                 <Button
                   onClick={saveToProduction}
-                  disabled={isSaving || !hasUnsavedChanges}
+                  disabled={saveState.isActive || !hasUnsavedChanges}
                   className={`w-full ${
                     hasUnsavedChanges 
                       ? 'bg-green-600 hover:bg-green-700 text-white' 
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  {saveStage === 'idle' && hasUnsavedChanges && (
+                  {saveState.stage === 'idle' && hasUnsavedChanges && (
                     <>
                       <Rocket className="w-4 h-4 mr-2" />
                       Deploy to Live Site
                     </>
                   )}
-                  {saveStage === 'idle' && !hasUnsavedChanges && (
+                  {saveState.stage === 'idle' && !hasUnsavedChanges && (
                     <>
                       <CheckCircle className="w-4 h-4 mr-2" />  
                       No Changes to Deploy
                     </>
                   )}
-                  {saveStage === 'validating' && (
+                  {saveState.stage === 'validating' && (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Validating...
                     </>
                   )}
-                  {saveStage === 'saving' && (
+                  {saveState.stage === 'saving' && (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Saving to Production...
                     </>
                   )}
-                  {saveStage === 'revalidating' && (
+                  {saveState.stage === 'revalidating' && (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Updating Live Site...
                     </>
                   )}
-                  {saveStage === 'complete' && (
+                  {saveState.stage === 'complete' && (
                     <>
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Successfully Deployed!
                     </>
                   )}
-                  {saveStage === 'error' && (
+                  {saveState.stage === 'error' && (
                     <>
                       <AlertTriangle className="w-4 h-4 mr-2" />
                       Deployment Failed
@@ -718,7 +730,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 <Button
                   variant="outline"
                   onClick={discardChanges}
-                  disabled={isSaving}
+                  disabled={saveState.isActive}
                   className="w-full text-gray-700 hover:bg-gray-100"
                 >
                   <Clock className="w-4 h-4 mr-2" />
@@ -744,14 +756,14 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       )}
 
       {/* ERROR: Deployment Failed with Retry */}
-      {saveStage === 'error' && (
+      {saveState.stage === 'error' && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <AlertTriangle className="w-5 h-5 text-red-600 mr-3" />
               <div>
                 <div className="font-medium text-red-900">Deployment Failed</div>
-                <div className="text-sm text-red-700">{saveMessage}</div>
+                <div className="text-sm text-red-700">{saveState.message}</div>
               </div>
             </div>
             <Button 

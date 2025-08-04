@@ -42,10 +42,24 @@ const headerMapping: { [key: string]: string } = {
   "SHIPPING( FIRST ITEM) ": "shippingFirst",      // Uppercase variant
   "SHIPPING(ADDITIONAL ITEM)": "shippingAdditional", // Uppercase variant
 
-  // NEW: Notification column mappings
+  // NEW: Notification column mappings  
   "NOTIFICATION": "notification",                  // UPPERCASE
   "Notification": "notification",                  // Title Case
   "notification": "notification",                  // lowercase
+
+  // ENHANCED: Subscription-specific field mappings
+  "SUBSCRIPTION INTERVAL": "subscriptionInterval",
+  "Subscription Interval": "subscriptionInterval", 
+  "subscription interval": "subscriptionInterval",
+  "SUBSCRIPTION PRICE": "subscriptionPrice",
+  "Subscription Price": "subscriptionPrice",
+  "subscription price": "subscriptionPrice",
+  "DELIVERY FREQUENCY": "deliveryFrequency",
+  "Delivery Frequency": "deliveryFrequency",
+  "delivery frequency": "deliveryFrequency",
+  "NOTIFICATION ENABLED": "notificationEnabled",
+  "Notification Enabled": "notificationEnabled",
+  "notification enabled": "notificationEnabled",
 
   // Additional variations for flexibility
   "Roast Level": "roastLevel",      // Title Case
@@ -63,7 +77,7 @@ export const transformHeader = (header: string): string => {
     return headerMapping[trimmed] as string
   }
   
-  // Then try lowercase match (handles variations)
+  // Then try lowercase match (handles variations)  
   const lowerHeader = trimmed.toLowerCase()
   return headerMapping[lowerHeader] || lowerHeader
 }
@@ -180,6 +194,12 @@ export const processCSVData = (rawData: any[]): Product[] => {
       // NEW: Add processed shipping fields
       shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
       shippingAdditional: (shippingAdditional && !isNaN(shippingAdditional)) ? shippingAdditional : undefined,
+
+      // ENHANCED: Subscription-specific fields (preserves subscription data)
+      subscriptionInterval: row.subscriptionInterval || undefined,
+      subscriptionPrice: row.subscriptionPrice ? parseFloat(row.subscriptionPrice) : undefined,
+      deliveryFrequency: row.deliveryFrequency || undefined,
+      notificationEnabled: row.notificationEnabled === 'TRUE' || row.notificationEnabled === true || row.notificationEnabled === 'true' || row.notificationEnabled === 1 || false,
     };
 
     // Log processed result for first few rows
@@ -211,6 +231,19 @@ export const processCSVData = (rawData: any[]): Product[] => {
           additional: processed.shippingAdditional 
         }
       });
+    }
+
+    // ENHANCED: Log subscription products for debugging (preserves subscription data)
+    if (processed.category === 'subscription') {
+      console.log(`📧 Processing subscription product ${index + 1}:`, {
+        sku: processed.sku,
+        name: processed.productName,
+        notification: processed.notification,
+        notificationEnabled: processed.notificationEnabled,
+        subscriptionInterval: processed.subscriptionInterval,
+        subscriptionPrice: processed.subscriptionPrice,
+        deliveryFrequency: processed.deliveryFrequency
+      })
     }
 
     return processed;
