@@ -396,7 +396,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       // Verify the CUSTOMER-FACING data pipeline (not just blob storage)
       let verificationAttempts = 0
       let customerDataVerified = false
-      const maxAttempts = 10 // Max 10 attempts = 30 seconds
+      const maxAttempts = 30 // Max 30 attempts = 90 seconds
       
       while (!customerDataVerified && verificationAttempts < maxAttempts) {
         try {
