@@ -13,10 +13,10 @@ const CACHE_DURATION = 60 * 1000 // 1 minute
 // Sample products for development when Vercel Blob is not configured
 const SAMPLE_PRODUCTS: Product[] = [
   {
+    id: 'sample-1',
     sku: "COFFEE-MORNING-12OZ-WHOLE",
     productName: "Morning Blend",
     category: "coffee",
-    subcategory: "signature-blend",
     status: "active",
     price: 16.99,
     description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
@@ -24,14 +24,18 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Chocolate, Caramel, Nuts",
+    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
     featured: true,
+    inStock: true,
+    images: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
+    id: 'sample-2',
     sku: "COFFEE-MORNING-12OZ-GROUND",
     productName: "Morning Blend",
     category: "coffee",
-    subcategory: "signature-blend", 
     status: "active",
     price: 16.99,
     description: "Our signature morning blend - smooth, balanced, and perfect for starting your day",
@@ -39,14 +43,18 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "ground",
-    tastingNotes: "Chocolate, Caramel, Nuts",
+    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
     featured: true,
+    inStock: true,
+    images: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
+    id: 'sample-3',
     sku: "COFFEE-DARK-12OZ-WHOLE",
     productName: "Dark Roast Supreme",
     category: "coffee",
-    subcategory: "dark-roast",
     status: "active",
     price: 17.99,
     description: "Bold and intense dark roast with rich, smoky flavors",
@@ -54,14 +62,18 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Guatemala",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Dark Chocolate, Smoky, Robust",
+    tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
     featured: true,
+    inStock: true,
+    images: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
+    id: 'sample-4',
     sku: "COFFEE-LIGHT-12OZ-WHOLE",
     productName: "Ethiopian Single Origin",
     category: "coffee",
-    subcategory: "single-origin",
     status: "active",
     price: 19.99,
     description: "Bright and fruity single origin from Ethiopia",
@@ -69,8 +81,12 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Ethiopia",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Blueberry, Floral, Citrus",
+    tastingNotes: ["Blueberry", "Floral", "Citrus"],
     featured: false,
+    inStock: true,
+    images: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
   }
 ]
 
@@ -343,7 +359,7 @@ export async function handleEmptyProductState(): Promise<void> {
       origin: '',
       weight: '',
       format: '',
-      tastingNotes: '',
+      tastingNotes: [],
       featured: false,
     }
     
@@ -382,64 +398,51 @@ export async function handleEmptyProductState(): Promise<void> {
 
 export async function updateProducts(products: Product[]): Promise<void> {
   try {
-    console.log(`🔄 Updating products.csv with ${products.length} products...`)
-    console.log('🔄 Product validation:', {
-      isArray: Array.isArray(products),
-      length: products.length,
-      hasValidItems: products.length > 0 && products[0] && typeof products[0] === 'object'
-    })
-
-    // Validate products array
-    if (!Array.isArray(products)) {
-      throw new Error("Products must be an array")
-    }
-    
-    // CRITICAL FIX: Handle empty state by delegating to special function
-    if (products.length === 0) {
-      console.log("🗑️ Empty products array detected - delegating to handleEmptyProductState()")
-      await handleEmptyProductState()
-      return
-    }
-
-    // Generate CSV with validation for non-empty products
-    console.log('🔄 Generating CSV content...')
-    const csvText = Papa.unparse(products, { header: true })
-    
-    console.log('🔄 CSV generation result:', {
-      csvLength: csvText.length,
-      isEmpty: !csvText || csvText.trim().length === 0,
-      firstLine: csvText.split('\n')[0] || 'EMPTY',
-      preview: csvText.substring(0, 200)
+    // Category-specific validation
+    const validatedProducts = products.map(product => {
+      // Validate required fields by category
+      if (product.category === 'coffee') {
+        if (!product.roastLevel) {
+          console.warn(`⚠️ Coffee product ${product.sku} missing roast level - defaulting to medium`)
+          product.roastLevel = 'medium'
+        }
+      }
+      
+      if (product.category === 'subscription') {
+        if (!product.subscriptionInterval) {
+          console.warn(`⚠️ Subscription product ${product.sku} missing interval - defaulting to monthly`)
+          product.subscriptionInterval = 'monthly'
+        }
+      }
+      
+      return product
     })
     
-    // CRITICAL: Validate CSV content before upload (for non-empty products)
-    if (!csvText || csvText.trim().length === 0) {
-      console.error('❌ CRITICAL: Generated CSV content is empty!')
-      console.error('❌ Products data:', products.slice(0, 2))
-      throw new Error("Generated CSV content is empty - cannot save to blob storage")
-    }
-
-    // Additional validation for minimum content
-    if (csvText.length < 10) {
-      console.error('❌ CRITICAL: Generated CSV content is too short:', csvText)
-      throw new Error("Generated CSV content is too short - likely malformed")
-    }
-
-    console.log('🔄 Uploading to Vercel Blob...', {
-      filename: BLOB_FILENAME,
-      contentLength: csvText.length,
-      contentType: 'text/csv'
+    console.log('💾 BLOB STORAGE: Saving products by category:', {
+      total: validatedProducts.length,
+      coffee: validatedProducts.filter(p => p.category === 'coffee').length,
+      subscription: validatedProducts.filter(p => p.category === 'subscription').length,
+      other: validatedProducts.filter(p => !['coffee', 'subscription'].includes(p.category as string)).length
     })
-
-    await put(BLOB_FILENAME, csvText, {
+    
+    // Save to blob storage with enhanced metadata
+    const blobData = {
+      version: '2.1',
+      timestamp: new Date().toISOString(),
+      productCount: validatedProducts.length,
+      categories: [...new Set(validatedProducts.map(p => p.category))],
+      products: validatedProducts
+    }
+    
+    const jsonString = JSON.stringify(blobData, null, 2)
+    
+    await put(BLOB_FILENAME, jsonString, {
       access: "public",
-      contentType: "text/csv",
+      contentType: "application/json",
       allowOverwrite: true,
     })
     
-    // Invalidate cache after successful upload
-    productCache = null
-    console.log("✅ Product update complete successfully.")
+    console.log('✅ BLOB STORAGE: Successfully saved enhanced product data')
     
   } catch (error) {
     console.error("❌ CRITICAL ERROR in updateProducts:", error)

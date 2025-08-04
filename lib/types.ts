@@ -7,32 +7,38 @@ export interface ProductImage {
 }
 
 export interface Product {
-  sku: string
-  productName: string
-  category: string
-  subcategory?: string
-  status: "active" | "draft" | "archived"
-  format: string
-  weight?: string
-  packSize?: number
-  price: number
-  originalPrice?: number
-  description: string
-  longDescription?: string
-  roastLevel?: string
-  origin?: string
-  processingMethod?: string
-  tastingNotes?: string | string[] // Allow both for processing
-  featured?: boolean
-  badge?: string
-  images?: ProductImage[] // Add images support
-  
-  // NEW: Shipping cost fields
-  shippingFirst?: number        // Cost for first item shipping
-  shippingAdditional?: number   // Cost for additional item shipping
-  
-  // NEW: Notification field for promotional messages
-  notification?: string         // Optional promotional notification text
-  
-  [key: string]: any // Allow other properties from the full CSV
+  id: string;
+  sku: string;
+  productName: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  category: 'coffee' | 'subscription' | 'gift-set' | 'equipment' | string; // Allow other strings
+  status: 'active' | 'draft' | 'archived';
+  featured: boolean;
+  inStock: boolean;
+  images: ProductImage[];
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Coffee-specific fields
+  roastLevel?: 'light' | 'medium' | 'medium-dark' | 'dark' | string;
+  origin?: string;
+  format?: 'whole-bean' | 'ground' | 'instant' | 'pods' | string;
+  weight?: string;
+  tastingNotes?: string[];
+
+  // Subscription-specific fields
+  notification?: string;
+  subscriptionInterval?: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly' | string;
+  deliveryFrequency?: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | string;
+  notificationEnabled?: boolean;
+  maxDeliveries?: number;
+  trialDays?: number;
+
+  // Shipping fields
+  shippingFirst?: number;
+  shippingAdditional?: number;
+
+  [key: string]: any; // For other dynamic properties from CSV
 }

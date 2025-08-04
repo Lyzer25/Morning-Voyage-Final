@@ -120,13 +120,6 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
 
       console.log(`  ✅ Added variant ${variant.format} to existing product: ${baseName}`)
     } else {
-      // Parse tasting notes
-      const tastingNotesRaw = product.tastingNotes
-      const tastingNotes =
-        typeof tastingNotesRaw === "string" && tastingNotesRaw.length > 0
-          ? tastingNotesRaw.split(",").map((note) => note.trim())
-          : Array.isArray(tastingNotesRaw) ? tastingNotesRaw : []
-      
       // Create new grouped product
       const groupedProduct: GroupedProduct = {
         baseSku: getBaseSku(product.sku),
@@ -138,7 +131,7 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
         roastLevel: product.roastLevel,
         origin: product.origin,
         processingMethod: product.processingMethod,
-        tastingNotes: tastingNotes, // Use the parsed array
+        tastingNotes: product.tastingNotes, // Use the parsed array
         featured: product.featured || false,
         badge: product.badge,
         status: product.status,

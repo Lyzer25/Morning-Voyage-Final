@@ -77,7 +77,8 @@ function formDataToProduct(formData: FormData): Product {
   const shippingFirst = formData.get("shippingFirst") ? Number(formData.get("shippingFirst")) : undefined
   const shippingAdditional = formData.get("shippingAdditional") ? Number(formData.get("shippingAdditional")) : undefined
 
-  return {
+  const product: Product = {
+    id: formData.get("id") as string || crypto.randomUUID(),
     sku: formData.get("sku") as string,
     productName: formData.get("productName") as string,
     category: formData.get("category") as string,
@@ -89,9 +90,12 @@ function formDataToProduct(formData: FormData): Product {
     weight: formData.get("weight") as string,
     roastLevel: formData.get("roastLevel") as string,
     origin: formData.get("origin") as string,
-    tastingNotes: formData.get("tastingNotes") as string,
+    tastingNotes: (formData.get("tastingNotes") as string)?.split(',').map(s => s.trim()) || [],
     featured: formData.get("featured") === "on",
-    badge: formData.get("badge") as string,
+    inStock: formData.get("inStock") === "on",
+    images: [], // Default to empty array, image handling is separate
+    createdAt: new Date(),
+    updatedAt: new Date(),
     
     // NEW: Add shipping fields with validation
     shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
@@ -100,6 +104,7 @@ function formDataToProduct(formData: FormData): Product {
     // NEW: Add notification field
     notification: formData.get("notification") as string || undefined,
   }
+  return product;
 }
 
 export async function addProductAction(prevState: FormState, formData: FormData): Promise<FormState> {

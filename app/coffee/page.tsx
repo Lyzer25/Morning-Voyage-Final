@@ -82,31 +82,27 @@ export default async function CoffeePage() {
       );
     }
 
-    // Debug the filtering process
-    console.log('☕ All product categories:', allProducts.map(p => p.category));
-    const uniqueCategories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
-    console.log('☕ Unique categories found:', uniqueCategories);
-    
+    // Filter for coffee products only with enhanced logging
     const coffeeProducts = allProducts.filter(product => {
-      console.log('☕ Checking product:', {
-        name: product.productName,
+      const isCoffee = product.category?.toLowerCase() === 'coffee'
+      console.log('☕ Coffee filter check:', {
+        sku: product.baseSku,
         category: product.category,
-        categoryLower: product.category?.toLowerCase(),
-        includesCoffee: product.category?.toLowerCase()?.includes('coffee')
-      });
-      return product && 
-        product.category && 
-        product.category.toLowerCase().includes('coffee');
-    });
+        isMatch: isCoffee
+      })
+      return isCoffee
+    })
     
-    console.log('☕ Coffee products found:', coffeeProducts.length);
-    console.log('☕ Coffee products sample:', coffeeProducts.slice(0, 2));
-
-    console.log(`☕ Coffee page: Found ${coffeeProducts.length} coffee products out of ${allProducts.length} total`)
+    console.log('☕ COFFEE PAGE: Final coffee products:', {
+      total: allProducts.length,
+      coffeeCount: coffeeProducts.length,
+      categories: [...new Set(allProducts.map(p => p.category))]
+    })
     
     // Handle case where we have products but no coffee products
     if (coffeeProducts.length === 0 && allProducts.length > 0) {
       console.log('☕ No coffee products found, but other products exist');
+      const uniqueCategories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -142,27 +138,6 @@ export default async function CoffeePage() {
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
           <Header />
-          
-          {/* DEBUG INFO - REMOVE AFTER FIXING */}
-          <div className="container mx-auto px-4 py-4">
-            <div className="bg-yellow-100 p-4 rounded mb-6 border-2 border-yellow-300">
-              <h3 className="font-bold text-yellow-800 mb-2">🔍 DEBUG INFO (Remove after fixing):</h3>
-              <div className="text-sm text-yellow-700 space-y-1">
-                <p><strong>Total products loaded:</strong> {allProducts.length}</p>
-                <p><strong>Coffee products found:</strong> {coffeeProducts.length}</p>
-                <p><strong>All categories:</strong> {uniqueCategories.join(', ') || 'None'}</p>
-                <p><strong>Sample products:</strong></p>
-                <ul className="ml-4 list-disc">
-                  {allProducts.slice(0, 3).map((p, i) => (
-                    <li key={i}>
-                      {p.productName || 'No name'} - Category: "{p.category || 'No category'}"
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-
           <CoffeePageClient initialProducts={coffeeProducts} />
           <Footer />
         </div>

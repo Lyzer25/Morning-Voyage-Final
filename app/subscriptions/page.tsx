@@ -90,11 +90,23 @@ export default async function SubscriptionsPage() {
       )
     }
     
-    // CRITICAL FIX: Safe filter operations with null checks
-    const subscriptionProducts = allProducts.filter((p) => 
-      p && p.category && p.category.toLowerCase().includes('subscription')
-    )
+    // Filter for subscription products only
+    const subscriptionProducts = allProducts.filter(product => {
+      const isSubscription = product.category?.toLowerCase() === 'subscription'
+      console.log('🔄 Subscription filter check:', {
+        sku: product.baseSku,
+        category: product.category,
+        isMatch: isSubscription
+      })
+      return isSubscription
+    })
     
+    console.log('🔄 SUBSCRIPTIONS PAGE: Final subscription products:', {
+      total: allProducts.length,
+      subscriptionCount: subscriptionProducts.length,
+      categories: [...new Set(allProducts.map(p => p.category))]
+    })
+
     const giftProducts = allProducts.filter((p) => 
       p && p.category && (p.category.toLowerCase().includes('gift') || p.category.toLowerCase().includes('gift-set'))
     )

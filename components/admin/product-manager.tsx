@@ -13,7 +13,6 @@ import { formatPrice } from "@/lib/utils"
 import {
   PlusCircle,
   Upload,
-  MoreHorizontal,
   Trash2,
   Pencil,
   Loader2,
@@ -39,9 +38,14 @@ import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteP
 import { getProducts } from "@/lib/csv-data"
 import { transformHeader, processCSVData } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
-import ProductForm from "./product-form"
+import { CoffeeProductForm } from "./forms/CoffeeProductForm"
+import { SubscriptionProductForm } from "./forms/SubscriptionProductForm"
+import ProductForm from "./product-form" // Assuming this is a general form
 import Papa from "papaparse"
 import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Coffee, RefreshCw, Gift, Wrench, Edit, Copy, MoreHorizontal, ChevronDown, Package } from "lucide-react"
+import { Dialog } from "@/components/ui/dialog"
 
 export default function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter()
@@ -49,13 +53,20 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [searchTerm, setSearchTerm] = useState("")
   const [isPending, startTransition] = useTransition()
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
   const [deletingSku, setDeletingSku] = useState<string | null>(null)
+  const [activeFormType, setActiveFormType] = useState<'coffee' | 'subscription' | 'general'>('coffee')
   
   // Bulk delete state
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  const handleAddNewProduct = (category: 'coffee' | 'subscription' | 'general') => {
+    setEditingProduct(undefined)
+    setActiveFormType(category)
+    setIsEditDialogOpen(true)
+  }
 
   // Enhanced filtering state
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -68,6 +79,76 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isDeployInProgress, setIsDeployInProgress] = useState(false)
+
+  const handleCategoryChange = useCallback(async (productSku: string, newCategory: string) => {
+    try {
+      setStagedProducts(prev => 
+        prev.map(product => 
+          product.sku === productSku 
+            ? { 
+                ...product, 
+                category: newCategory.toLowerCase(),
+                // Reset category-specific fields when changing category
+                ...(newCategory === 'coffee' ? {
+                  roastLevel: product.roastLevel || 'medium',
+                  origin: product.origin || '',
+                  tastingNotes: product.tastingNotes || []
+                } : {}),
+                ...(newCategory === 'subscription' ? {
+                  notification: product.notification || '',
+                  subscriptionInterval: product.subscriptionInterval || 'monthly',
+                  deliveryFrequency: product.deliveryFrequency || 'monthly'
+                } : {})
+              }
+            : product
+        )
+      )
+      toast.success(`${productSku} category updated to ${newCategory}`)
+    } catch (error: any) {
+      toast.error(`Failed to update category: ${error.message}`)
+    }
+  }, [])
+
+  const getCategoryFormType = (category: string): 'coffee' | 'subscription' | 'general' => {
+    switch (category?.toLowerCase()) {
+      case 'coffee': return 'coffee'
+      case 'subscription': return 'subscription'
+      default: return 'general'
+    }
+  }
+
+  const handleCategoryEdit = useCallback((product: Product) => {
+    const formType = getCategoryFormType(product.category)
+    setEditingProduct(product)
+    setActiveFormType(formType) // 'coffee', 'subscription', 'general'
+    setIsEditDialogOpen(true)
+  }, [])
+
+  const getCategoryFormLabel = (category: string): string => {
+    switch (category?.toLowerCase()) {
+      case 'coffee': return 'Edit Coffee'
+      case 'subscription': return 'Edit Subscription'
+      default: return 'Edit Product'
+    }
+  }
+  
+  const getCategoryVariant = (category: string) => {
+    switch (category?.toLowerCase()) {
+      case 'coffee': return 'default'
+      case 'subscription': return 'secondary'
+      default: return 'outline'
+    }
+  }
+
+  const getCategoryDisplayName = (category: string) => {
+    switch (category?.toLowerCase()) {
+      case 'coffee': return 'Coffee'
+      case 'subscription': return 'Subscription'
+      case 'gift-set': return 'Gift Set'
+      case 'equipment': return 'Equipment'
+      default: return 'General'
+    }
+  }
 
   // ENHANCED: Unified progress state management (FIXES DISAPPEARING PROGRESS BAR)
   const [saveState, setSaveState] = useState<{
@@ -615,9 +696,29 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto bg-transparent">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleAddNewProduct('coffee')}>
+                <Coffee className="mr-2 h-4 w-4" />
+                Add Coffee Product
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNewProduct('subscription')}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Add Subscription
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNewProduct('general')}>
+                <Package className="mr-2 h-4 w-4" />
+                Add General Product
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -940,6 +1041,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               </TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Product Name</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Shipping (1st)</TableHead>
@@ -977,6 +1079,51 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">{product.productName}</TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <Select
+                      value={product.category || 'coffee'}
+                      onValueChange={(newCategory) => handleCategoryChange(product.sku, newCategory)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="coffee">
+                          <div className="flex items-center space-x-2">
+                            <Coffee className="h-3 w-3" />
+                            <span>Coffee</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="subscription">
+                          <div className="flex items-center space-x-2">
+                            <RefreshCw className="h-3 w-3" />
+                            <span>Subscription</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gift-set">
+                          <div className="flex items-center space-x-2">
+                            <Gift className="h-3 w-3" />
+                            <span>Gift Set</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="equipment">
+                          <div className="flex items-center space-x-2">
+                            <Wrench className="h-3 w-3" />
+                            <span>Equipment</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Badge 
+                      variant={getCategoryVariant(product.category)}
+                      className="text-xs px-1 py-0"
+                    >
+                      {getCategoryDisplayName(product.category)}
+                    </Badge>
+                  </div>
+                </TableCell>
                 <TableCell>{product.sku}</TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
                 <TableCell>
@@ -994,22 +1141,34 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                   />
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditingProduct(product)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeletingSku(product.sku)} className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex space-x-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCategoryEdit(product)}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      {getCategoryFormLabel(product.category)}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => console.log('duplicate', product.sku)}>
+                          <Copy className="h-3 w-3 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeletingSku(product.sku)}>
+                          <Trash2 className="h-3 w-3 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -1018,19 +1177,34 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       </div>
       {filteredProducts.length === 0 && <div className="text-center py-12 text-gray-500">No products found.</div>}
 
-      <ProductForm
-        product={editingProduct}
-        isOpen={!!editingProduct || isAddModalOpen}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setEditingProduct(null)
-            setIsAddModalOpen(false)
-            // No router refresh needed - staging system handles UI updates
-            console.log('🔄 ProductForm closed - staging system will handle updates')
-          }
-        }}
-        onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
-      />
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        {activeFormType === 'coffee' && (
+          <CoffeeProductForm
+            product={editingProduct}
+            onSubmit={handleUpdateProduct}
+            onCancel={() => setIsEditDialogOpen(false)}
+            isSubmitting={isPending}
+          />
+        )}
+        
+        {activeFormType === 'subscription' && (
+          <SubscriptionProductForm
+            product={editingProduct}
+            onSubmit={handleUpdateProduct}
+            onCancel={() => setIsEditDialogOpen(false)}
+            isSubmitting={isPending}
+          />
+        )}
+        
+        {activeFormType === 'general' && (
+          <ProductForm
+            product={editingProduct}
+            isOpen={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
+          />
+        )}
+      </Dialog>
 
       <AlertDialog open={!!deletingSku} onOpenChange={(isOpen) => !isOpen && setDeletingSku(null)}>
         <AlertDialogContent>

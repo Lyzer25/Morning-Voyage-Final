@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/types"
+import Papa from "papaparse"
 
 // Enhanced mapping to handle your exact CSV format and variations
 // Supports both your UPPERCASE format and standard lowercase variations
@@ -82,170 +83,106 @@ export const transformHeader = (header: string): string => {
   return headerMapping[lowerHeader] || lowerHeader
 }
 
-// Normalize category values for dropdown compatibility
-const normalizeCategory = (category: string): string => {
-  if (!category) return 'coffee';
-  
-  const normalized = category.toLowerCase().trim();
-  
-  // Map your CSV values to dropdown values
-  const categoryMap: { [key: string]: string } = {
-    'coffee': 'coffee',
-    'subscription': 'subscription',
-    'gift-set': 'gift-set',
-    'gift set': 'gift-set',
-    'equipment': 'gift-set'  // Map old equipment to gift-set
-  };
-  
-  return categoryMap[normalized] || 'coffee';
-}
-
-// Normalize format values for dropdown compatibility  
-const normalizeFormat = (format: string): string => {
-  if (!format) return 'whole-bean';
-  
-  const normalized = format.toLowerCase().trim();
-  
-  // Map your CSV values to dropdown values
-  const formatMap: { [key: string]: string } = {
-    'whole bean': 'whole-bean',
-    'whole-bean': 'whole-bean',
-    'ground': 'ground',
-    'instant': 'instant',
-    'pods': 'pods',
-    'pod': 'pods',
-    'k-cup': 'pods',
-    'k-cups': 'pods'
-  };
-  
-  return formatMap[normalized] || 'whole-bean';
-}
-
-// Normalize roast level values for dropdown compatibility
-const normalizeRoastLevel = (roastLevel: string): string => {
-  if (!roastLevel) return 'medium';
-  
-  const normalized = roastLevel.toLowerCase().trim();
-  
-  // Map variations to dropdown values
-  const roastMap: { [key: string]: string } = {
-    'light': 'light',
-    'medium': 'medium',
-    'medium-dark': 'medium-dark',
-    'medium dark': 'medium-dark',
-    'dark': 'dark'
-  };
-  
-  return roastMap[normalized] || 'medium';
-}
-
-// Enhanced CSV data processing for your specific format
-export const processCSVData = (rawData: any[]): Product[] => {
-  return rawData.map((row: any, index: number) => {
-    // Log first few rows for debugging
-    if (index < 3) {
-      console.log(`🔧 Processing row ${index + 1}:`, row);
-    }
-
-    const price = typeof row.price === 'string' ? parseFloat(row.price) || 0 : (row.price || 0);
-
-    // NEW: Process shipping fields with dollar sign removal
-    const shippingFirst = row.shippingFirst ? 
-      parseFloat(row.shippingFirst.toString().replace('$', '')) : undefined;
-    const shippingAdditional = row.shippingAdditional ? 
-      parseFloat(row.shippingAdditional.toString().replace('$', '')) : undefined;
-
-    const processed = {
-      ...row,
-      // CRITICAL: Convert your specific data formats
-      price: price,
-      
-      // AUTO-POPULATE original price from CSV price (as requested)
-      originalPrice: row.originalPrice ? parseFloat(row.originalPrice) : price,
-      
-      // NORMALIZE dropdown values for form compatibility
-      category: normalizeCategory(row.category),
-      format: normalizeFormat(row.format),
-      roastLevel: normalizeRoastLevel(row.roastLevel),
-      
-      // Handle boolean conversion for FEATURED field
-      featured: row.featured === 'TRUE' || row.featured === true || row.featured === 'true' || row.featured === 1,
-      
-      // Ensure status is set
+// Enhance the processCSVData function:
+export function processCSVData(data: any[]): Product[] {
+  return data.map((row: any) => {
+    const category = row.category?.toLowerCase() || 'coffee'
+    
+    // Base product data
+    const baseProduct: Product = {
+      id: crypto.randomUUID(),
+      sku: row.sku || '',
+      productName: row.productName || '',
+      description: row.description || '',
+      category: category,
+      price: parseFloat(row.price) || 0,
+      originalPrice: row.originalPrice ? parseFloat(row.originalPrice) : undefined,
+      featured: row.featured === 'TRUE' || row.featured === true,
       status: row.status || 'active',
+      inStock: row.inStock !== false,
+      images: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
       
-      // ENHANCED tasting notes processing
-      tastingNotes: (() => {
-        if (!row.tastingNotes) return [];
-        
-        if (typeof row.tastingNotes === 'string') {
-          return row.tastingNotes
-            .split(',')
-            .map((note: string) => note.trim())
-            .filter(Boolean);
-        }
-        
-        return Array.isArray(row.tastingNotes) ? row.tastingNotes : [];
-      })(),
-
-      // Initialize empty images array for new products
-      images: row.images || [],
-
-      // NEW: Add processed shipping fields
-      shippingFirst: (shippingFirst && !isNaN(shippingFirst)) ? shippingFirst : undefined,
-      shippingAdditional: (shippingAdditional && !isNaN(shippingAdditional)) ? shippingAdditional : undefined,
-
-      // ENHANCED: Subscription-specific fields (preserves subscription data)
-      subscriptionInterval: row.subscriptionInterval || undefined,
-      subscriptionPrice: row.subscriptionPrice ? parseFloat(row.subscriptionPrice) : undefined,
-      deliveryFrequency: row.deliveryFrequency || undefined,
-      notificationEnabled: row.notificationEnabled === 'TRUE' || row.notificationEnabled === true || row.notificationEnabled === 'true' || row.notificationEnabled === 1 || false,
-    };
-
-    // Log processed result for first few rows
-    if (index < 3) {
-      console.log(`✅ Processed row ${index + 1}:`, {
-        sku: processed.sku,
-        productName: processed.productName,
-        category: `"${row.category}" → "${processed.category}"`,
-        format: `"${row.format}" → "${processed.format}"`,
-        roastLevel: `"${row.roastLevel}" → "${processed.roastLevel}"`,
-        price: processed.price,
-        originalPrice: processed.originalPrice,
-        featured: processed.featured,
-        tastingNotes: processed.tastingNotes
-      });
-      
-      // Enhanced shipping fields debug logging
-      console.log('🚢 Shipping data processed:', {
-        raw: { 
-          first: row.shippingFirst, 
-          additional: row.shippingAdditional 
-        },
-        parsed: { 
-          first: shippingFirst, 
-          additional: shippingAdditional 
-        },
-        final: { 
-          first: processed.shippingFirst, 
-          additional: processed.shippingAdditional 
-        }
-      });
+      // Shipping fields
+      shippingFirst: row.shippingFirst ? parseFloat(row.shippingFirst) : undefined,
+      shippingAdditional: row.shippingAdditional ? parseFloat(row.shippingAdditional) : undefined
     }
-
-    // ENHANCED: Log subscription products for debugging (preserves subscription data)
-    if (processed.category === 'subscription') {
-      console.log(`📧 Processing subscription product ${index + 1}:`, {
-        sku: processed.sku,
-        name: processed.productName,
-        notification: processed.notification,
-        notificationEnabled: processed.notificationEnabled,
-        subscriptionInterval: processed.subscriptionInterval,
-        subscriptionPrice: processed.subscriptionPrice,
-        deliveryFrequency: processed.deliveryFrequency
-      })
+    
+    // Category-specific field processing
+    if (category === 'coffee') {
+      return {
+        ...baseProduct,
+        roastLevel: row.roastLevel?.toLowerCase() || 'medium',
+        origin: row.origin || '',
+        format: row.format?.toLowerCase().replace(' ', '-') || 'whole-bean',
+        weight: row.weight || '12oz',
+        tastingNotes: typeof row.tastingNotes === 'string' 
+          ? row.tastingNotes.split(',').map((note: string) => note.trim()).filter((note: string) => note.length > 0)
+          : []
+      }
     }
+    
+    if (category === 'subscription') {
+      return {
+        ...baseProduct,
+        notification: row.notification || '',
+        subscriptionInterval: row.subscriptionInterval?.toLowerCase() || 'monthly',
+        deliveryFrequency: row.deliveryFrequency?.toLowerCase() || 'monthly',
+        notificationEnabled: row.notificationEnabled === 'TRUE' || row.notificationEnabled === true,
+        maxDeliveries: row.maxDeliveries ? parseInt(row.maxDeliveries) : undefined,
+        trialDays: row.trialDays ? parseInt(row.trialDays) : 0
+      }
+    }
+    
+    // Default processing for other categories
+    return baseProduct
+  })
+}
 
-    return processed;
-  });
+// Add category-specific CSV export:
+export function exportProductsToCSV(products: Product[]): string {
+  const csvData = products.map(product => {
+    const baseData = {
+      sku: product.sku,
+      productName: product.productName,
+      CATEGORY: product.category?.toUpperCase(),
+      PRICE: product.price,
+      DESCRIPTION: product.description,
+      FEATURED: product.featured ? 'TRUE' : 'FALSE',
+      STATUS: product.status,
+      'Shipping(First Item)': product.shippingFirst || '',
+      'Shipping(Additional Item)': product.shippingAdditional || ''
+    }
+    
+    // Add category-specific fields
+    if (product.category === 'coffee') {
+      return {
+        ...baseData,
+        'ROAST LEVEL': product.roastLevel || '',
+        ORIGIN: product.origin || '',
+        FORMAT: product.format || '',
+        WEIGHT: product.weight || '',
+        'TASTING NOTES': Array.isArray(product.tastingNotes) 
+          ? product.tastingNotes.join(', ')
+          : product.tastingNotes || ''
+      }
+    }
+    
+    if (product.category === 'subscription') {
+      return {
+        ...baseData,
+        NOTIFICATION: product.notification || '',
+        'SUBSCRIPTION INTERVAL': product.subscriptionInterval || '',
+        'DELIVERY FREQUENCY': product.deliveryFrequency || '',
+        'NOTIFICATION ENABLED': product.notificationEnabled ? 'TRUE' : 'FALSE',
+        'MAX DELIVERIES': product.maxDeliveries || '',
+        'TRIAL DAYS': product.trialDays || 0
+      }
+    }
+    
+    return baseData
+  })
+  
+  return Papa.unparse(csvData, { header: true })
 }
