@@ -67,6 +67,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [originalProducts, setOriginalProducts] = useState<Product[]>([])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [isDeployInProgress, setIsDeployInProgress] = useState(false)
 
   // ENHANCED: Unified progress state management (FIXES DISAPPEARING PROGRESS BAR)
   const [saveState, setSaveState] = useState<{
@@ -201,6 +202,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
 
   // STAGING SYSTEM: Initialize staging data (including empty state)
   useEffect(() => {
+    // CRITICAL FIX: Don't reset staging if a deployment is in progress.
+    if (isDeployInProgress) {
+      console.log('⚠️ Skipping staging re-init - deployment in progress')
+      return
+    }
+
     console.log('🔍 initialProducts changed:', {
       length: initialProducts.length,
       first: initialProducts[0]?.productName || 'EMPTY',
@@ -212,7 +219,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     setOriginalProducts([...initialProducts])
     setHasUnsavedChanges(false)
     console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
-  }, [initialProducts])
+  }, [initialProducts, isDeployInProgress])
 
   // STAGING SYSTEM: Detect changes
   useEffect(() => {
@@ -267,6 +274,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       return
     }
     
+    setIsDeployInProgress(true)
     console.log('🚀 Starting save to production...')
     updateSaveProgress('validating', 0, 'Starting deployment...')
     
@@ -383,11 +391,15 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       // Show success state for 4 seconds
       setTimeout(() => {
         updateSaveProgress('idle', 0, '')
+        setIsDeployInProgress(false) // Clear deployment lock
       }, 4000)
       
     } catch (error) {
       console.error('❌ DEPLOY: Failed with error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Deployment failed'
+      
+      // CRITICAL FIX: Clear deployment protection on error
+      setIsDeployInProgress(false)
       
       // FIXED: Keep progress at 90% to show where verification failed
       updateSaveProgress('error', 90, errorMessage, errorMessage)
@@ -395,7 +407,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       // FIXED: Remove auto-reset timer - let user control error dismissal
       console.log('🔴 Error state will persist until user action')
     }
-  }, [stagedProducts, updateSaveProgress, saveState.isActive])
+  }, [stagedProducts, updateSaveProgress, saveState.isActive, isDeployInProgress])
 
   // STAGING SYSTEM: Discard changes
   const discardChanges = () => {
@@ -609,8 +621,8 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         </div>
       </div>
 
-      {/* ENHANCED: Professional Save & Deploy Interface */}
-      {hasUnsavedChanges && (
+      {/* ENHANCED: Professional Save & Deploy Interface - FIXED VISIBILITY */}
+      {(hasUnsavedChanges || saveState.isActive || isDeployInProgress) && (
         <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
