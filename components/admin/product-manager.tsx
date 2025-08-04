@@ -388,12 +388,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     } catch (error) {
       console.error('❌ DEPLOY: Failed with error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Deployment failed'
-      updateSaveProgress('error', 0, errorMessage, errorMessage)
       
-      // Show error state for 8 seconds
-      setTimeout(() => {
-        updateSaveProgress('idle', 0, '')
-      }, 8000)
+      // FIXED: Keep progress at 90% to show where verification failed
+      updateSaveProgress('error', 90, errorMessage, errorMessage)
+      
+      // FIXED: Remove auto-reset timer - let user control error dismissal
+      console.log('🔴 Error state will persist until user action')
     }
   }, [stagedProducts, updateSaveProgress, saveState.isActive])
 
@@ -755,7 +755,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         </div>
       )}
 
-      {/* ERROR: Deployment Failed with Retry */}
+      {/* ERROR: Deployment Failed with Retry and Clear Options */}
       {saveState.stage === 'error' && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -764,16 +764,29 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               <div>
                 <div className="font-medium text-red-900">Deployment Failed</div>
                 <div className="text-sm text-red-700">{saveState.message}</div>
+                <div className="text-xs text-red-600 mt-1">
+                  Progress stopped at {saveState.progress}% - Error state will persist until you take action
+                </div>
               </div>
             </div>
-            <Button 
-              onClick={saveToProduction}
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
-            >
-              <Rocket className="w-4 h-4 mr-2" />
-              Retry Deployment
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={saveToProduction}
+                variant="outline"
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <Rocket className="w-4 h-4 mr-2" />
+                Retry Deployment
+              </Button>
+              <Button 
+                onClick={() => updateSaveProgress('idle', 0, '')}
+                variant="outline"
+                size="sm"
+                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+              >
+                Clear Error
+              </Button>
+            </div>
           </div>
         </div>
       )}
