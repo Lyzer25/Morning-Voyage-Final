@@ -21,7 +21,7 @@ import {
   Download,
   Clock,
   Rocket,
-} from "lucide-react"
+} from "lucide-react" 
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
@@ -403,7 +403,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           console.log(`🔍 CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts}`)
           
           // CRITICAL: Test the same API that customer pages use
-          const response = await fetch('/api/products?grouped=true', {
+          const response = await fetch(`/api/products?grouped=true&ts=${Date.now()}`, {
             cache: 'no-store',
             headers: { 
               'Cache-Control': 'no-cache',

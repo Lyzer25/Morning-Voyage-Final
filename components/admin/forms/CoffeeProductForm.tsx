@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Product } from '@/lib/types';
+import { useState, useCallback } from 'react';
+import { Product, ProductImage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,8 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Coffee, Package, DollarSign, Truck, Loader2 } from 'lucide-react';
+import { Coffee, Package, DollarSign, Truck, Loader2, Upload, X, ImageIcon, Move } from 'lucide-react';
+import { put } from '@vercel/blob';
 
 interface CoffeeProductFormProps {
   product?: Product;
@@ -50,6 +53,91 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
     shippingAdditional: product?.shippingAdditional || undefined
   });
 
+  // Image management state
+  const [images, setImages] = useState<ProductImage[]>(product?.images || []);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+
+  // Image upload handler
+  const handleImageUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const maxImages = 6;
+    if (images.length + files.length > maxImages) {
+      toast.error(`Maximum ${maxImages} images allowed. You can upload ${maxImages - images.length} more.`);
+      return;
+    }
+
+    setUploadingImage(true);
+    console.log('🖼️ Starting image upload...', { fileCount: files.length });
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file, index) => {
+        // Validate file
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`${file.name} is not an image`);
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`${file.name} is too large (max 5MB)`);
+        }
+
+        // Generate filename
+        const timestamp = Date.now();
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const filename = `products/images/${timestamp}-${index}-${crypto.randomUUID().substring(0, 8)}.${extension}`;
+
+        console.log('🖼️ Uploading:', { filename, size: file.size });
+
+        // Upload to Vercel Blob
+        const blob = await put(filename, file, {
+          access: 'public',
+          allowOverwrite: true
+        });
+
+        // Create ProductImage
+        const productImage: ProductImage = {
+          id: crypto.randomUUID(),
+          url: blob.url,
+          alt: formData.productName || file.name.replace(/\.[^/.]+$/, ''),
+          type: images.length === 0 && index === 0 ? 'main' : 'gallery',
+          order: images.length + index
+        };
+
+        console.log('✅ Image uploaded:', productImage);
+        return productImage;
+      });
+
+      const newImages = await Promise.all(uploadPromises);
+      setImages(prev => [...prev, ...newImages]);
+      toast.success(`${newImages.length} image(s) uploaded successfully`);
+
+    } catch (error: any) {
+      console.error('❌ Image upload failed:', error);
+      toast.error(error.message || 'Failed to upload images');
+    } finally {
+      setUploadingImage(false);
+    }
+  }, [images.length, formData.productName]);
+
+  // Remove image handler
+  const handleRemoveImage = useCallback((imageId: string) => {
+    setImages(prev => prev.filter(img => img.id !== imageId));
+    toast.success('Image removed');
+  }, []);
+
+  // Reorder images handler
+  const handleImageReorder = useCallback((dragIndex: number, hoverIndex: number) => {
+    setImages(prev => {
+      const draggedImage = prev[dragIndex];
+      const newImages = [...prev];
+      newImages.splice(dragIndex, 1);
+      newImages.splice(hoverIndex, 0, draggedImage);
+      
+      // Update order property
+      return newImages.map((img, idx) => ({ ...img, order: idx }));
+    });
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -71,7 +159,7 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
         tastingNotes: processedTastingNotes,
         createdAt: product?.createdAt || new Date(),
         updatedAt: new Date(),
-        images: product?.images || []
+        images: images // Use current images state
       };
       
       const success = onSubmit(productData);
@@ -214,6 +302,127 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
             <p className="text-xs text-gray-500 mt-1">
               Enter tasting notes separated by commas
             </p>
+          </div>
+        </div>
+
+        {/* Product Images Section */}
+        <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <h3 className="font-semibold text-purple-800 flex items-center">
+            <ImageIcon className="h-4 w-4 mr-2" />
+            Product Images
+          </h3>
+          
+          {/* Upload Area */}
+          <div className="space-y-4">
+            <div
+              className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors"
+              onDrop={(e) => {
+                e.preventDefault();
+                handleImageUpload(e.dataTransfer.files);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+            >
+              <Upload className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+              <p className="text-sm text-purple-600 mb-2">
+                Drag & drop images here, or click to select
+              </p>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e.target.files)}
+                className="hidden"
+                id="image-upload"
+                disabled={uploadingImage}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById('image-upload')?.click()}
+                disabled={uploadingImage}
+                className="border-purple-300 text-purple-700 hover:bg-purple-100"
+              >
+                {uploadingImage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose Images
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-gray-500 mt-2">
+                Max 6 images, 5MB each. First image will be the main product image.
+              </p>
+            </div>
+
+            {/* Image Gallery */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {images.map((image, index) => (
+                  <Card key={image.id} className="relative group">
+                    <CardContent className="p-2">
+                      <div className="relative aspect-square rounded overflow-hidden">
+                        <img
+                          src={image.url}
+                          alt={image.alt}
+                          className="w-full h-full object-cover"
+                        />
+                        
+                        {/* Image Controls */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                          {/* Remove Button */}
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveImage(image.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Move Buttons */}
+                          {index > 0 && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleImageReorder(index, index - 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Move className="h-4 w-4 rotate-180" />
+                            </Button>
+                          )}
+                          {index < images.length - 1 && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleImageReorder(index, index + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Move className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* Main Image Badge */}
+                        {index === 0 && (
+                          <Badge className="absolute top-2 left-2 bg-purple-600">
+                            Main
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

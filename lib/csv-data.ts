@@ -1,7 +1,19 @@
 import { put, list } from "@vercel/blob"
 import Papa from "papaparse"
 import type { Product } from "@/lib/types"
-import { transformHeader, exportProductsToCSV } from "@/lib/csv-helpers"
+import { 
+  transformHeader, 
+  exportProductsToCSV, 
+  HEADER_ALIASES,
+  normalizeCategory,
+  normalizeFormat,
+  normalizeWeight,
+  normalizeBool,
+  normalizeMoney,
+  normalizeTastingNotes,
+  normalizeRoastLevel,
+  norm
+} from "@/lib/csv-helpers"
 
 // CRITICAL: Centralized blob key for consistency
 export const PRODUCTS_BLOB_KEY = "products.csv"
@@ -90,6 +102,56 @@ const SAMPLE_PRODUCTS: Product[] = [
     updatedAt: new Date(),
   }
 ]
+
+// ENHANCED: Convert CSV row to normalized Product using all value normalizers
+function fromCsvRow(row: Record<string, any>): Product {
+  console.log('🔧 Processing CSV row:', Object.keys(row));
+  
+  const product: Product = {
+    id: crypto.randomUUID(),
+    sku: row["SKU"]?.toString().trim() || '',
+    productName: row["PRODUCTNAME"]?.toString().trim() || '',
+    category: normalizeCategory(row["CATEGORY"]),
+    price: normalizeMoney(row["PRICE"]),
+    originalPrice: undefined, // Set after processing
+    description: row["DESCRIPTION"]?.toString().trim() || '',
+    roastLevel: normalizeRoastLevel(row["ROAST LEVEL"]),
+    origin: row["ORIGIN"]?.toString().trim() || '',
+    format: normalizeFormat(row["FORMAT"]),
+    weight: normalizeWeight(row["WEIGHT"]),
+    tastingNotes: (() => {
+      const notes = normalizeTastingNotes(row["TASTING NOTES"])
+      return notes ? notes.split(', ').filter(Boolean) : []
+    })(),
+    featured: normalizeBool(row["FEATURED"]),
+    shippingFirst: normalizeMoney(row["SHIPPINGFIRST"]),
+    shippingAdditional: normalizeMoney(row["SHIPPINGADDITIONAL"]),
+    status: row["STATUS"]?.toString().toLowerCase() || "active",
+    inStock: true, // Default to in stock
+    images: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  
+  // CRITICAL: Set originalPrice = price if not provided (initial import rule)
+  if (row["ORIGINAL PRICE"]) {
+    product.originalPrice = normalizeMoney(row["ORIGINAL PRICE"])
+  } else {
+    product.originalPrice = product.price // Default to current price on import
+  }
+  
+  // tastingNotes is already processed as array above, no need for additional conversion
+  
+  console.log('🔧 Normalized product:', {
+    sku: product.sku,
+    category: product.category,
+    price: product.price,
+    originalPrice: product.originalPrice,
+    tastingNotes: product.tastingNotes
+  });
+  
+  return product
+}
 
 async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
   try {
@@ -266,13 +328,9 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
 
     console.log('📊 Raw parsed data sample:', parseResult.data.slice(0, 2));
 
-    // Process and validate data
-    const processedProducts = parseResult.data.map((rawProduct: any, index) => {
-      const processed = {
-        ...rawProduct,
-        status: rawProduct.status || "active",
-        price: typeof rawProduct.price === "number" ? rawProduct.price : 0,
-      };
+    // ENHANCED: Process using new normalization system
+    const processedProducts = parseResult.data.map((rawRow: any, index) => {
+      const processed = fromCsvRow(rawRow);
       
       // Log first few products for debugging
       if (index < 3) {
@@ -281,7 +339,9 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
           productName: processed.productName,
           category: processed.category,
           price: processed.price,
-          status: processed.status,
+          originalPrice: processed.originalPrice,
+          roastLevel: processed.roastLevel,
+          tastingNotes: processed.tastingNotes,
           allFields: Object.keys(processed)
         });
       }

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 // GET /api/products - Fetch all products from Vercel Blob
 export async function GET(request: NextRequest) {
@@ -124,7 +125,14 @@ export async function GET(request: NextRequest) {
           hasProducts: response.products.length > 0
         });
         
-        return NextResponse.json(response);
+        return NextResponse.json(response, {
+          headers: {
+            // Belt & suspenders for every cache on the path
+            "Cache-Control": "no-store, max-age=0, must-revalidate",
+            "CDN-Cache-Control": "no-store",
+            "Vercel-CDN-Cache-Control": "no-store",
+          },
+        });
       } catch (groupError) {
         console.error("❌ API Error grouping products:", groupError)
         // Fallback to raw products if grouping fails
@@ -168,7 +176,14 @@ export async function GET(request: NextRequest) {
       hasProducts: response.products.length > 0
     });
     
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        // Belt & suspenders for every cache on the path
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
+        "CDN-Cache-Control": "no-store",
+        "Vercel-CDN-Cache-Control": "no-store",
+      },
+    });
 
   } catch (error) {
     console.error("❌ API Error fetching products:", error)

@@ -1,86 +1,135 @@
 import type { Product } from "@/lib/types"
 import Papa from "papaparse"
 
-// Enhanced mapping to handle your exact CSV format and variations
-// Supports both your UPPERCASE format and standard lowercase variations
-const headerMapping: { [key: string]: string } = {
-  // Standard lowercase mappings (existing)
-  sku: "sku",
-  "product name": "productName",
-  productname: "productName",
-  category: "category",
-  subcategory: "subcategory",
-  status: "status",
-  format: "format",
-  weight: "weight",
-  packsize: "packSize",
-  price: "price",
-  "original price": "originalPrice",
-  description: "description",
-  "long description": "longDescription",
-  "roast level": "roastLevel",
-  origin: "origin",
-  "processing method": "processingMethod",
-  "tasting notes": "tastingNotes",
-  featured: "featured",
-  badge: "badge",
-
-  // YOUR EXACT CSV FORMAT MAPPINGS (UPPERCASE)
-  "productName": "productName",     // Already correct camelCase
-  "CATEGORY": "category",           // UPPERCASE → lowercase
-  "PRICE": "price",                 // UPPERCASE → lowercase  
-  "DESCRIPTION": "description",     // UPPERCASE → lowercase
-  "FEATURED": "featured",           // UPPERCASE → lowercase
-  "ROAST LEVEL": "roastLevel",      // UPPERCASE with space → camelCase
-  "ORIGIN": "origin",               // UPPERCASE → lowercase
-  "FORMAT": "format",               // UPPERCASE → lowercase
-  "WEIGHT": "weight",               // UPPERCASE → lowercase
-  "TASTING NOTES": "tastingNotes",  // UPPERCASE with space → camelCase
-
-  // NEW: Shipping column mappings (handle exact format from CSV)
-  "Shipping( First Item) ": "shippingFirst",      // Note the trailing space
-  "Shipping(Additional Item)": "shippingAdditional",
-  "SHIPPING( FIRST ITEM) ": "shippingFirst",      // Uppercase variant
-  "SHIPPING(ADDITIONAL ITEM)": "shippingAdditional", // Uppercase variant
-
-  // NEW: Notification column mappings  
-  "NOTIFICATION": "notification",                  // UPPERCASE
-  "Notification": "notification",                  // Title Case
-  "notification": "notification",                  // lowercase
-
-  // ENHANCED: Subscription-specific field mappings
-  "SUBSCRIPTION INTERVAL": "subscriptionInterval",
-  "Subscription Interval": "subscriptionInterval", 
-  "subscription interval": "subscriptionInterval",
-  "SUBSCRIPTION PRICE": "subscriptionPrice",
-  "Subscription Price": "subscriptionPrice",
-  "subscription price": "subscriptionPrice",
-  "DELIVERY FREQUENCY": "deliveryFrequency",
-  "Delivery Frequency": "deliveryFrequency",
-  "delivery frequency": "deliveryFrequency",
-  "NOTIFICATION ENABLED": "notificationEnabled",
-  "Notification Enabled": "notificationEnabled",
-  "notification enabled": "notificationEnabled",
-
-  // Additional variations for flexibility
-  "Roast Level": "roastLevel",      // Title Case
-  "Tasting Notes": "tastingNotes",  // Title Case
-  "Product Name": "productName",    // Title Case
+// COMPREHENSIVE CSV NORMALIZATION SYSTEM
+// Normalize headers: case/space/paren tolerant, trimmed
+export function norm(h: string): string {
+  return h?.toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")           // Collapse multiple spaces
+    .replace(/\u00A0/g, " ")        // Replace non-breaking spaces
+    .replace(/\s*\(\s*/g, "(")      // Normalize parens spacing
+    .replace(/\s*\)\s*/g, ")")
 }
 
+// Map MANY possible incoming headers → our canonical UPPERCASE CSV columns
+export const HEADER_ALIASES: Record<string, string> = {
+  // Core product fields
+  "sku": "SKU",
+  "productname": "PRODUCTNAME", 
+  "product name": "PRODUCTNAME",
+  "name": "PRODUCTNAME",
+  "category": "CATEGORY",
+  "price": "PRICE",
+  "current price": "PRICE",
+  "description": "DESCRIPTION",
+  "featured": "FEATURED",
+  
+  // Coffee-specific fields
+  "roast level": "ROAST LEVEL",
+  "roastlevel": "ROAST LEVEL",
+  "roast": "ROAST LEVEL",
+  "origin": "ORIGIN",
+  "format": "FORMAT",
+  "weight": "WEIGHT",
+  "size": "WEIGHT",
+  "tasting notes": "TASTING NOTES",
+  "tastingnotes": "TASTING NOTES",
+  "notes": "TASTING NOTES",
+  
+  // Pricing fields
+  "original price": "ORIGINAL PRICE",
+  "originalprice": "ORIGINAL PRICE",
+  "msrp": "ORIGINAL PRICE",
+  
+  // Shipping fields (handle exact CSV quirks)
+  "shipping( first item)": "SHIPPINGFIRST",
+  "shipping(first item)": "SHIPPINGFIRST", 
+  "shipping first item": "SHIPPINGFIRST",
+  "shipping first": "SHIPPINGFIRST",
+  "shipping(additional item)": "SHIPPINGADDITIONAL",
+  "shipping( additional item)": "SHIPPINGADDITIONAL",
+  "shipping additional item": "SHIPPINGADDITIONAL",
+  "shipping additional": "SHIPPINGADDITIONAL",
+  
+  // Status fields
+  "status": "STATUS",
+  "active": "STATUS",
+  "published": "STATUS"
+}
+
+// Canonical CSV column order
+export const PRODUCTS_HEADERS = [
+  "SKU", "PRODUCTNAME", "CATEGORY", "PRICE", "ORIGINAL PRICE", "DESCRIPTION", 
+  "FEATURED", "ROAST LEVEL", "ORIGIN", "FORMAT", "WEIGHT", "TASTING NOTES",
+  "SHIPPINGFIRST", "SHIPPINGADDITIONAL", "STATUS"
+]
+
+// VALUE NORMALIZERS
+export function normalizeCategory(v?: string): string {
+  const s = v?.toString().toLowerCase().trim()
+  if (!s) return "coffee"
+  if (["coffee", "coffees"].includes(s)) return "coffee"
+  if (["subscription", "subscriptions"].includes(s)) return "subscription"
+  if (["gift set", "gift-set", "giftset", "gift"].includes(s)) return "gift-set"
+  if (["equipment", "gear"].includes(s)) return "equipment"
+  return "coffee" // Default fallback
+}
+
+export function normalizeFormat(v?: string): string {
+  const s = v?.toString().toLowerCase().trim()
+  if (!s) return ""
+  if (s.includes("whole")) return "whole-bean"
+  if (s.includes("ground")) return "ground"
+  if (s.includes("pod")) return "pods"
+  if (s.includes("instant")) return "instant"
+  return s // Keep original if no match
+}
+
+export function normalizeWeight(v?: string): string {
+  if (!v) return ""
+  const s = v.toString().toLowerCase().replace(/\s+/g, "")
+  return s.replace(/oz/g, "oz").replace(/lb/g, "lb") // Normalize units
+}
+
+export function normalizeBool(v: any): boolean {
+  const s = v?.toString().toLowerCase().trim()
+  return s === "true" || s === "yes" || s === "1" || s === "on"
+}
+
+export function normalizeMoney(v: any): number {
+  if (v == null) return 0
+  const n = Number(String(v).replace(/[^0-9.\-]/g, ""))
+  return isNaN(n) ? 0 : Number(n.toFixed(2))
+}
+
+export function normalizeTastingNotes(v?: string): string {
+  if (!v) return ""
+  // Keep as comma-separated string for form binding
+  return v.split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
+    .join(", ")
+}
+
+export function normalizeRoastLevel(v?: string): string {
+  const s = v?.toString().toLowerCase().trim()
+  if (!s) return "medium"
+  if (s.includes("light")) return "light"
+  if (s.includes("medium-dark") || s.includes("medium dark")) return "medium-dark"
+  if (s.includes("dark")) return "dark"
+  if (s.includes("medium")) return "medium"
+  return s // Keep original if no standard match
+}
+
+// Enhanced transformHeader using new normalization system
 export const transformHeader = (header: string): string => {
-  const trimmed = header.trim()
+  const normalized = norm(header)
   
-  console.log('🔧 Header mapping:', `"${trimmed}" →`, headerMapping[trimmed] || `"${trimmed.toLowerCase()}" →`, headerMapping[trimmed.toLowerCase()] || 'unmapped');
+  console.log('🔧 Header transformation:', `"${header}" → norm:"${normalized}" → canonical:"${HEADER_ALIASES[normalized] || normalized}"`)
   
-  // First try exact match (handles your UPPERCASE format)
-  if (headerMapping[trimmed]) {
-    return headerMapping[trimmed] as string
-  }
-  
-  // Then try lowercase match (handles variations)  
-  const lowerHeader = trimmed.toLowerCase()
-  return headerMapping[lowerHeader] || lowerHeader
+  // Use HEADER_ALIASES with normalized header
+  return HEADER_ALIASES[normalized] || normalized
 }
 
 // Enhance the processCSVData function:
