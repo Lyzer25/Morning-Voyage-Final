@@ -107,44 +107,53 @@ const SAMPLE_PRODUCTS: Product[] = [
 function fromCsvRow(row: Record<string, any>): Product {
   console.log('🔧 Processing CSV row:', Object.keys(row));
   
+  // CRITICAL: Validate required fields only - warn for missing optional
+  const requiredFields = ['SKU', 'PRODUCTNAME', 'CATEGORY', 'PRICE'];
+  const missing = requiredFields.filter(field => !row[field]);
+  if (missing.length > 0) {
+    console.error(`❌ Missing required fields: ${missing.join(', ')}`, row);
+    throw new Error(`Missing required fields: ${missing.join(', ')}`);
+  }
+  
+  // Warn for missing optional fields
+  const optionalFields = ['DESCRIPTION', 'ROAST LEVEL', 'ORIGIN', 'FORMAT', 'WEIGHT', 'TASTING NOTES'];
+  const missingOptional = optionalFields.filter(field => !row[field]);
+  if (missingOptional.length > 0) {
+    console.warn(`⚠️ Missing optional fields: ${missingOptional.join(', ')} - using defaults`);
+  }
+  
+  const price = normalizeMoney(row["PRICE"]);
+  
   const product: Product = {
     id: crypto.randomUUID(),
     sku: row["SKU"]?.toString().trim() || '',
     productName: row["PRODUCTNAME"]?.toString().trim() || '',
     category: normalizeCategory(row["CATEGORY"]),
-    price: normalizeMoney(row["PRICE"]),
-    originalPrice: undefined, // Set after processing
+    price: price,
+    originalPrice: row["ORIGINAL PRICE"] ? normalizeMoney(row["ORIGINAL PRICE"]) : price, // Default to price
     description: row["DESCRIPTION"]?.toString().trim() || '',
     roastLevel: normalizeRoastLevel(row["ROAST LEVEL"]),
     origin: row["ORIGIN"]?.toString().trim() || '',
     format: normalizeFormat(row["FORMAT"]),
     weight: normalizeWeight(row["WEIGHT"]),
-    tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]),
+    tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]), // Use string format
     featured: normalizeBool(row["FEATURED"]),
-    shippingFirst: normalizeMoney(row["SHIPPINGFIRST"]),
-    shippingAdditional: normalizeMoney(row["SHIPPINGADDITIONAL"]),
-    status: row["STATUS"]?.toString().toLowerCase() || "active",
+    shippingFirst: row["SHIPPINGFIRST"] ? normalizeMoney(row["SHIPPINGFIRST"]) : undefined,
+    shippingAdditional: row["SHIPPINGADDITIONAL"] ? normalizeMoney(row["SHIPPINGADDITIONAL"]) : undefined,
+    status: row["STATUS"]?.toString().toLowerCase() || "active", // Default active
     inStock: true, // Default to in stock
     images: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   }
   
-  // CRITICAL: Set originalPrice = price if not provided (initial import rule)
-  if (row["ORIGINAL PRICE"]) {
-    product.originalPrice = normalizeMoney(row["ORIGINAL PRICE"])
-  } else {
-    product.originalPrice = product.price // Default to current price on import
-  }
-  
-  // tastingNotes is already processed as array above, no need for additional conversion
-  
   console.log('🔧 Normalized product:', {
     sku: product.sku,
     category: product.category,
     price: product.price,
     originalPrice: product.originalPrice,
-    tastingNotes: product.tastingNotes
+    tastingNotes: product.tastingNotes,
+    status: product.status
   });
   
   return product

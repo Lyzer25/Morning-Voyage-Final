@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import ProductDetail from "@/components/product/product-detail"
 import ProductRecommendations from "@/components/product/product-recommendations"
 import PageTransition from "@/components/ui/page-transition"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import { getProducts } from "@/lib/csv-data"
+import { groupProductFamilies, findFamilyBySlug, generateFamilySlug, convertFamilyToGroupedProduct } from "@/lib/family-grouping"
 
 interface ProductPageProps {
   params: {
@@ -17,14 +18,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
   try {
     console.log(`🔍 ProductPage: Loading product for slug: ${params.slug}`)
     
-    // CRITICAL FIX: Properly await the async function
-    const products = await getCachedGroupedProducts()
+    // Check for old SKU-based URLs and redirect to family URLs
+    if (params.slug.match(/-wb$|-gr$/i)) {
+      const familySlug = params.slug.replace(/-wb$|-gr$/i, '')
+      console.log(`🔄 Redirecting old SKU slug ${params.slug} to family slug ${familySlug}`)
+      redirect(`/product/${familySlug}`)
+    }
+    
+    // Load all products and group into families
+    const allProducts = await getProducts()
+    const coffeeProducts = allProducts.filter(p => p.category?.toLowerCase() === 'coffee')
+    const productFamilies = groupProductFamilies(coffeeProducts)
 
-    console.log(`📊 ProductPage: Available products: ${products?.length || 0}`)
+    console.log(`📊 ProductPage: ${productFamilies.length} families available`)
 
-    // Add null checks before using the data
-    if (!products || !Array.isArray(products)) {
-      console.error('❌ ProductPage: No products available or products is not an array')
+    if (!productFamilies || productFamilies.length === 0) {
+      console.error('❌ ProductPage: No product families available')
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -39,32 +48,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
       )
     }
 
-    // Find product by slug (match against baseSku or productName)
-    const product = products.find((p) => {
-      if (!p || !p.baseSku || !p.productName) return false
-      
-      const baseSkuSlug = p.baseSku.toLowerCase().replace(/[^a-z0-9]/g, "-")
-      const nameSlug = p.productName
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, "")
-        .replace(/\s+/g, "-")
+    // Find family by slug
+    const family = findFamilyBySlug(productFamilies, params.slug)
 
-      console.log(`   Checking: ${p.productName} -> baseSkuSlug: ${baseSkuSlug}, nameSlug: ${nameSlug}`)
-
-      return baseSkuSlug === params.slug || nameSlug === params.slug
-    })
-
-    if (!product) {
-      console.log(`❌ Product not found for slug: ${params.slug}`)
+    if (!family) {
+      console.log(`❌ Product family not found for slug: ${params.slug}`)
       notFound()
     }
 
-    console.log(`✅ Found product: ${product.productName} with ${product.variants?.length || 0} variants`)
+    console.log(`✅ Found family: ${family.base.productName} with ${family.variants.length} variants`)
 
-    // Get related products with null safety
-    const relatedProducts = products
-      .filter((p) => p && p.category === product.category && p.baseSku !== product.baseSku)
+    // Convert to GroupedProduct for compatibility with existing ProductDetail component
+    const product = convertFamilyToGroupedProduct(family)
+
+    // Get related products from other families
+    const relatedFamilies = productFamilies
+      .filter(f => f.familyKey !== family.familyKey && f.base.category === family.base.category)
       .slice(0, 4)
+      .map(convertFamilyToGroupedProduct)
 
     return (
       <PageTransition>
@@ -73,7 +74,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           <main className="relative overflow-hidden pt-24">
             <ProductDetail product={product} />
-            {relatedProducts.length > 0 && <ProductRecommendations products={relatedProducts} />}
+            {relatedFamilies.length > 0 && <ProductRecommendations products={relatedFamilies} />}
           </main>
 
           <Footer />
@@ -102,36 +103,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 }
 
-// CRITICAL FIX: Properly await async function in generateStaticParams
+// CRITICAL FIX: Generate static params based on product families
 export async function generateStaticParams() {
   try {
-    console.log('🏗️ generateStaticParams: Starting static generation...')
+    console.log('🏗️ generateStaticParams: Starting family-based static generation...')
     
-    // CRITICAL: Properly await the async function
-    const products = await getCachedGroupedProducts()
+    // Load products and group into families
+    const allProducts = await getProducts()
+    const coffeeProducts = allProducts.filter(p => p.category?.toLowerCase() === 'coffee')
+    const productFamilies = groupProductFamilies(coffeeProducts)
     
-    console.log('🏗️ generateStaticParams: Retrieved products:', products?.length || 0)
+    console.log('🏗️ generateStaticParams: Generated families:', productFamilies?.length || 0)
     
-    // Add comprehensive null checks
-    if (!products || !Array.isArray(products)) {
-      console.warn('⚠️ generateStaticParams: Products is not an array, returning empty array')
+    if (!productFamilies || productFamilies.length === 0) {
+      console.warn('⚠️ generateStaticParams: No families found, returning empty array')
       return []
     }
     
-    // Filter only products that have valid data for slug generation
-    const validProducts = products.filter(product => 
-      product && 
-      product.baseSku && 
-      typeof product.baseSku === 'string'
-    )
-    
-    console.log('🏗️ generateStaticParams: Valid products with baseSku:', validProducts.length)
-    
-    const params = validProducts.map((product) => ({
-      slug: product.baseSku.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+    // Generate slugs from family keys
+    const params = productFamilies.map((family) => ({
+      slug: generateFamilySlug(family.familyKey),
     }))
     
     console.log('🏗️ generateStaticParams: Generated params:', params.length)
+    params.forEach((param, i) => {
+      console.log(`  ${i + 1}. ${param.slug}`)
+    })
+    
     return params
     
   } catch (error) {

@@ -92,7 +92,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 ...(newCategory === 'coffee' ? {
                   roastLevel: product.roastLevel || 'medium',
                   origin: product.origin || '',
-                  tastingNotes: product.tastingNotes || []
+                  tastingNotes: product.tastingNotes || ""
                 } : {}),
                 ...(newCategory === 'subscription' ? {
                   notification: product.notification || '',
@@ -182,8 +182,19 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }))
   }, [])
 
-  // NEW: Client-side CSV upload handler
+  // PARSING GUARD: Prevent duplicate CSV processing
+  const [isParsingCsv, setIsParsingCsv] = useState(false)
+
+  // NEW: Client-side CSV upload handler with staging integration
   const handleCsvUpload = useCallback(async (file: File) => {
+    // GUARD: Prevent duplicate runs
+    if (isParsingCsv) {
+      console.log('🚫 CSV parsing already in progress, ignoring duplicate call')
+      return
+    }
+
+    setIsParsingCsv(true)
+    
     try {
       console.log('📂 CSV Upload: Processing file locally...', {
         name: file.name,
@@ -209,11 +220,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         preview: csvText.substring(0, 300)
       })
 
-      // Parse CSV using existing helper
+      // Parse CSV with proper header transformation
       const parsed = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
-        dynamicTyping: true,
+        dynamicTyping: false, // Keep as strings for proper processing
         transformHeader: transformHeader,
       })
 
@@ -225,61 +236,65 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
 
       if (parsed.errors.length > 0) {
         console.warn('⚠️ CSV parsing errors:', parsed.errors)
-        toast.error(`CSV parsing error: ${parsed.errors[0].message}`)
+        // Don't abort on parsing warnings, just show them
+        parsed.errors.forEach(error => {
+          console.warn(`CSV Warning: ${error.message} at row ${error.row}`)
+        })
+      }
+
+      // CRITICAL: Only require essential fields (SKU, PRODUCTNAME, CATEGORY, PRICE)
+      const requiredFields = ["SKU", "PRODUCTNAME", "CATEGORY", "PRICE"]
+      const missingRequired = requiredFields.filter(field => !parsed.meta?.fields?.includes(field))
+      
+      if (missingRequired.length > 0) {
+        toast.error(`CSV must contain required columns: ${missingRequired.join(', ')}`)
         return
       }
 
-      if (!parsed.meta.fields?.includes("sku") || !parsed.meta.fields?.includes("productName")) {
-        toast.error("CSV must contain 'sku' and 'productName' columns.")
-        return
-      }
+      console.log('✅ CSV has all required fields:', requiredFields)
 
-      // Process data using existing helper
-      const processedData = processCSVData(parsed.data || [])
+      // Process each row using updated fromCsvRow function (with validation & defaults)
+      const processedProducts: Product[] = []
+      
+      for (let i = 0; i < parsed.data.length; i++) {
+        try {
+          // fromCsvRow now handles validation and defaults internally
+          const product = processCSVData([parsed.data[i]])[0]
+          processedProducts.push(product)
+        } catch (rowError) {
+          console.error(`❌ Failed to process row ${i + 1}:`, rowError)
+          toast.error(`Row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Processing failed'}`)
+          // Continue processing other rows instead of aborting
+        }
+      }
 
       console.log('📂 CSV processed:', {
-        productsCount: processedData.length,
-        categories: [...new Set(processedData.map(p => p.category).filter(Boolean))],
-        sampleProduct: processedData[0]
+        totalRows: parsed.data.length,
+        successfullyProcessed: processedProducts.length,
+        categories: [...new Set(processedProducts.map(p => p.category).filter(Boolean))],
+        sampleProduct: processedProducts[0]
       })
 
-      // Smart merge: Ask user how to handle the CSV data
-      const userChoice = confirm(
-        `Import ${processedData.length} products from CSV.\n\nOK = Replace all products\nCancel = Add new products only`
-      )
+      if (processedProducts.length === 0) {
+        toast.error('No valid products could be processed from CSV')
+        return
+      }
 
-      setStagedProducts(prev => {
-        if (userChoice) {
-          // Replace all products with CSV data
-          console.log('📂 Replacing all products with CSV data')
-          return [...processedData]
-        } else {
-          // Add new products, update existing ones
-          const existingSkus = new Set(prev.map(p => p.sku))
-          const newProducts = processedData.filter(p => !existingSkus.has(p.sku))
-          const updatedProducts = prev.map(existing => {
-            const csvProduct = processedData.find(p => p.sku === existing.sku)
-            return csvProduct || existing // Update if found in CSV, keep existing if not
-          })
-          
-          console.log('📂 Merging CSV data:', {
-            existing: prev.length,
-            newFromCsv: newProducts.length,
-            updated: updatedProducts.length
-          })
-          
-          return [...updatedProducts, ...newProducts]
-        }
-      })
+      // CRITICAL: Always set staging products and mark as unsaved
+      console.log('🎭 Staging replace: Updating staging area with CSV data')
+      setStagedProducts(processedProducts)
+      setHasUnsavedChanges(true)
 
-      // Show success message
-      toast.success(`📂 CSV processed: ${processedData.length} products added to staging area`)
+      console.log(`🎭 Staging replace: ${processedProducts.length} products loaded into staging`)
+      toast.success(`📂 CSV processed: ${processedProducts.length} products loaded into staging area`)
 
     } catch (error) {
       console.error('❌ CSV Upload Error:', error)
       toast.error(`CSV upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsParsingCsv(false)
     }
-  }, [])
+  }, [isParsingCsv])
 
   // STAGING SYSTEM: Initialize staging data (including empty state)
   useEffect(() => {

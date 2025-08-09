@@ -47,10 +47,12 @@ export const HEADER_ALIASES: Record<string, string> = {
   "shipping(first item)": "SHIPPINGFIRST", 
   "shipping first item": "SHIPPINGFIRST",
   "shipping first": "SHIPPINGFIRST",
+  "shippingfirst": "SHIPPINGFIRST",
   "shipping(additional item)": "SHIPPINGADDITIONAL",
   "shipping( additional item)": "SHIPPINGADDITIONAL",
   "shipping additional item": "SHIPPINGADDITIONAL",
   "shipping additional": "SHIPPINGADDITIONAL",
+  "shippingadditional": "SHIPPINGADDITIONAL",
   
   // Status fields
   "status": "STATUS",
@@ -125,11 +127,11 @@ export function normalizeRoastLevel(v?: string): string {
 // Enhanced transformHeader using new normalization system
 export const transformHeader = (header: string): string => {
   const normalized = norm(header)
+  const result = HEADER_ALIASES[normalized] || header.trim().toUpperCase()
   
-  console.log('🔧 Header transformation:', `"${header}" → norm:"${normalized}" → canonical:"${HEADER_ALIASES[normalized] || normalized}"`)
+  console.log('🔧 Header transformation:', `"${header}" → norm:"${normalized}" → canonical:"${result}"`)
   
-  // Use HEADER_ALIASES with normalized header
-  return HEADER_ALIASES[normalized] || normalized
+  return result
 }
 
 // Enhance the processCSVData function:
