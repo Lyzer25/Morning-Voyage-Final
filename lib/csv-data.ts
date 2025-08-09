@@ -1,9 +1,10 @@
 import { put, list } from "@vercel/blob"
 import Papa from "papaparse"
 import type { Product } from "@/lib/types"
-import { transformHeader } from "@/lib/csv-helpers"
+import { transformHeader, exportProductsToCSV } from "@/lib/csv-helpers"
 
-const BLOB_FILENAME = "products.csv"
+// CRITICAL: Centralized blob key for consistency
+export const PRODUCTS_BLOB_KEY = "products.csv"
 
 // In-memory cache to reduce blob storage reads
 let productCache: Product[] | null = null
@@ -115,11 +116,11 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
     }
 
     console.log('📊 BLOB_READ_WRITE_TOKEN exists, proceeding to fetch...');
-    console.log('📊 Looking for blob file with name:', BLOB_FILENAME);
+    console.log('📊 Looking for blob file with name:', PRODUCTS_BLOB_KEY);
 
     // First, check what blob files exist
-    console.log('📊 Listing blobs with exact prefix:', BLOB_FILENAME);
-    const blob = await list({ prefix: BLOB_FILENAME, limit: 10 });
+    console.log('📊 Listing blobs with exact prefix:', PRODUCTS_BLOB_KEY);
+    const blob = await list({ prefix: PRODUCTS_BLOB_KEY, limit: 10 });
     console.log('📊 Blob list result (exact prefix):', {
       blobCount: blob.blobs?.length || 0,
       blobs: blob.blobs?.map(b => ({ 
@@ -132,7 +133,7 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
 
     // If no exact match, check for ANY blob files
     if (!blob.blobs || blob.blobs.length === 0) {
-      console.log('❌ NO BLOB FILES FOUND with prefix:', BLOB_FILENAME);
+      console.log('❌ NO BLOB FILES FOUND with prefix:', PRODUCTS_BLOB_KEY);
       console.log('📊 Checking for ANY blob files in storage...');
       
       const allBlobs = await list({ limit: 20 });
@@ -148,7 +149,7 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
       
       if (allBlobs.blobs && allBlobs.blobs.length > 0) {
         console.log('❌ ISSUE FOUND: Blob files exist but not with expected name!');
-        console.log('📊 Expected filename:', BLOB_FILENAME);
+        console.log('📊 Expected filename:', PRODUCTS_BLOB_KEY);
         console.log('📊 Actual filenames:', allBlobs.blobs.map(b => b.pathname));
       } else {
         console.log('❌ ISSUE FOUND: No blob files exist at all in storage!');
@@ -194,6 +195,14 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
       console.log('📊 File size was:', targetBlob.size);
       console.log('📊 Falling back to sample products');
       return SAMPLE_PRODUCTS;
+    }
+
+    // CRITICAL GUARDRAIL: Detect JSON content and handle gracefully
+    if (/^\s*[\[{]/.test(csvText)) {
+      console.error('❌ JSON detected in products blob; treating as empty CSV (guardrail)');
+      console.log('📊 JSON content preview:', csvText.substring(0, 200));
+      console.log('📊 Returning empty array instead of trying to parse JSON as CSV');
+      return [];
     }
 
     console.log('📊 Starting Papa Parse with detailed tracking...');
@@ -373,7 +382,7 @@ export async function handleEmptyProductState(): Promise<void> {
     })
     
     console.log('🗑️ Saving empty state to Vercel Blob...')
-    await put(BLOB_FILENAME, csvText, {
+    await put(PRODUCTS_BLOB_KEY, csvText, {
       access: "public",
       contentType: "text/csv",
       allowOverwrite: true,
@@ -398,6 +407,11 @@ export async function handleEmptyProductState(): Promise<void> {
 
 export async function updateProducts(products: Product[]): Promise<void> {
   try {
+    // CRITICAL FIX: Input validation
+    if (!Array.isArray(products)) {
+      throw new Error('updateProducts: products must be an array')
+    }
+
     // Category-specific validation
     const validatedProducts = products.map(product => {
       // Validate required fields by category
@@ -418,31 +432,42 @@ export async function updateProducts(products: Product[]): Promise<void> {
       return product
     })
     
-    console.log('💾 BLOB STORAGE: Saving products by category:', {
+    console.log('[products] write: validating', {
       total: validatedProducts.length,
       coffee: validatedProducts.filter(p => p.category === 'coffee').length,
       subscription: validatedProducts.filter(p => p.category === 'subscription').length,
       other: validatedProducts.filter(p => !['coffee', 'subscription'].includes(p.category as string)).length
     })
-    
-    // Save to blob storage with enhanced metadata
-    const blobData = {
-      version: '2.1',
-      timestamp: new Date().toISOString(),
-      productCount: validatedProducts.length,
-      categories: [...new Set(validatedProducts.map(p => p.category))],
-      products: validatedProducts
+
+    // CRITICAL FIX: Handle empty products case
+    if (validatedProducts.length === 0) {
+      console.log('[products] write: empty products - calling handleEmptyProductState')
+      await handleEmptyProductState()
+      // Clear cache after successful write
+      productCache = null
+      return
     }
+
+    // CRITICAL FIX: Generate CSV using existing helper
+    const csvText = exportProductsToCSV(validatedProducts)
     
-    const jsonString = JSON.stringify(blobData, null, 2)
+    if (!csvText?.trim() || csvText.length < 10) {
+      throw new Error('updateProducts: generated CSV unexpectedly empty/short')
+    }
+
+    console.log(`[products] write: ${validatedProducts.length} products, csvLen=${csvText.length}`)
     
-    await put(BLOB_FILENAME, jsonString, {
+    // CRITICAL FIX: Write CSV to blob (not JSON)
+    await put(PRODUCTS_BLOB_KEY, csvText, {
       access: "public",
-      contentType: "application/json",
+      contentType: "text/csv",
       allowOverwrite: true,
     })
     
-    console.log('✅ BLOB STORAGE: Successfully saved enhanced product data')
+    // Clear cache after successful write
+    productCache = null
+    
+    console.log('✅ [products] write: CSV saved successfully')
     
   } catch (error) {
     console.error("❌ CRITICAL ERROR in updateProducts:", error)

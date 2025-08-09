@@ -1,11 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { put } from "@vercel/blob"
-import Papa from "papaparse"
 import { getProducts, updateProducts, addProduct, updateProduct, deleteProduct } from "@/lib/csv-data"
 import type { Product } from "@/lib/types"
-import { transformHeader } from "@/lib/csv-helpers"
+import { exportProductsToCSV } from "@/lib/csv-helpers"
 import { forceInvalidateCache } from "@/lib/product-cache"
 
 // ENHANCED: Aggressive cache clearing for all layers
@@ -61,7 +59,7 @@ export async function exportCsvAction(): Promise<{ error?: string; csv?: string 
     if (products.length === 0) {
       return { error: "No products to export." }
     }
-    const csv = Papa.unparse(products)
+    const csv = exportProductsToCSV(products)
     return { csv }
   } catch (error) {
     console.error("Error exporting CSV:", error)

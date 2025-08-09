@@ -1,7 +1,8 @@
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import PageTransition from "@/components/ui/page-transition"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import { getProducts } from "@/lib/csv-data"
+import { groupProductVariants } from "@/lib/product-variants"
 import CoffeePageClient from "@/components/coffee/coffee-page-client"
 
 // CRITICAL FIX: ISR Configuration for fast customer updates
@@ -11,7 +12,7 @@ export const dynamicParams = true
 
 // Add metadata for better SEO and caching
 export async function generateMetadata() {
-  const allProducts = await getCachedGroupedProducts()
+  const allProducts = await getProducts()
   const coffeeProducts = allProducts.filter((p) => p.category === "coffee")
   
   return {
@@ -28,8 +29,8 @@ export default async function CoffeePage() {
   try {
     console.log('☕ CoffeePage: Starting to load...');
     
-    // Fetch products from API via cache with error handling
-    const allProducts = await getCachedGroupedProducts()
+    // CRITICAL FIX: Use CSV-only getProducts
+    const allProducts = await getProducts()
     
     console.log('☕ Raw products received:', allProducts?.length || 0);
     console.log('☕ Products sample:', allProducts?.slice(0, 2) || 'No products');
@@ -82,11 +83,11 @@ export default async function CoffeePage() {
       );
     }
 
-    // Filter for coffee products only with enhanced logging
+    // CRITICAL FIX: Filter for coffee products with correct property access
     const coffeeProducts = allProducts.filter(product => {
       const isCoffee = product.category?.toLowerCase() === 'coffee'
       console.log('☕ Coffee filter check:', {
-        sku: product.baseSku,
+        sku: product.sku, // Fixed: use sku not baseSku
         category: product.category,
         isMatch: isCoffee
       })
@@ -129,6 +130,15 @@ export default async function CoffeePage() {
       );
     }
     
+    // CRITICAL FIX: Convert raw products to grouped products for variant system
+    const groupedCoffeeProducts = groupProductVariants(coffeeProducts)
+    
+    console.log('☕ COFFEE PAGE: Grouped coffee products:', {
+      raw: coffeeProducts.length,
+      grouped: groupedCoffeeProducts.length,
+      sampleGroup: groupedCoffeeProducts[0]?.productName || 'None'
+    })
+    
     // Add performance logging for Vercel
     if (process.env.VERCEL) {
       console.log(`🔍 Vercel ISR: Coffee page generated at ${new Date().toISOString()}`)
@@ -138,7 +148,7 @@ export default async function CoffeePage() {
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
           <Header />
-          <CoffeePageClient initialProducts={coffeeProducts} />
+          <CoffeePageClient initialProducts={groupedCoffeeProducts} />
           <Footer />
         </div>
       </PageTransition>
@@ -161,11 +171,8 @@ export default async function CoffeePage() {
               {process.env.NODE_ENV === 'development' && (
                 <details className="mt-2 text-left">
                   <summary className="cursor-pointer text-red-700">Error Details</summary>
-                  <pre className="text-xs mt-1 overflow-auto">
-                    {error instanceof Error ? error.stack : String(error)}
-                  </pre>
-                </details>
-              )}
+              </details>
+            )}
             </div>
           </div>
           <Footer />

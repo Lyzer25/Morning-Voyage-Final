@@ -4,7 +4,8 @@ import SubscriptionHero from "@/components/subscriptions/subscription-hero"
 import SubscriptionPlans from "@/components/subscriptions/subscription-plans"
 import GiftSubscriptions from "@/components/subscriptions/gift-subscriptions"
 import PageTransition from "@/components/ui/page-transition"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import { getProducts } from "@/lib/csv-data"
+import { groupProductVariants } from "@/lib/product-variants"
 
 // CRITICAL FIX: Add ISR configuration for Vercel
 export const revalidate = 3600 // Revalidate every hour instead of 0
@@ -13,7 +14,7 @@ export const dynamic = 'force-static' // Force static generation
 // Add metadata for better SEO and caching
 export async function generateMetadata() {
   try {
-    const allProducts = await getCachedGroupedProducts()
+    const allProducts = await getProducts()
     const subscriptionProducts = allProducts.filter((p) => p && p.category === "subscription")
     
     return {
@@ -38,7 +39,7 @@ export default async function SubscriptionsPage() {
     console.log('🎯 SubscriptionsPage: Loading subscription products...')
     
     // CRITICAL FIX: Properly await the async function
-    const allProducts = await getCachedGroupedProducts()
+    const allProducts = await getProducts()
     
     console.log(`📊 SubscriptionsPage: Retrieved ${allProducts?.length || 0} total products`)
 
@@ -111,7 +112,11 @@ export default async function SubscriptionsPage() {
       p && p.category && (p.category.toLowerCase().includes('gift') || p.category.toLowerCase().includes('gift-set'))
     )
 
-    console.log(`✅ SubscriptionsPage: Found ${subscriptionProducts.length} subscription products, ${giftProducts.length} gift products`)
+    // CRITICAL FIX: Convert raw products to grouped products for variant system
+    const groupedSubscriptionProducts = groupProductVariants(subscriptionProducts)
+    const groupedGiftProducts = groupProductVariants(giftProducts)
+    
+    console.log(`✅ SubscriptionsPage: Found ${subscriptionProducts.length} subscription products (${groupedSubscriptionProducts.length} grouped), ${giftProducts.length} gift products (${groupedGiftProducts.length} grouped)`)
     
     // Add performance logging for Vercel
     if (process.env.VERCEL) {
@@ -125,8 +130,8 @@ export default async function SubscriptionsPage() {
 
           <main className="relative overflow-hidden pt-24">
             <SubscriptionHero />
-            <SubscriptionPlans products={subscriptionProducts} />
-            <GiftSubscriptions products={giftProducts} />
+            <SubscriptionPlans products={groupedSubscriptionProducts} />
+            <GiftSubscriptions products={groupedGiftProducts} />
           </main>
 
           <Footer />
