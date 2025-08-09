@@ -35,8 +35,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
-import { getProducts } from "@/lib/csv-data"
-import { transformHeader, processCSVData } from "@/lib/csv-helpers"
+import { getProducts, fromCsvRow } from "@/lib/csv-data"
+import { transformHeader } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import { CoffeeProductForm } from "./forms/CoffeeProductForm"
 import { SubscriptionProductForm } from "./forms/SubscriptionProductForm"
@@ -253,13 +253,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
 
       console.log('✅ CSV has all required fields:', requiredFields)
 
-      // Process each row using updated fromCsvRow function (with validation & defaults)
+      // Process each row using the robust fromCsvRow function directly
       const processedProducts: Product[] = []
       
       for (let i = 0; i < parsed.data.length; i++) {
         try {
-          // fromCsvRow now handles validation and defaults internally
-          const product = processCSVData([parsed.data[i]])[0]
+          // FIXED: Use the robust fromCsvRow function that expects uppercase keys
+          const product = fromCsvRow(parsed.data[i] as Record<string, any>)
           processedProducts.push(product)
         } catch (rowError) {
           console.error(`❌ Failed to process row ${i + 1}:`, rowError)

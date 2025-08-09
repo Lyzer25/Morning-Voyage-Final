@@ -104,7 +104,7 @@ const SAMPLE_PRODUCTS: Product[] = [
 ]
 
 // ENHANCED: Convert CSV row to normalized Product using all value normalizers
-function fromCsvRow(row: Record<string, any>): Product {
+export function fromCsvRow(row: Record<string, any>): Product {
   console.log('🔧 Processing CSV row:', Object.keys(row));
   
   // CRITICAL: Validate required fields only - warn for missing optional
