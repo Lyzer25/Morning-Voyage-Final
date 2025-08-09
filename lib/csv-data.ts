@@ -37,7 +37,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
+    tastingNotes: "Chocolate, Caramel, Nuts",
     featured: true,
     inStock: true,
     images: [],
@@ -56,7 +56,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "ground",
-    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
+    tastingNotes: "Chocolate, Caramel, Nuts",
     featured: true,
     inStock: true,
     images: [],
@@ -75,7 +75,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Guatemala",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
+    tastingNotes: "Dark Chocolate, Smoky, Robust",
     featured: true,
     inStock: true,
     images: [],
@@ -94,7 +94,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Ethiopia",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: ["Blueberry", "Floral", "Citrus"],
+    tastingNotes: "Blueberry, Floral, Citrus",
     featured: false,
     inStock: true,
     images: [],
@@ -119,10 +119,7 @@ function fromCsvRow(row: Record<string, any>): Product {
     origin: row["ORIGIN"]?.toString().trim() || '',
     format: normalizeFormat(row["FORMAT"]),
     weight: normalizeWeight(row["WEIGHT"]),
-    tastingNotes: (() => {
-      const notes = normalizeTastingNotes(row["TASTING NOTES"])
-      return notes ? notes.split(', ').filter(Boolean) : []
-    })(),
+    tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]),
     featured: normalizeBool(row["FEATURED"]),
     shippingFirst: normalizeMoney(row["SHIPPINGFIRST"]),
     shippingAdditional: normalizeMoney(row["SHIPPINGADDITIONAL"]),
@@ -271,12 +268,8 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
     const parseResult = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
-      transformHeader: (header) => {
-        const transformed = transformHeader(header);
-        console.log('📊 Header transformation:', `"${header}" → "${transformed}"`);
-        return transformed;
-      }
+      dynamicTyping: false, // Keep as strings to handle properly
+      transformHeader: (h) => HEADER_ALIASES[norm(h)] ?? h.trim().toUpperCase()
     });
 
     console.log('📊 Papa Parse complete:', {
@@ -428,7 +421,7 @@ export async function handleEmptyProductState(): Promise<void> {
       origin: '',
       weight: '',
       format: '',
-      tastingNotes: [],
+      tastingNotes: '',
       featured: false,
     }
     

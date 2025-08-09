@@ -2,7 +2,7 @@ import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import PageTransition from "@/components/ui/page-transition"
 import { getProducts } from "@/lib/csv-data"
-import { groupProductVariants } from "@/lib/product-variants"
+import { groupProductFamilies, convertFamiliesToGroupedProducts } from "@/lib/family-grouping"
 import CoffeePageClient from "@/components/coffee/coffee-page-client"
 
 // CRITICAL FIX: ISR Configuration for fast customer updates
@@ -130,13 +130,15 @@ export default async function CoffeePage() {
       );
     }
     
-    // CRITICAL FIX: Convert raw products to grouped products for variant system
-    const groupedCoffeeProducts = groupProductVariants(coffeeProducts)
+    // CRITICAL FIX: Convert raw products to grouped families for WB/GR grouping
+    const productFamilies = groupProductFamilies(coffeeProducts)
+    const groupedCoffeeProducts = convertFamiliesToGroupedProducts(productFamilies)
     
     console.log('☕ COFFEE PAGE: Grouped coffee products:', {
       raw: coffeeProducts.length,
-      grouped: groupedCoffeeProducts.length,
-      sampleGroup: groupedCoffeeProducts[0]?.productName || 'None'
+      families: productFamilies.length,
+      converted: groupedCoffeeProducts.length,
+      sampleGroup: productFamilies[0]?.base?.productName || 'None'
     })
     
     // Add performance logging for Vercel

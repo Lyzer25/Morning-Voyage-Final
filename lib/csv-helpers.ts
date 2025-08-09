@@ -5,9 +5,9 @@ import Papa from "papaparse"
 // Normalize headers: case/space/paren tolerant, trimmed
 export function norm(h: string): string {
   return h?.toLowerCase()
+    .replace(/\u00A0/g, " ")        // Replace non-breaking spaces FIRST
     .trim()
     .replace(/\s+/g, " ")           // Collapse multiple spaces
-    .replace(/\u00A0/g, " ")        // Replace non-breaking spaces
     .replace(/\s*\(\s*/g, "(")      // Normalize parens spacing
     .replace(/\s*\)\s*/g, ")")
 }
@@ -105,8 +105,8 @@ export function normalizeMoney(v: any): number {
 
 export function normalizeTastingNotes(v?: string): string {
   if (!v) return ""
-  // Keep as comma-separated string for form binding
-  return v.split(",")
+  // Accept comma or semicolon; collapse spaces; preserve quoted commas
+  return v.split(/[;,]/)
     .map(s => s.trim())
     .filter(Boolean)
     .join(", ")

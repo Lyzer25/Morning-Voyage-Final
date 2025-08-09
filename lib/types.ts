@@ -26,7 +26,7 @@ export interface Product {
   origin?: string;
   format?: 'whole-bean' | 'ground' | 'instant' | 'pods' | string;
   weight?: string;
-  tastingNotes?: string[];
+  tastingNotes?: string; // Changed to string for form binding simplicity
 
   // Subscription-specific fields
   notification?: string;
