@@ -131,7 +131,7 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
         roastLevel: product.roastLevel,
         origin: product.origin,
         processingMethod: product.processingMethod,
-        tastingNotes: product.tastingNotes, // Use the parsed array
+        tastingNotes: Array.isArray(product.tastingNotes) ? product.tastingNotes : product.tastingNotes?.split(', ').filter(Boolean) || [],
         featured: product.featured || false,
         badge: product.badge,
         status: product.status,

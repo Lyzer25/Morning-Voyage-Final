@@ -289,7 +289,7 @@ const FamilyCard: React.FC<FamilyCardProps> = ({
                   </div>
                   {family.sharedProperties.tastingNotes && (
                     <div className="col-span-2">
-                      <span className="font-medium">Tasting Notes:</span> {family.sharedProperties.tastingNotes.join(', ')}
+                      <span className="font-medium">Tasting Notes:</span> {family.sharedProperties.tastingNotes || 'None'}
                     </div>
                   )}
                 </div>

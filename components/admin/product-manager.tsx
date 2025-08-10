@@ -411,11 +411,20 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       // Verify the CUSTOMER-FACING data pipeline (not just blob storage)
       let verificationAttempts = 0
       let customerDataVerified = false
-      const maxAttempts = 30 // Max 30 attempts = 90 seconds
+      const maxAttempts = 20 // 20 attempts = 300 seconds (5 minutes)
+      const checkInterval = 15000 // 15 seconds between checks
+      const startTime = Date.now()
       
       while (!customerDataVerified && verificationAttempts < maxAttempts) {
         try {
-          console.log(`🔍 CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts}`)
+          const elapsed = Date.now() - startTime
+          const elapsedSeconds = Math.floor(elapsed / 1000)
+          const maxSeconds = Math.floor((maxAttempts * checkInterval) / 1000)
+          
+          console.log(`🔍 CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts} (${elapsedSeconds}s/${maxSeconds}s)`)
+          
+          // Update progress with timer
+          updateSaveProgress('revalidating', 90, `Verifying customer pages... ${elapsedSeconds}s/${maxSeconds}s`)
           
           // CRITICAL: Test the same API that customer pages use
           const response = await fetch(`/api/products?grouped=true&ts=${Date.now()}`, {
@@ -464,12 +473,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             customerDataVerified = true
           } else {
             console.log(`⏳ CUSTOMER VERIFICATION: Customer cache still updating...`)
-            await new Promise(resolve => setTimeout(resolve, 3000))
+            await new Promise(resolve => setTimeout(resolve, checkInterval))
             verificationAttempts++
           }
         } catch (verifyError) {
           console.warn(`⚠️ CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1} failed:`, verifyError)
-          await new Promise(resolve => setTimeout(resolve, 3000))
+          await new Promise(resolve => setTimeout(resolve, checkInterval))
           verificationAttempts++
         }
       }

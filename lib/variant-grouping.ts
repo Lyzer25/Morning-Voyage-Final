@@ -9,7 +9,7 @@ export interface VariantFamily {
     roastLevel?: string;
     category: string;
     description?: string;
-    tastingNotes?: string[];
+    tastingNotes?: string;
     images?: any[];
   };
 }
@@ -31,7 +31,7 @@ export function areVariants(product1: Product, product2: Product): boolean {
     return (
       product1.origin === product2.origin &&
       product1.roastLevel === product2.roastLevel &&
-      arraysEqual(product1.tastingNotes || [], product2.tastingNotes || [])
+      (product1.tastingNotes || '') === (product2.tastingNotes || '')
     );
   }
   
@@ -145,7 +145,7 @@ function extractSharedProperties(variants: Product[]): VariantFamily['sharedProp
     shared.roastLevel = first.roastLevel;
   }
   
-  if (variants.every(v => arraysEqual(v.tastingNotes || [], first.tastingNotes || []))) {
+  if (variants.every(v => (v.tastingNotes || '') === (first.tastingNotes || ''))) {
     shared.tastingNotes = first.tastingNotes;
   }
   

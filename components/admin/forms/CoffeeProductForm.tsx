@@ -26,6 +26,28 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
   onCancel,
   isSubmitting = false
 }) => {
+  // DEBUG: Log the product data being passed to the form
+  console.log('🔍 CoffeeProductForm received product:', {
+    product: product ? {
+      sku: product.sku,
+      productName: product.productName,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      tastingNotes: product.tastingNotes,
+      roastLevel: product.roastLevel,
+      origin: product.origin,
+      format: product.format,
+      weight: product.weight,
+      shippingFirst: product.shippingFirst,
+      shippingAdditional: product.shippingAdditional,
+      dataTypes: {
+        price: typeof product.price,
+        tastingNotes: typeof product.tastingNotes,
+        isArray: Array.isArray(product.tastingNotes)
+      }
+    } : 'NO_PRODUCT_PASSED'
+  });
+
   const [formData, setFormData] = useState({
     sku: product?.sku || '',
     productName: product?.productName || '',
@@ -156,7 +178,7 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
       const productData: Product = {
         ...formData,
         id: product?.id || crypto.randomUUID(),
-        tastingNotes: processedTastingNotes,
+        tastingNotes: processedTastingNotes.join(', '),
         createdAt: product?.createdAt || new Date(),
         updatedAt: new Date(),
         images: images // Use current images state
