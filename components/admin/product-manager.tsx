@@ -45,7 +45,7 @@ import ProductForm from "./product-form" // Assuming this is a general form
 import Papa from "papaparse"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Coffee, RefreshCw, Gift, Wrench, Edit, Copy, MoreHorizontal, ChevronDown, Package } from "lucide-react"
+import { Coffee, RefreshCw, Gift, Wrench, Edit, Copy, MoreHorizontal, ChevronDown, Package, Users } from "lucide-react"
 import { Dialog } from "@/components/ui/dialog"
 import { groupProductFamilies, ProductFamily } from "@/lib/family-grouping"
 
@@ -239,6 +239,47 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       case 'gift-set': return 'Gift Set'
       case 'equipment': return 'Equipment'
       default: return 'General'
+    }
+  }
+
+  // NEW: Dynamic category badge helper for families
+  const getCategoryBadge = (category: string) => {
+    switch (category?.toLowerCase()) {
+      case 'coffee':
+        return (
+          <Badge variant="default" className="bg-amber-100 text-amber-800">
+            <Coffee className="h-3 w-3 mr-1" />
+            Coffee
+          </Badge>
+        )
+      case 'subscription':
+        return (
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            <Users className="h-3 w-3 mr-1" />
+            Subscription
+          </Badge>
+        )
+      case 'gift-set':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            <Gift className="h-3 w-3 mr-1" />
+            Gift Set
+          </Badge>
+        )
+      case 'equipment':
+        return (
+          <Badge variant="default" className="bg-purple-100 text-purple-800">
+            <Wrench className="h-3 w-3 mr-1" />
+            Equipment
+          </Badge>
+        )
+      default:
+        return (
+          <Badge variant="default" className="bg-gray-100 text-gray-800">
+            <Package className="h-3 w-3 mr-1" />
+            General
+          </Badge>
+        )
     }
   }
 
@@ -1239,10 +1280,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="default" className="bg-amber-100 text-amber-800">
-                        <Coffee className="h-3 w-3 mr-1" />
-                        Coffee
-                      </Badge>
+                      {getCategoryBadge(baseProduct.category)}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-600">

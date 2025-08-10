@@ -10,8 +10,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check } from 'lucide-react';
+import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check, Upload, Image as ImageIcon, X, Camera, Grid3X3 } from 'lucide-react';
+import { uploadProductImages, validateImageFiles } from '@/lib/blob-storage';
 
 interface FamilyEditFormProps {
   family: ProductFamily;
@@ -57,6 +59,20 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
     });
     return variants;
   });
+
+  // Image upload state management
+  const [images, setImages] = useState<{
+    thumbnail?: File | string
+    main?: File | string  
+    gallery: (File | string)[]
+  }>({
+    thumbnail: family.base.images?.find(img => img.type === 'thumbnail')?.url,
+    main: family.base.images?.find(img => img.type === 'main')?.url,
+    gallery: family.base.images?.filter(img => img.type === 'gallery').sort((a, b) => a.order - b.order).map(img => img.url) || []
+  });
+
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   // Validation system
   const validationIssues = useMemo((): ValidationIssue[] => {
@@ -158,6 +174,79 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
     }));
   }, []);
 
+  // Image upload handlers
+  const handleImageUpload = useCallback(async (
+    files: File[], 
+    type: 'thumbnail' | 'main' | 'gallery'
+  ) => {
+    if (files.length === 0) return;
+
+    // Validate files
+    const validation = validateImageFiles(files);
+    if (!validation.valid) {
+      validation.errors.forEach(error => toast.error(error));
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+
+      console.log(`📸 Starting ${type} image upload:`, files.length, 'files');
+
+      // Upload to blob storage
+      const uploadedImages = await uploadProductImages(files);
+      
+      console.log(`✅ ${type} images uploaded:`, uploadedImages.map(img => img.url));
+
+      // Update image state based on type
+      if (type === 'thumbnail' && uploadedImages[0]) {
+        setImages(prev => ({ ...prev, thumbnail: uploadedImages[0].url }));
+        toast.success('Thumbnail image uploaded successfully!');
+      } else if (type === 'main' && uploadedImages[0]) {
+        setImages(prev => ({ ...prev, main: uploadedImages[0].url }));
+        toast.success('Main product image uploaded successfully!');
+      } else if (type === 'gallery') {
+        setImages(prev => ({ 
+          ...prev, 
+          gallery: [...prev.gallery, ...uploadedImages.map(img => img.url)] 
+        }));
+        toast.success(`${uploadedImages.length} gallery image(s) uploaded successfully!`);
+      }
+
+      setUploadProgress(prev => ({ ...prev, [type]: 100 }));
+    } catch (error) {
+      console.error(`❌ ${type} image upload failed:`, error);
+      toast.error(`Failed to upload ${type} image(s): ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => {
+        setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+      }, 2000);
+    }
+  }, []);
+
+  const removeImage = useCallback((type: 'thumbnail' | 'main' | 'gallery', index?: number) => {
+    if (type === 'gallery' && typeof index === 'number') {
+      setImages(prev => ({
+        ...prev,
+        gallery: prev.gallery.filter((_, i) => i !== index)
+      }));
+    } else {
+      setImages(prev => ({ ...prev, [type]: undefined }));
+    }
+    toast.success(`${type === 'gallery' ? 'Gallery image' : type + ' image'} removed`);
+  }, []);
+
+  const reorderGalleryImages = useCallback((startIndex: number, endIndex: number) => {
+    setImages(prev => {
+      const newGallery = [...prev.gallery];
+      const [removed] = newGallery.splice(startIndex, 1);
+      newGallery.splice(endIndex, 0, removed);
+      return { ...prev, gallery: newGallery };
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -175,7 +264,58 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
       }
       
       // Convert variant data to array
-      const updatedProducts = Object.values(variantData);
+      let updatedProducts = Object.values(variantData);
+      
+      // Process and apply family images to all variants
+      const familyImages: ProductImage[] = [];
+      
+      // Add thumbnail image
+      if (images.thumbnail) {
+        familyImages.push({
+          id: crypto.randomUUID(),
+          url: typeof images.thumbnail === 'string' ? images.thumbnail : images.thumbnail.name,
+          alt: `${familyData.productName} thumbnail`,
+          type: 'thumbnail',
+          order: 0
+        });
+      }
+      
+      // Add main product image  
+      if (images.main) {
+        familyImages.push({
+          id: crypto.randomUUID(),
+          url: typeof images.main === 'string' ? images.main : images.main.name,
+          alt: `${familyData.productName} main image`,
+          type: 'main',
+          order: 1
+        });
+      }
+      
+      // Add gallery images
+      images.gallery.forEach((image, index) => {
+        familyImages.push({
+          id: crypto.randomUUID(),
+          url: typeof image === 'string' ? image : image.name,
+          alt: `${familyData.productName} gallery ${index + 1}`,
+          type: 'gallery',
+          order: index + 2
+        });
+      });
+      
+      // Apply family images to all variants
+      if (familyImages.length > 0) {
+        console.log('📸 Applying family images to all variants:', {
+          imageCount: familyImages.length,
+          variants: updatedProducts.length,
+          images: familyImages.map(img => ({ type: img.type, url: img.url }))
+        });
+        
+        updatedProducts = updatedProducts.map(product => ({
+          ...product,
+          images: familyImages,
+          updatedAt: new Date()
+        }));
+      }
       
       // Validate required fields
       const missingData = updatedProducts.filter(p => !p.productName || !p.sku || p.price <= 0);
@@ -189,18 +329,20 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
         editMode,
         variantCount: updatedProducts.length,
         familyData,
+        familyImages: familyImages.length,
         validationIssues: validationIssues.length,
         updatedProducts: updatedProducts.map(p => ({
           sku: p.sku,
           productName: p.productName,
           price: p.price,
-          format: p.format
+          format: p.format,
+          imageCount: p.images?.length || 0
         }))
       });
       
       const success = onSubmit(updatedProducts);
       if (success) {
-        toast.success(`Family "${familyData.productName}" updated successfully!`);
+        toast.success(`Family "${familyData.productName}" updated successfully with ${familyImages.length} shared images!`);
         onCancel();
       }
     } catch (error: any) {
@@ -577,6 +719,228 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
             </Card>
           </div>
         )}
+
+        {/* NEW: Family Image Upload System */}
+        <Card className="border-2 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center text-blue-800">
+              <Camera className="h-4 w-4 mr-2" />
+              Family Images
+            </CardTitle>
+            <p className="text-sm text-blue-600">
+              Manage images for the entire family. These images will be used across all product variants.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            
+            {/* Section 1: Thumbnail Image */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Thumbnail Image</Label>
+              <p className="text-xs text-gray-600">Used in product grids and search results</p>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                {images.thumbnail ? (
+                  <div className="relative">
+                    <img 
+                      src={typeof images.thumbnail === 'string' ? images.thumbnail : URL.createObjectURL(images.thumbnail)}
+                      alt="Thumbnail preview"
+                      className="w-32 h-32 object-cover rounded-md mx-auto"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeImage('thumbnail')}
+                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Grid3X3 className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="mt-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) handleImageUpload(files.slice(0, 1), 'thumbnail');
+                        }}
+                        className="hidden"
+                        id="thumbnail-upload"
+                      />
+                      <Label
+                        htmlFor="thumbnail-upload"
+                        className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Thumbnail
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Optimal for grid display</p>
+                  </div>
+                )}
+                
+                {uploadProgress.thumbnail > 0 && (
+                  <div className="mt-2">
+                    <Progress value={uploadProgress.thumbnail} className="w-full" />
+                    <p className="text-xs text-gray-600 mt-1">Uploading... {uploadProgress.thumbnail}%</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 2: Main Product Image */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Main Product Image</Label>
+              <p className="text-xs text-gray-600">Hero image displayed on product detail page</p>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                {images.main ? (
+                  <div className="relative">
+                    <img 
+                      src={typeof images.main === 'string' ? images.main : URL.createObjectURL(images.main)}
+                      alt="Main product preview"
+                      className="w-48 h-48 object-cover rounded-md mx-auto"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeImage('main')}
+                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <ImageIcon className="mx-auto h-16 w-16 text-gray-400" />
+                    <div className="mt-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) handleImageUpload(files.slice(0, 1), 'main');
+                        }}
+                        className="hidden"
+                        id="main-upload"
+                      />
+                      <Label
+                        htmlFor="main-upload"
+                        className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Choose Main Image
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">High-quality hero image</p>
+                  </div>
+                )}
+                
+                {uploadProgress.main > 0 && (
+                  <div className="mt-2">
+                    <Progress value={uploadProgress.main} className="w-full" />
+                    <p className="text-xs text-gray-600 mt-1">Uploading... {uploadProgress.main}%</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 3: Gallery Images */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Gallery Images</Label>
+              <p className="text-xs text-gray-600">Additional photos for product page carousel (max 8)</p>
+              
+              {images.gallery.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {images.gallery.map((image, index) => (
+                    <div key={index} className="relative">
+                      <img 
+                        src={typeof image === 'string' ? image : URL.createObjectURL(image)}
+                        alt={`Gallery image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeImage('gallery', index)}
+                        className="absolute -top-2 -right-2 w-5 h-5 p-0 rounded-full"
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                      <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                <div className="text-center">
+                  <Grid3X3 className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          const remainingSlots = 8 - images.gallery.length;
+                          const filesToUpload = files.slice(0, remainingSlots);
+                          if (filesToUpload.length < files.length) {
+                            toast.warning(`Only uploading ${filesToUpload.length} images. Gallery limit is 8 total.`);
+                          }
+                          handleImageUpload(filesToUpload, 'gallery');
+                        }
+                      }}
+                      className="hidden"
+                      id="gallery-upload"
+                      disabled={images.gallery.length >= 8}
+                    />
+                    <Label
+                      htmlFor="gallery-upload"
+                      className={`cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                        images.gallery.length >= 8 
+                          ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                          : 'text-gray-700 bg-white hover:bg-gray-50'
+                      }`}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {images.gallery.length >= 8 ? 'Gallery Full' : 'Add Gallery Images'}
+                    </Label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {images.gallery.length}/8 images • Multiple selection supported
+                  </p>
+                </div>
+                
+                {uploadProgress.gallery > 0 && (
+                  <div className="mt-2">
+                    <Progress value={uploadProgress.gallery} className="w-full" />
+                    <p className="text-xs text-gray-600 mt-1">Uploading gallery... {uploadProgress.gallery}%</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Upload Status */}
+            {isUploading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-blue-800">Uploading images...</span>
+                </div>
+              </div>
+            )}
+            
+          </CardContent>
+        </Card>
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-2 pt-4 border-t">
