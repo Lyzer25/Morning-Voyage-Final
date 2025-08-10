@@ -119,10 +119,58 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   }
 
   const handleCategoryEdit = useCallback((product: Product) => {
+    console.log('🔍 EDIT TRIGGER: Product being passed to form:', {
+      productObject: product,
+      productExists: !!product,
+      productKeys: product ? Object.keys(product) : [],
+      coreData: {
+        sku: product?.sku,
+        productName: product?.productName,
+        description: product?.description,
+        price: product?.price,
+        originalPrice: product?.originalPrice,
+        category: product?.category,
+        status: product?.status,
+        featured: product?.featured,
+        inStock: product?.inStock
+      },
+      coffeeSpecific: product?.category === 'coffee' ? {
+        roastLevel: product?.roastLevel,
+        origin: product?.origin,
+        format: product?.format,
+        weight: product?.weight,
+        tastingNotes: {
+          value: product?.tastingNotes,
+          type: typeof product?.tastingNotes,
+          isArray: Array.isArray(product?.tastingNotes),
+          length: Array.isArray(product?.tastingNotes) ? product.tastingNotes.length : 'N/A'
+        }
+      } : null,
+      shippingData: {
+        shippingFirst: product?.shippingFirst,
+        shippingAdditional: product?.shippingAdditional
+      },
+      dataTypes: {
+        sku: typeof product?.sku,
+        productName: typeof product?.productName,
+        price: typeof product?.price,
+        tastingNotes: typeof product?.tastingNotes
+      },
+      timestamp: new Date().toISOString()
+    })
+    
     const formType = getCategoryFormType(product.category)
+    console.log('🔍 FORM TYPE SELECTED:', formType, 'for category:', product?.category)
+    
     setEditingProduct(product)
     setActiveFormType(formType) // 'coffee', 'subscription', 'general'
     setIsEditDialogOpen(true)
+    
+    console.log('🔍 STATE UPDATES TRIGGERED:', {
+      editingProduct: 'SET',
+      activeFormType: formType,
+      isEditDialogOpen: true
+    })
   }, [])
 
   const getCategoryFormLabel = (category: string): string => {

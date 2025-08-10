@@ -26,26 +26,127 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
   onCancel,
   isSubmitting = false
 }) => {
-  // DEBUG: Log the product data being passed to the form
-  console.log('🔍 CoffeeProductForm received product:', {
-    product: product ? {
-      sku: product.sku,
-      productName: product.productName,
-      price: product.price,
-      originalPrice: product.originalPrice,
-      tastingNotes: product.tastingNotes,
-      roastLevel: product.roastLevel,
-      origin: product.origin,
-      format: product.format,
-      weight: product.weight,
-      shippingFirst: product.shippingFirst,
-      shippingAdditional: product.shippingAdditional,
-      dataTypes: {
-        price: typeof product.price,
-        tastingNotes: typeof product.tastingNotes,
-        isArray: Array.isArray(product.tastingNotes)
+  // ENHANCED DEBUG: Comprehensive product data analysis
+  console.log('🔍 CoffeeProductForm DETAILED ANALYSIS:', {
+    renderTimestamp: new Date().toISOString(),
+    componentProps: {
+      productExists: !!product,
+      isSubmitting,
+      onSubmitType: typeof onSubmit,
+      onCancelType: typeof onCancel
+    },
+    productReceived: product ? {
+      objectType: typeof product,
+      isObject: typeof product === 'object' && product !== null,
+      keys: Object.keys(product),
+      keyCount: Object.keys(product).length
+    } : null,
+    coreFields: product ? {
+      id: { value: product.id, type: typeof product.id, hasValue: !!product.id },
+      sku: { value: product.sku, type: typeof product.sku, hasValue: !!product.sku, length: product.sku?.length },
+      productName: { value: product.productName, type: typeof product.productName, hasValue: !!product.productName, length: product.productName?.length },
+      description: { value: product.description, type: typeof product.description, hasValue: !!product.description, length: product.description?.length },
+      category: { value: product.category, type: typeof product.category, hasValue: !!product.category }
+    } : null,
+    pricingFields: product ? {
+      price: { 
+        value: product.price, 
+        type: typeof product.price, 
+        isNumber: typeof product.price === 'number',
+        isValid: !isNaN(Number(product.price)),
+        parsed: Number(product.price)
+      },
+      originalPrice: { 
+        value: product.originalPrice, 
+        type: typeof product.originalPrice, 
+        isNumber: typeof product.originalPrice === 'number',
+        isUndefined: product.originalPrice === undefined
       }
-    } : 'NO_PRODUCT_PASSED'
+    } : null,
+    coffeeSpecificFields: product ? {
+      roastLevel: { value: product.roastLevel, type: typeof product.roastLevel, hasValue: !!product.roastLevel },
+      origin: { value: product.origin, type: typeof product.origin, hasValue: !!product.origin },
+      format: { value: product.format, type: typeof product.format, hasValue: !!product.format },
+      weight: { value: product.weight, type: typeof product.weight, hasValue: !!product.weight },
+      tastingNotes: {
+        value: product.tastingNotes,
+        type: typeof product.tastingNotes,
+        isArray: Array.isArray(product.tastingNotes),
+        arrayLength: Array.isArray(product.tastingNotes) ? product.tastingNotes.length : 'N/A',
+        firstFewItems: Array.isArray(product.tastingNotes) ? product.tastingNotes.slice(0, 3) : 'NOT_ARRAY',
+        stringified: JSON.stringify(product.tastingNotes)
+      }
+    } : null,
+    statusFields: product ? {
+      featured: { value: product.featured, type: typeof product.featured, isBool: typeof product.featured === 'boolean' },
+      status: { value: product.status, type: typeof product.status, hasValue: !!product.status },
+      inStock: { value: product.inStock, type: typeof product.inStock, isBool: typeof product.inStock === 'boolean' }
+    } : null,
+    shippingFields: product ? {
+      shippingFirst: { 
+        value: product.shippingFirst, 
+        type: typeof product.shippingFirst, 
+        isNumber: typeof product.shippingFirst === 'number',
+        isUndefined: product.shippingFirst === undefined
+      },
+      shippingAdditional: { 
+        value: product.shippingAdditional, 
+        type: typeof product.shippingAdditional, 
+        isNumber: typeof product.shippingAdditional === 'number',
+        isUndefined: product.shippingAdditional === undefined
+      }
+    } : null,
+    dateFields: product ? {
+      createdAt: { value: product.createdAt, type: typeof product.createdAt, isDate: product.createdAt instanceof Date },
+      updatedAt: { value: product.updatedAt, type: typeof product.updatedAt, isDate: product.updatedAt instanceof Date }
+    } : null,
+    imageFields: product ? {
+      images: {
+        value: product.images,
+        type: typeof product.images,
+        isArray: Array.isArray(product.images),
+        arrayLength: Array.isArray(product.images) ? product.images.length : 'N/A'
+      }
+    } : null,
+    rawProductDump: product
+  });
+
+  // FORM INITIALIZATION DEBUG: Track how form data gets initialized
+  console.log('🔍 CoffeeProductForm FORM INITIALIZATION:', {
+    initializationTimestamp: new Date().toISOString(),
+    productAvailable: !!product,
+    formDataInit: {
+      sku: { 
+        willBe: product?.sku || '', 
+        source: product?.sku ? 'product.sku' : 'empty_default',
+        sourceValue: product?.sku 
+      },
+      productName: { 
+        willBe: product?.productName || '', 
+        source: product?.productName ? 'product.productName' : 'empty_default',
+        sourceValue: product?.productName 
+      },
+      price: { 
+        willBe: product?.price || 0, 
+        source: product?.price !== undefined ? 'product.price' : 'zero_default',
+        sourceValue: product?.price,
+        sourceType: typeof product?.price
+      },
+      tastingNotesProcessing: {
+        rawValue: product?.tastingNotes,
+        isArray: Array.isArray(product?.tastingNotes),
+        willBecomeString: Array.isArray(product?.tastingNotes) 
+          ? product.tastingNotes.join(', ') 
+          : product?.tastingNotes || '',
+        processingPath: Array.isArray(product?.tastingNotes) ? 'array_join' : 
+                       product?.tastingNotes ? 'direct_string' : 'empty_default'
+      },
+      roastLevel: { 
+        willBe: product?.roastLevel || 'medium', 
+        source: product?.roastLevel ? 'product.roastLevel' : 'medium_default',
+        sourceValue: product?.roastLevel 
+      }
+    }
   });
 
   // Family Edit Toggle State
