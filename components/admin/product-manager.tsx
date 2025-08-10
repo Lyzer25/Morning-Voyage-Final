@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useActionState, useEffect, useCallback } from "react"
+import { useState, useTransition, useActionState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
 import { getProducts, fromCsvRow } from "@/lib/csv-data"
-import { transformHeader } from "@/lib/csv-helpers"
+import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import { CoffeeProductForm } from "./forms/CoffeeProductForm"
 import { SubscriptionProductForm } from "./forms/SubscriptionProductForm"
@@ -46,6 +46,7 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Coffee, RefreshCw, Gift, Wrench, Edit, Copy, MoreHorizontal, ChevronDown, Package } from "lucide-react"
 import { Dialog } from "@/components/ui/dialog"
+import { groupProductFamilies, ProductFamily } from "@/lib/family-grouping"
 
 export default function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter()
@@ -92,7 +93,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 ...(newCategory === 'coffee' ? {
                   roastLevel: product.roastLevel || 'medium',
                   origin: product.origin || '',
-                  tastingNotes: product.tastingNotes || ""
+                  tastingNotes: normalizeTastingNotes(product.tastingNotes || "")
                 } : {}),
                 ...(newCategory === 'subscription' ? {
                   notification: product.notification || '',
@@ -526,25 +527,50 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  const filteredProducts = stagedProducts.filter((p) => {
-    // Existing search logic
-    const matchesSearch = p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+  // FAMILY-FIRST VIEW: Transform coffee products into families, keep others individual
+  const displayData = useMemo(() => {
+    // First, apply filters to get base products
+    const baseFilteredProducts = stagedProducts.filter((p) => {
+      const matchesSearch = p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
+      const matchesRoast = roastFilter === 'all' || 
+        (p.category === 'coffee' && p.roastLevel === roastFilter) ||
+        p.category !== 'coffee'
+      const matchesStatus = statusFilter === 'all' || p.status === statusFilter
+      
+      return matchesSearch && matchesCategory && matchesRoast && matchesStatus
+    })
+
+    // Separate coffee and non-coffee products
+    const coffeeProducts = baseFilteredProducts.filter(p => p.category === 'coffee')
+    const nonCoffeeProducts = baseFilteredProducts.filter(p => p.category !== 'coffee')
     
-    // NEW: Category filter
-    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
+    // Group coffee products into families
+    const coffeeFamilies = coffeeProducts.length > 0 
+      ? groupProductFamilies(coffeeProducts)
+      : []
+
+    console.log('🏗️ Family view transformation:', {
+      totalFiltered: baseFilteredProducts.length,
+      coffeeProducts: coffeeProducts.length,
+      coffeeFamilies: coffeeFamilies.length,
+      nonCoffeeProducts: nonCoffeeProducts.length
+    })
     
-    // NEW: Roast level filter (only for coffee)
-    const matchesRoast = roastFilter === 'all' || 
-      (p.category === 'coffee' && p.roastLevel === roastFilter) ||
-      p.category !== 'coffee' // Non-coffee products pass roast filter
-    
-    // NEW: Status filter  
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
-    
-    return matchesSearch && matchesCategory && matchesRoast && matchesStatus
-  })
+    // Return mixed array: families (for coffee) + individual products (for non-coffee)
+    return [
+      ...coffeeFamilies.map(family => ({ ...family, isFamily: true })),
+      ...nonCoffeeProducts.map(product => ({ ...product, isFamily: false }))
+    ]
+  }, [stagedProducts, searchTerm, categoryFilter, roastFilter, statusFilter])
+
+  // Legacy compatibility for places that expect filteredProducts
+  const filteredProducts = displayData.flatMap((item: any) => 
+    item.isFamily ? item.variants : [item]
+  )
 
   const handleExport = async () => {
     const { csv, error } = await exportCsvAction()
@@ -1075,127 +1101,255 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map((product) => (
-              <TableRow key={product.sku}>
-                <TableCell>
-                  <Checkbox
-                    checked={selectedSkus.includes(product.sku)}
-                    onCheckedChange={(checked) => handleSelectProduct(product.sku, !!checked)}
-                    aria-label={`Select ${product.productName}`}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={product.status === "active"}
-                      onCheckedChange={(checked) => handleToggleStatus(product.sku, checked)}
-                      disabled={isPending}
-                      aria-label="Toggle active status"
-                    />
-                    <Badge
-                      variant={product.status === "active" ? "default" : "secondary"}
-                      className={
-                        product.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                      }
-                    >
-                      {product.status === "active" ? "Active" : "Draft"}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">{product.productName}</TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <Select
-                      value={product.category || 'coffee'}
-                      onValueChange={(newCategory) => handleCategoryChange(product.sku, newCategory)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="coffee">
-                          <div className="flex items-center space-x-2">
-                            <Coffee className="h-3 w-3" />
-                            <span>Coffee</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="subscription">
-                          <div className="flex items-center space-x-2">
-                            <RefreshCw className="h-3 w-3" />
-                            <span>Subscription</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="gift-set">
-                          <div className="flex items-center space-x-2">
-                            <Gift className="h-3 w-3" />
-                            <span>Gift Set</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="equipment">
-                          <div className="flex items-center space-x-2">
-                            <Wrench className="h-3 w-3" />
-                            <span>Equipment</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Badge 
-                      variant={getCategoryVariant(product.category)}
-                      className="text-xs px-1 py-0"
-                    >
-                      {getCategoryDisplayName(product.category)}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell>{product.sku}</TableCell>
-                <TableCell>{formatPrice(product.price)}</TableCell>
-                <TableCell>
-                  {product.shippingFirst ? formatPrice(product.shippingFirst) : "—"}
-                </TableCell>
-                <TableCell>
-                  {product.shippingAdditional ? formatPrice(product.shippingAdditional) : "—"}
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={product.featured}
-                    onCheckedChange={(checked) => handleToggleFeatured(product.sku, checked)}
-                    disabled={isPending}
-                    aria-label="Toggle featured"
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex space-x-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCategoryEdit(product)}
-                      className="h-7 px-2 text-xs"
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      {getCategoryFormLabel(product.category)}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                          <MoreHorizontal className="h-3 w-3" />
+            {displayData.map((item: any) => {
+              if (item.isFamily) {
+                // FAMILY ROW: Show coffee families with variant summary
+                const family = item as ProductFamily & { isFamily: true }
+                const baseProduct = family.base
+                const variantCount = family.variants.length
+                const formats = family.variants.map(v => v.formatCode).join(', ')
+                const priceRange = family.variants.map(v => v.price)
+                const minPrice = Math.min(...priceRange)
+                const maxPrice = Math.max(...priceRange)
+                const priceDisplay = minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
+                
+                return (
+                  <TableRow key={family.familyKey} className="bg-blue-50 border-l-4 border-l-blue-400">
+                    <TableCell>
+                      <Checkbox
+                        checked={family.variants.some(v => selectedSkus.includes(v.sku))}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const newSkus = [...selectedSkus, ...family.variants.map(v => v.sku)]
+                            setSelectedSkus([...new Set(newSkus)])
+                          } else {
+                            setSelectedSkus(prev => prev.filter(sku => !family.variants.some(v => v.sku === sku)))
+                          }
+                        }}
+                        aria-label={`Select ${family.base.productName} family`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="default"
+                          className="bg-blue-100 text-blue-800"
+                        >
+                          Family ({variantCount})
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div className="font-semibold text-blue-900">{baseProduct.productName}</div>
+                        <div className="text-sm text-blue-600">
+                          {variantCount} variant{variantCount > 1 ? 's' : ''}: {formats}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="default" className="bg-amber-100 text-amber-800">
+                        <Coffee className="h-3 w-3 mr-1" />
+                        Coffee Family
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-600">
+                        {family.familyKey}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold">{priceDisplay}</TableCell>
+                    <TableCell>
+                      {baseProduct.shippingFirst ? formatPrice(baseProduct.shippingFirst) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {baseProduct.shippingAdditional ? formatPrice(baseProduct.shippingAdditional) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={baseProduct.featured}
+                        onCheckedChange={(checked) => {
+                          // Update all variants in family
+                          setStagedProducts(prev => 
+                            prev.map(p => 
+                              family.variants.some(v => v.sku === p.sku)
+                                ? { ...p, featured: checked } 
+                                : p
+                            )
+                          )
+                        }}
+                        disabled={isPending}
+                        aria-label="Toggle family featured"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCategoryEdit(baseProduct)}
+                          className="h-7 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Coffee className="h-3 w-3 mr-1" />
+                          Edit Family
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => console.log('duplicate', product.sku)}>
-                          <Copy className="h-3 w-3 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeletingSku(product.sku)}>
-                          <Trash2 className="h-3 w-3 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => console.log('duplicate family', family.familyKey)}>
+                              <Copy className="h-3 w-3 mr-2" />
+                              Duplicate Family
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                if (confirm(`Delete entire ${baseProduct.productName} family (${variantCount} products)?`)) {
+                                  setStagedProducts(prev => 
+                                    prev.filter(p => !family.variants.some(v => v.sku === p.sku))
+                                  )
+                                }
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Delete Family
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              } else {
+                // INDIVIDUAL PRODUCT ROW: Show non-coffee products normally
+                const product = item as Product & { isFamily: false }
+                
+                return (
+                  <TableRow key={product.sku}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedSkus.includes(product.sku)}
+                        onCheckedChange={(checked) => handleSelectProduct(product.sku, !!checked)}
+                        aria-label={`Select ${product.productName}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={product.status === "active"}
+                          onCheckedChange={(checked) => handleToggleStatus(product.sku, checked)}
+                          disabled={isPending}
+                          aria-label="Toggle active status"
+                        />
+                        <Badge
+                          variant={product.status === "active" ? "default" : "secondary"}
+                          className={
+                            product.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {product.status === "active" ? "Active" : "Draft"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{product.productName}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Select
+                          value={product.category || 'subscription'}
+                          onValueChange={(newCategory) => handleCategoryChange(product.sku, newCategory)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="coffee">
+                              <div className="flex items-center space-x-2">
+                                <Coffee className="h-3 w-3" />
+                                <span>Coffee</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="subscription">
+                              <div className="flex items-center space-x-2">
+                                <RefreshCw className="h-3 w-3" />
+                                <span>Subscription</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="gift-set">
+                              <div className="flex items-center space-x-2">
+                                <Gift className="h-3 w-3" />
+                                <span>Gift Set</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="equipment">
+                              <div className="flex items-center space-x-2">
+                                <Wrench className="h-3 w-3" />
+                                <span>Equipment</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Badge 
+                          variant={getCategoryVariant(product.category)}
+                          className="text-xs px-1 py-0"
+                        >
+                          {getCategoryDisplayName(product.category)}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{formatPrice(product.price)}</TableCell>
+                    <TableCell>
+                      {product.shippingFirst ? formatPrice(product.shippingFirst) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {product.shippingAdditional ? formatPrice(product.shippingAdditional) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={product.featured}
+                        onCheckedChange={(checked) => handleToggleFeatured(product.sku, checked)}
+                        disabled={isPending}
+                        aria-label="Toggle featured"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCategoryEdit(product)}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          {getCategoryFormLabel(product.category)}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => console.log('duplicate', product.sku)}>
+                              <Copy className="h-3 w-3 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeletingSku(product.sku)}>
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              }
+            })}
           </TableBody>
         </Table>
       </div>
