@@ -40,6 +40,7 @@ import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import { CoffeeProductForm } from "./forms/CoffeeProductForm"
 import { SubscriptionProductForm } from "./forms/SubscriptionProductForm"
+import { FamilyEditForm } from "./forms/FamilyEditForm"
 import ProductForm from "./product-form" // Assuming this is a general form
 import Papa from "papaparse"
 import { toast } from "sonner"
@@ -58,6 +59,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
   const [deletingSku, setDeletingSku] = useState<string | null>(null)
   const [activeFormType, setActiveFormType] = useState<'coffee' | 'subscription' | 'general'>('coffee')
+  
+  // Family editing state
+  const [isFamilyEditOpen, setIsFamilyEditOpen] = useState(false)
+  const [editingFamily, setEditingFamily] = useState<ProductFamily | null>(null)
   
   // Bulk delete state
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
@@ -171,6 +176,44 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       activeFormType: formType,
       isEditDialogOpen: true
     })
+  }, [])
+
+  // FAMILY EDITING: Handle family edit button click
+  const handleFamilyEdit = useCallback((family: ProductFamily) => {
+    console.log('🏗️ FAMILY EDIT: Opening family editor for:', family.familyKey, {
+      variantCount: family.variants.length,
+      familyData: family.base,
+      variants: family.variants.map(v => ({ sku: v.sku, format: v.format, weight: v.weight }))
+    })
+    
+    setEditingFamily(family)
+    setIsFamilyEditOpen(true)
+  }, [])
+
+  // FAMILY EDITING: Handle family update in staging
+  const handleFamilyUpdate = useCallback((updatedProducts: Product[]) => {
+    console.log('🏗️ FAMILY UPDATE: Processing family update in staging:', {
+      productCount: updatedProducts.length,
+      updatedSkus: updatedProducts.map(p => p.sku)
+    })
+    
+    try {
+      // Update all family variants in staging
+      setStagedProducts(prev => 
+        prev.map(existingProduct => {
+          const updatedProduct = updatedProducts.find(up => up.sku === existingProduct.sku)
+          return updatedProduct || existingProduct
+        })
+      )
+      
+      console.log('✅ Family update applied to staging successfully')
+      toast.success(`Family updated successfully in staging area!`)
+      return true
+    } catch (error) {
+      console.error('❌ Family update failed:', error)
+      toast.error(`Failed to update family: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      return false
+    }
   }, [])
 
   const getCategoryFormLabel = (category: string): string => {
@@ -1235,7 +1278,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleCategoryEdit(baseProduct)}
+                          onClick={() => handleFamilyEdit(family)}
                           className="h-7 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
                         >
                           <Coffee className="h-3 w-3 mr-1" />
@@ -1428,6 +1471,18 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             isOpen={isEditDialogOpen}
             onOpenChange={setIsEditDialogOpen}
             onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
+          />
+        )}
+      </Dialog>
+
+      {/* Family Edit Dialog */}
+      <Dialog open={isFamilyEditOpen} onOpenChange={setIsFamilyEditOpen}>
+        {editingFamily && (
+          <FamilyEditForm
+            family={editingFamily}
+            onSubmit={handleFamilyUpdate}
+            onCancel={() => setIsFamilyEditOpen(false)}
+            isSubmitting={isPending}
           />
         )}
       </Dialog>
