@@ -1079,7 +1079,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       )}
 
       <div className="overflow-x-auto border rounded-lg">
-        <Table>
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -1089,15 +1089,15 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                   aria-label="Select all products"
                 />
               </TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Shipping (1st)</TableHead>
-              <TableHead>Shipping (Add'l)</TableHead>
-              <TableHead>Featured</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="w-32">Status</TableHead>
+              <TableHead className="w-1/4">Product Name</TableHead>
+              <TableHead className="w-32">Category</TableHead>
+              <TableHead className="w-32">SKU</TableHead>
+              <TableHead className="w-24">Price</TableHead>
+              <TableHead className="w-24">Shipping (1st)</TableHead>
+              <TableHead className="w-24">Shipping (Add'l)</TableHead>
+              <TableHead className="w-20">Featured</TableHead>
+              <TableHead className="w-40 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1150,7 +1150,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                     <TableCell>
                       <Badge variant="default" className="bg-amber-100 text-amber-800">
                         <Coffee className="h-3 w-3 mr-1" />
-                        Coffee Family
+                        Coffee
                       </Badge>
                     </TableCell>
                     <TableCell>

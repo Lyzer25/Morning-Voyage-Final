@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Product, ProductImage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,26 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
       }
     } : 'NO_PRODUCT_PASSED'
   });
+
+  // Family Edit Toggle State
+  const [editMode, setEditMode] = useState<'family' | 'individual'>('family')
+  
+  // Find all products with same base name (family variants)
+  const familyVariants = useMemo(() => {
+    if (!product?.sku) return []
+    
+    // Extract base name from SKU (remove format suffix)
+    const extractBaseName = (sku: string) => {
+      return sku.replace(/-(?:WB|GR|INST|PODS)$/i, '')
+    }
+    
+    const baseName = extractBaseName(product.sku)
+    console.log('🔍 Finding family variants for base name:', baseName)
+    
+    // This would need access to all staged products to find variants
+    // For now, we'll just return the current product
+    return [product]
+  }, [product])
 
   const [formData, setFormData] = useState({
     sku: product?.sku || '',
@@ -203,6 +223,44 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
       </DialogHeader>
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Family Edit Toggle - Show when editing coffee with multiple variants */}
+        {familyVariants.length > 1 && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-medium mb-2 flex items-center text-blue-900">
+              <Coffee className="h-4 w-4 mr-2" />
+              {product?.productName} Family ({familyVariants.length} variants)
+            </h4>
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant={editMode === 'family' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setEditMode('family')}
+                className={editMode === 'family' ? 'bg-blue-600 text-white' : 'border-blue-300 text-blue-700 hover:bg-blue-100'}
+              >
+                <Coffee className="h-3 w-3 mr-1" />
+                Edit Entire Family
+              </Button>
+              <Button 
+                type="button"
+                variant={editMode === 'individual' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setEditMode('individual')}
+                className={editMode === 'individual' ? 'bg-amber-600 text-white' : 'border-amber-300 text-amber-700 hover:bg-amber-100'}
+              >
+                <Package className="h-3 w-3 mr-1" />
+                Edit This Variant Only ({product?.format})
+              </Button>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              {editMode === 'family' 
+                ? 'Changes will apply to all variants in this family' 
+                : `Changes will only apply to this ${product?.format} variant`
+              }
+            </p>
+          </div>
+        )}
+
         {/* Basic Information Section */}
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-semibold text-gray-800 flex items-center">
