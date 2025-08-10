@@ -9,7 +9,7 @@ export interface VariantFamily {
     roastLevel?: string;
     category: string;
     description?: string;
-    tastingNotes?: string;
+    tastingNotes?: string[]; // Updated to match Product type
     images?: any[];
   };
 }
@@ -27,11 +27,18 @@ export function areVariants(product1: Product, product2: Product): boolean {
     
     if (baseName1 !== baseName2) return false;
     
-    // Check shared coffee properties
+    // Check shared coffee properties - handle both string and array tastingNotes
+    const notes1 = Array.isArray(product1.tastingNotes) 
+      ? product1.tastingNotes.join(', ')
+      : product1.tastingNotes || '';
+    const notes2 = Array.isArray(product2.tastingNotes)
+      ? product2.tastingNotes.join(', ')
+      : product2.tastingNotes || '';
+    
     return (
       product1.origin === product2.origin &&
       product1.roastLevel === product2.roastLevel &&
-      (product1.tastingNotes || '') === (product2.tastingNotes || '')
+      notes1 === notes2
     );
   }
   
@@ -58,6 +65,13 @@ function extractBaseName(productName: string): string {
 function arraysEqual<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((val, idx) => val === b[idx]);
+}
+
+// Helper to normalize tastingNotes to array
+function normalizeTastingNotes(tastingNotes?: string | string[]): string[] {
+  if (!tastingNotes) return [];
+  if (Array.isArray(tastingNotes)) return tastingNotes;
+  return tastingNotes.split(',').map((note: string) => note.trim()).filter(Boolean);
 }
 
 // Group products into variant families
@@ -113,7 +127,7 @@ export function groupProductsIntoFamilies(products: Product[]): VariantFamily[] 
           description: product.description,
           origin: product.origin,
           roastLevel: product.roastLevel,
-          tastingNotes: product.tastingNotes,
+          tastingNotes: normalizeTastingNotes(product.tastingNotes),
           images: product.images
         }
       };
@@ -145,8 +159,10 @@ function extractSharedProperties(variants: Product[]): VariantFamily['sharedProp
     shared.roastLevel = first.roastLevel;
   }
   
-  if (variants.every(v => (v.tastingNotes || '') === (first.tastingNotes || ''))) {
-    shared.tastingNotes = first.tastingNotes;
+  // Compare tastingNotes as arrays
+  const firstNotes = normalizeTastingNotes(first.tastingNotes);
+  if (variants.every(v => arraysEqual(normalizeTastingNotes(v.tastingNotes), firstNotes))) {
+    shared.tastingNotes = firstNotes;
   }
   
   // Use images from the first product as shared (can be overridden in bulk edit)

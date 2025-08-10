@@ -37,7 +37,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Chocolate, Caramel, Nuts",
+    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
     featured: true,
     inStock: true,
     images: [],
@@ -56,7 +56,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Colombia & Brazil",
     weight: "12 oz",
     format: "ground",
-    tastingNotes: "Chocolate, Caramel, Nuts",
+    tastingNotes: ["Chocolate", "Caramel", "Nuts"],
     featured: true,
     inStock: true,
     images: [],
@@ -75,7 +75,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Guatemala",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Dark Chocolate, Smoky, Robust",
+    tastingNotes: ["Dark Chocolate", "Smoky", "Robust"],
     featured: true,
     inStock: true,
     images: [],
@@ -94,7 +94,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     origin: "Ethiopia",
     weight: "12 oz",
     format: "whole-bean",
-    tastingNotes: "Blueberry, Floral, Citrus",
+    tastingNotes: ["Blueberry", "Floral", "Citrus"],
     featured: false,
     inStock: true,
     images: [],
@@ -136,7 +136,7 @@ export function fromCsvRow(row: Record<string, any>): Product {
     origin: row["ORIGIN"]?.toString().trim() || '',
     format: normalizeFormat(row["FORMAT"]),
     weight: normalizeWeight(row["WEIGHT"]),
-    tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]), // Use string format
+    tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]), // Now returns string[]
     featured: normalizeBool(row["FEATURED"]),
     shippingFirst: row["SHIPPINGFIRST"] ? normalizeMoney(row["SHIPPINGFIRST"]) : undefined,
     shippingAdditional: row["SHIPPINGADDITIONAL"] ? normalizeMoney(row["SHIPPINGADDITIONAL"]) : undefined,
@@ -430,7 +430,7 @@ export async function handleEmptyProductState(): Promise<void> {
       origin: '',
       weight: '',
       format: '',
-      tastingNotes: '',
+      tastingNotes: [],
       featured: false,
     }
     

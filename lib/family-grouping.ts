@@ -127,10 +127,16 @@ export function convertFamilyToGroupedProduct(family: ProductFamily): any {
 
   const defaultVariant = variants.find(v => v.sku === family.base.sku) || variants[0]
   
-  // Convert tastingNotes string to array for compatibility
-  const tastingNotesArray = family.base.tastingNotes 
-    ? family.base.tastingNotes.split(',').map(note => note.trim()).filter(Boolean)
-    : []
+  // Convert tastingNotes to array for compatibility (handle both string and array cases)
+  let tastingNotesArray: string[] = []
+  if (family.base.tastingNotes) {
+    if (Array.isArray(family.base.tastingNotes)) {
+      tastingNotesArray = family.base.tastingNotes
+    } else {
+      // Handle legacy string format
+      tastingNotesArray = String(family.base.tastingNotes).split(',').map((note: string) => note.trim()).filter(Boolean)
+    }
+  }
 
   return {
     baseSku: family.familyKey,

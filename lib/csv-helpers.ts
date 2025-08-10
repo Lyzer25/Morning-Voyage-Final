@@ -105,13 +105,12 @@ export function normalizeMoney(v: any): number {
   return isNaN(n) ? 0 : Number(n.toFixed(2))
 }
 
-export function normalizeTastingNotes(v?: string): string {
-  if (!v) return ""
+export function normalizeTastingNotes(v?: string): string[] {
+  if (!v) return []
   // Accept comma or semicolon; collapse spaces; preserve quoted commas
   return v.split(/[;,]/)
     .map(s => s.trim())
     .filter(Boolean)
-    .join(", ")
 }
 
 export function normalizeRoastLevel(v?: string): string {

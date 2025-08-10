@@ -88,7 +88,7 @@ function formDataToProduct(formData: FormData): Product {
     weight: formData.get("weight") as string,
     roastLevel: formData.get("roastLevel") as string,
     origin: formData.get("origin") as string,
-    tastingNotes: (formData.get("tastingNotes") as string)?.split(',').map(s => s.trim()).join(', ') || '',
+    tastingNotes: (formData.get("tastingNotes") as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
     featured: formData.get("featured") === "on",
     inStock: formData.get("inStock") === "on",
     images: [], // Default to empty array, image handling is separate

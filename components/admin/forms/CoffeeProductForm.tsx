@@ -178,7 +178,7 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
       const productData: Product = {
         ...formData,
         id: product?.id || crypto.randomUUID(),
-        tastingNotes: processedTastingNotes.join(', '),
+        tastingNotes: processedTastingNotes,
         createdAt: product?.createdAt || new Date(),
         updatedAt: new Date(),
         images: images // Use current images state
