@@ -145,14 +145,19 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                         )}
                       </div>
 
-                      {/* Tasting Notes */}
+                      {/* Tasting Notes - DEFENSIVE: Handle both string and array */}
                       {product.tastingNotes && product.tastingNotes.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-4">
-                          {product.tastingNotes.slice(0, 3).map((note) => (
-                            <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658]">
-                              {note}
-                            </Badge>
-                          ))}
+                          {(() => {
+                            const notes = Array.isArray(product.tastingNotes)
+                              ? product.tastingNotes
+                              : String(product.tastingNotes).split(',').map((s: string) => s.trim()).filter(Boolean);
+                            return notes.slice(0, 3).map((note: string) => (
+                              <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658]">
+                                {note}
+                              </Badge>
+                            ));
+                          })()}
                         </div>
                       )}
                     </div>
@@ -279,14 +284,19 @@ export default function CoffeeGrid({ products, viewMode }: CoffeeGridProps) {
                   </div>
                 )}
 
-                {/* Tasting Notes */}
+                {/* Tasting Notes - DEFENSIVE: Handle both string and array */}
                 {product.tastingNotes && product.tastingNotes.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {product.tastingNotes.slice(0, 2).map((note) => (
-                      <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658] px-2 py-1">
-                        {note}
-                      </Badge>
-                    ))}
+                    {(() => {
+                      const notes = Array.isArray(product.tastingNotes)
+                        ? product.tastingNotes
+                        : String(product.tastingNotes).split(',').map((s: string) => s.trim()).filter(Boolean);
+                      return notes.slice(0, 2).map((note: string) => (
+                        <Badge key={note} variant="secondary" className="text-xs bg-[#F6F1EB] text-[#6E6658] px-2 py-1">
+                          {note}
+                        </Badge>
+                      ));
+                    })()}
                   </div>
                 )}
 

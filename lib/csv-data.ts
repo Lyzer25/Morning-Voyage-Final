@@ -142,10 +142,24 @@ async function fetchAndParseCsvInternal(): Promise<Product[]> {
     // Process rows to Product objects
     const processedProducts = parseResult.data.map((rawRow: any) => fromCsvRow(rawRow));
 
+    // CRITICAL: Second-pass validation for tastingNotes normalization
+    const validatedProducts = processedProducts.map(p => ({
+      ...p,
+      tastingNotes: normalizeTastingNotes(p.tastingNotes)
+    }));
+
+    // VALIDATION: Verify all tastingNotes are arrays
+    const tastingNotesValidation = validatedProducts.every(p => Array.isArray(p.tastingNotes));
+    console.log('✅ tastingNotes normalized', { 
+      allArrays: tastingNotesValidation,
+      sampleProduct: validatedProducts[0]?.productName || 'None',
+      sampleNotes: validatedProducts[0]?.tastingNotes || []
+    });
+
     // CRITICAL: Single, easy-to-grep marker - appears ONCE per build worker
-    console.log('🧩 CSV parsed once', { count: processedProducts.length });
+    console.log('🧩 CSV parsed once', { count: validatedProducts.length });
     
-    return processedProducts;
+    return validatedProducts;
   } catch (error) {
     console.error("❌ CRITICAL ERROR in CSV fetch/parse:", error);
     

@@ -6,7 +6,7 @@ import Testimonials from "@/components/sections/testimonials"
 import Newsletter from "@/components/sections/newsletter"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { getCachedGroupedProducts } from "@/lib/product-cache"
+import { getGroupedProducts } from "@/lib/csv-data"
 
 // ISR Configuration for Vercel
 export const revalidate = 60 // Revalidate every 60 seconds
@@ -14,8 +14,8 @@ export const dynamic = 'force-static' // Enable ISR
 
 // Add metadata for better SEO
 export async function generateMetadata() {
-  const allProducts = await getCachedGroupedProducts()
-  const featuredProducts = allProducts.filter(p => p.featured) 
+  const allProducts = await getGroupedProducts()
+  const featuredProducts = allProducts.filter((p: any) => p.featured) 
   
   return {
     title: `Morning Voyage - Premium Coffee & Artisan Blends | ${allProducts.length} Products`,
@@ -29,8 +29,8 @@ export async function generateMetadata() {
 
 export default async function HomePage() {
   try {
-    // Fetch products for the showcase with error handling
-    const allProducts = await getCachedGroupedProducts()
+    // SINGLE-SHOT: Use unified getGroupedProducts() with tastingNotes normalization
+    const allProducts = await getGroupedProducts()
     
     console.log(`🏠 Homepage: Found ${allProducts.length} products`)
     
