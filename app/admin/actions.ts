@@ -1,18 +1,23 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-import { getProducts, updateProducts, addProduct, updateProduct, deleteProduct } from "@/lib/csv-data"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { getProducts, updateProducts, addProduct, updateProduct, deleteProduct, PRODUCTS_TAG } from "@/lib/csv-data"
 import type { Product } from "@/lib/types"
 import { exportProductsToCSV } from "@/lib/csv-helpers"
 import { forceInvalidateCache } from "@/lib/product-cache"
 
-// ENHANCED: Aggressive cache clearing for all layers
+// ENHANCED: Tag-based cache revalidation with comprehensive coverage
 async function triggerCacheRevalidation() {
   try {
-    console.log("🔄 ENHANCED: Triggering aggressive cache revalidation after product update...")
+    console.log("🔄 TAG-BASED: Triggering comprehensive cache revalidation after product update...")
     
-    // CRITICAL: Force invalidate ALL cache layers immediately
+    // CRITICAL: Tag-based revalidation (primary method)
+    await revalidateTag(PRODUCTS_TAG)
+    console.log(`✅ Revalidated products tag: ${PRODUCTS_TAG}`)
+    
+    // CRITICAL: Force invalidate in-memory cache layers
     forceInvalidateCache()
+    console.log("✅ Cleared in-memory product cache")
     
     // Revalidate all customer-facing pages (ISR cache)
     const pathsToRevalidate = ["/", "/coffee", "/subscriptions", "/shop", "/admin"]
@@ -22,23 +27,24 @@ async function triggerCacheRevalidation() {
       console.log(`✅ Revalidated ISR page: ${path}`)
     }
     
-    // Also revalidate layout-level cache
+    // Also revalidate layout-level cache for product page families
     revalidatePath("/", "layout")
-    revalidatePath("/coffee", "layout")
+    revalidatePath("/coffee", "layout") 
     revalidatePath("/subscriptions", "layout")
-    console.log("✅ Revalidated layout caches")
+    revalidatePath("/product", "layout") // For [slug] pages
+    console.log("✅ Revalidated layout caches including product families")
     
     // ENHANCED: Add small delay to allow revalidation to propagate
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     if (process.env.VERCEL) {
-      console.log("🔍 Vercel environment detected - enhanced revalidation completed")
+      console.log("🔍 Vercel environment detected - tag-based revalidation completed")
     }
     
-    console.log("✅ ENHANCED: All cache layers cleared successfully")
+    console.log("✅ TAG-BASED: All cache layers cleared successfully")
     
   } catch (error) {
-    console.error("❌ Error during enhanced cache revalidation:", error)
+    console.error("❌ Error during tag-based cache revalidation:", error)
     // Don't throw - we still want the main operation to succeed
   }
 }

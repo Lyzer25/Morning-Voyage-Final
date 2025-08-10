@@ -5,10 +5,9 @@ import { getProducts } from "@/lib/csv-data"
 import { groupProductFamilies, convertFamiliesToGroupedProducts } from "@/lib/family-grouping"
 import CoffeePageClient from "@/components/coffee/coffee-page-client"
 
-// CRITICAL FIX: ISR Configuration for fast customer updates
-export const revalidate = 60 // Revalidate every minute for fast customer updates
-export const dynamic = 'force-static' // Enable ISR
-export const dynamicParams = true
+// STATIC ISR: Build-safe static generation with 1-hour revalidation
+export const dynamic = 'force-static'
+export const revalidate = 3600
 
 // Add metadata for better SEO and caching
 export async function generateMetadata() {

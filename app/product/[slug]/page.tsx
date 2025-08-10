@@ -7,6 +7,11 @@ import PageTransition from "@/components/ui/page-transition"
 import { getProducts } from "@/lib/csv-data"
 import { groupProductFamilies, findFamilyBySlug, generateFamilySlug, convertFamilyToGroupedProduct } from "@/lib/family-grouping"
 
+// STATIC ISR: Build-safe static generation with 1-hour revalidation
+export const dynamic = 'force-static'
+export const revalidate = 3600
+export const dynamicParams = false // prebuild all slugs
+
 interface ProductPageProps {
   params: {
     slug: string

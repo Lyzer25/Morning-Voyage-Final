@@ -1,5 +1,6 @@
 import { put, list } from "@vercel/blob"
 import Papa from "papaparse"
+import { cache } from "react"
 import type { Product } from "@/lib/types"
 import { 
   transformHeader, 
@@ -17,6 +18,9 @@ import {
 
 // CRITICAL: Centralized blob key for consistency
 export const PRODUCTS_BLOB_KEY = "products.csv"
+
+// TAG-BASED ISR: Centralized cache tag for coordinated revalidation
+export const PRODUCTS_TAG = 'products'
 
 // In-memory cache to reduce blob storage reads
 let productCache: Product[] | null = null
@@ -236,7 +240,10 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
     });
 
     console.log('📊 Fetching CSV content from URL:', targetBlob.url);
-    const response = await fetch(targetBlob.url, { cache: "no-store" });
+    const response = await fetch(targetBlob.url, {
+      // Build-safe caching + ISR; admin will revalidate this tag
+      next: { revalidate: 3600, tags: [PRODUCTS_TAG] }
+    });
     console.log('📊 Fetch response details:', {
       status: response.status,
       statusText: response.statusText,
@@ -373,15 +380,24 @@ async function fetchAndParseCsv(bustCache = false): Promise<Product[]> {
         stack: error.stack
       });
     }
-    console.log("📊 Emergency fallback to sample products");
+    
+    // CRITICAL BUILD FIX: Detect build time and fail loudly instead of fallback
+    const isBuild = process.env.VERCEL === '1' || process.env.VERCEL_BUILD === '1';
+    if (isBuild) {
+      console.error("❌ BUILD FAILURE: CSV fetch failed during build - failing loudly to catch issues");
+      throw error; // Fail loudly during build
+    }
+    
+    // In dev/runtime only, fall back to samples if desired
+    console.log("📊 Runtime fallback to sample products (dev/runtime only)");
     console.log('📊 Sample products count:', SAMPLE_PRODUCTS.length);
     console.log('📊 Sample products categories:', SAMPLE_PRODUCTS.map(p => p.category));
     return SAMPLE_PRODUCTS;
   }
 }
 
-// ENHANCED: getProducts with cache-busting for verification
-export async function getProducts(bustCache = false): Promise<Product[]> {
+// Internal implementation
+async function getProductsInternal(bustCache = false): Promise<Product[]> {
   try {
     console.log('🔍 getProducts called', { bustCache })
     
@@ -412,6 +428,9 @@ export async function getProducts(bustCache = false): Promise<Product[]> {
     return []
   }
 }
+
+// CACHE-MEMOIZED: Wrap with React cache for SSG consistency during builds
+export const getProducts = cache(getProductsInternal)
 
 // Handle empty product state when user deletes all products
 export async function handleEmptyProductState(): Promise<void> {

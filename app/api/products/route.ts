@@ -3,9 +3,8 @@ import { getProducts } from "@/lib/csv-data"
 import { groupProductVariants } from "@/lib/product-variants"
 import { revalidatePath } from "next/cache"
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-export const fetchCache = 'force-no-store'
+export const dynamic = 'force-static'
+export const revalidate = 3600
 
 // GET /api/products - Fetch all products from Vercel Blob
 export async function GET(request: NextRequest) {
@@ -127,10 +126,8 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.json(response, {
           headers: {
-            // Belt & suspenders for every cache on the path
-            "Cache-Control": "no-store, max-age=0, must-revalidate",
-            "CDN-Cache-Control": "no-store",
-            "Vercel-CDN-Cache-Control": "no-store",
+            // ISR-aligned caching headers
+            "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400"
           },
         });
       } catch (groupError) {
@@ -178,10 +175,8 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response, {
       headers: {
-        // Belt & suspenders for every cache on the path
-        "Cache-Control": "no-store, max-age=0, must-revalidate",
-        "CDN-Cache-Control": "no-store",
-        "Vercel-CDN-Cache-Control": "no-store",
+        // ISR-aligned caching headers
+        "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400"
       },
     });
 
