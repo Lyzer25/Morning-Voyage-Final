@@ -4,18 +4,17 @@ import SubscriptionHero from "@/components/subscriptions/subscription-hero"
 import SubscriptionPlans from "@/components/subscriptions/subscription-plans"
 import GiftSubscriptions from "@/components/subscriptions/gift-subscriptions"
 import PageTransition from "@/components/ui/page-transition"
-import { getProducts } from "@/lib/csv-data"
+import { getProductsByCategory } from "@/lib/csv-data"
 import { groupProductVariants } from "@/lib/product-variants"
 
-// CRITICAL FIX: Add ISR configuration for Vercel
-export const revalidate = 3600 // Revalidate every hour instead of 0
-export const dynamic = 'force-static' // Force static generation
+// STATIC ISR: Build-safe static generation with 1-hour revalidation
+export const dynamic = 'force-static'
+export const revalidate = 3600
 
 // Add metadata for better SEO and caching
 export async function generateMetadata() {
   try {
-    const allProducts = await getProducts()
-    const subscriptionProducts = allProducts.filter((p) => p && p.category === "subscription")
+    const subscriptionProducts = await getProductsByCategory('subscription')
     
     return {
       title: `Subscription Plans - ${subscriptionProducts.length} Options | Morning Voyage`,
@@ -33,39 +32,19 @@ export async function generateMetadata() {
   }
 }
 
-// CRITICAL FIX: Convert to async server component and properly await
 export default async function SubscriptionsPage() {
   try {
     console.log('🎯 SubscriptionsPage: Loading subscription products...')
     
-    // CRITICAL FIX: Properly await the async function
-    const allProducts = await getProducts()
+    // SINGLE-SHOT: Use getProductsByCategory() for subscriptions
+    const subscriptionProducts = await getProductsByCategory('subscription')
+    const giftProducts = await getProductsByCategory('gift-set')
     
-    console.log(`📊 SubscriptionsPage: Retrieved ${allProducts?.length || 0} total products`)
+    console.log(`📊 SubscriptionsPage: Retrieved ${subscriptionProducts?.length || 0} subscription products, ${giftProducts?.length || 0} gift products`)
 
-    // CRITICAL FIX: Add null checks before calling .filter()
-    if (!allProducts || !Array.isArray(allProducts)) {
-      console.warn('⚠️ SubscriptionsPage: No products array available')
-      return (
-        <PageTransition>
-          <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-            <Header />
-            <main className="relative overflow-hidden pt-24">
-              <SubscriptionHero />
-              <div className="container mx-auto px-4 py-16 text-center">
-                <h2 className="text-3xl font-bold text-[#4B2E2E] mb-4">Subscription Plans</h2>
-                <p className="text-[#6E6658] mb-8">No subscription plans available at the moment.</p>
-              </div>
-            </main>
-            <Footer />
-          </div>
-        </PageTransition>
-      )
-    }
-    
-    // Handle empty product state
-    if (allProducts.length === 0) {
-      console.log('📦 Empty product state detected on subscriptions page');
+    // Handle empty subscription state
+    if (!subscriptionProducts || subscriptionProducts.length === 0) {
+      console.log('📦 Empty subscription state detected');
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -91,32 +70,16 @@ export default async function SubscriptionsPage() {
       )
     }
     
-    // Filter for subscription products only
-    const subscriptionProducts = allProducts.filter(product => {
-      const isSubscription = product.category?.toLowerCase() === 'subscription'
-      console.log('🔄 Subscription filter check:', {
-        sku: product.baseSku,
-        category: product.category,
-        isMatch: isSubscription
-      })
-      return isSubscription
-    })
-    
-    console.log('🔄 SUBSCRIPTIONS PAGE: Final subscription products:', {
-      total: allProducts.length,
+    console.log('🔄 SUBSCRIPTIONS PAGE: Products loaded:', {
       subscriptionCount: subscriptionProducts.length,
-      categories: [...new Set(allProducts.map(p => p.category))]
+      giftCount: giftProducts.length
     })
 
-    const giftProducts = allProducts.filter((p) => 
-      p && p.category && (p.category.toLowerCase().includes('gift') || p.category.toLowerCase().includes('gift-set'))
-    )
-
-    // CRITICAL FIX: Convert raw products to grouped products for variant system
+    // Convert to grouped products for variant system
     const groupedSubscriptionProducts = groupProductVariants(subscriptionProducts)
     const groupedGiftProducts = groupProductVariants(giftProducts)
     
-    console.log(`✅ SubscriptionsPage: Found ${subscriptionProducts.length} subscription products (${groupedSubscriptionProducts.length} grouped), ${giftProducts.length} gift products (${groupedGiftProducts.length} grouped)`)
+    console.log(`✅ SubscriptionsPage: Grouped ${subscriptionProducts.length} → ${groupedSubscriptionProducts.length} subscription products, ${giftProducts.length} → ${groupedGiftProducts.length} gift products`)
     
     // Add performance logging for Vercel
     if (process.env.VERCEL) {

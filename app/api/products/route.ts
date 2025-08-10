@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getProducts } from "@/lib/csv-data"
-import { groupProductVariants } from "@/lib/product-variants"
+import { getProducts, getGroupedProducts, getProductsByCategory } from "@/lib/csv-data"
 import { revalidatePath } from "next/cache"
 
 export const dynamic = 'force-static'
@@ -91,89 +90,61 @@ export async function GET(request: NextRequest) {
       console.log('🔍 Filtered products sample:', filteredProducts.slice(0, 2));
     }
 
-    // Return grouped products if requested (for frontend)
+    // SINGLE-SHOT: Use cached functions instead of manual processing
+    let responseData;
+    
     if (grouped) {
-      try {
-        console.log('🔍 Attempting to group products...');
-        const groupedProducts = groupProductVariants(filteredProducts)
-        const safeGroupedProducts = Array.isArray(groupedProducts) ? groupedProducts : []
-        
-        console.log(`✅ API: Grouped ${filteredProducts.length} raw into ${safeGroupedProducts.length} grouped products`);
-        console.log('🔍 Grouped products sample:', safeGroupedProducts.slice(0, 2));
-        
-        const response = {
-          products: safeGroupedProducts,
-          count: safeGroupedProducts.length,
-          rawCount: filteredProducts.length,
+      // Use getGroupedProducts() - reuses same cached data as pages
+      if (category) {
+        // For category-specific grouped products, get raw then filter
+        const categoryProducts = await getProductsByCategory(category)
+        responseData = {
+          products: categoryProducts, // These come pre-processed
+          count: categoryProducts.length,
           grouped: true,
-          category: category || 'all',
-          debug: {
-            totalRawProducts: safeRawProducts.length,
-            filteredProducts: filteredProducts.length,
-            groupedProducts: safeGroupedProducts.length,
-            categoriesFound: uniqueCategories,
-            requestedCategory: category
-          },
+          category: category,
           timestamp: new Date().toISOString()
         };
-        
-        console.log('🔍 Final API response:', {
-          count: response.count,
-          rawCount: response.rawCount,
-          category: response.category,
-          hasProducts: response.products.length > 0
-        });
-        
-        return NextResponse.json(response, {
-          headers: {
-            // ISR-aligned caching headers
-            "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400"
-          },
-        });
-      } catch (groupError) {
-        console.error("❌ API Error grouping products:", groupError)
-        // Fallback to raw products if grouping fails
-        return NextResponse.json({
-          products: filteredProducts,
-          count: filteredProducts.length,
-          grouped: false,
-          category: category || 'all',
-          message: "Grouping failed, returning raw products",
-          error: groupError instanceof Error ? groupError.message : String(groupError),
-          debug: {
-            totalRawProducts: safeRawProducts.length,
-            filteredProducts: filteredProducts.length,
-            categoriesFound: uniqueCategories
-          },
+      } else {
+        // All grouped products
+        const groupedProducts = await getGroupedProducts()
+        responseData = {
+          products: groupedProducts,
+          count: groupedProducts.length,
+          grouped: true,
+          category: 'all',
           timestamp: new Date().toISOString()
-        })
+        };
+      }
+    } else {
+      // Raw products
+      if (category) {
+        const categoryProducts = await getProductsByCategory(category)
+        responseData = {
+          products: categoryProducts,
+          count: categoryProducts.length,
+          grouped: false,
+          category: category,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        responseData = {
+          products: rawProducts,
+          count: rawProducts.length,
+          grouped: false,
+          category: 'all',
+          timestamp: new Date().toISOString()
+        };
       }
     }
 
-    // Return raw products (for admin)
-    console.log(`✅ API: Returning ${filteredProducts.length} raw products`);
-    
-    const response = {
-      products: filteredProducts,
-      count: filteredProducts.length,
-      grouped: false,
-      category: category || 'all',
-      debug: {
-        totalRawProducts: safeRawProducts.length,
-        filteredProducts: filteredProducts.length,
-        categoriesFound: uniqueCategories,
-        requestedCategory: category
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log('🔍 Final API response (raw):', {
-      count: response.count,
-      category: response.category,
-      hasProducts: response.products.length > 0
+    console.log('🔍 SINGLE-SHOT API response:', {
+      count: responseData.count,
+      grouped: responseData.grouped,
+      category: responseData.category
     });
     
-    return NextResponse.json(response, {
+    return NextResponse.json(responseData, {
       headers: {
         // ISR-aligned caching headers
         "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400"
