@@ -63,6 +63,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   // Family editing state
   const [isFamilyEditOpen, setIsFamilyEditOpen] = useState(false)
   const [editingFamily, setEditingFamily] = useState<ProductFamily | null>(null)
+  const [isCreatingFamily, setIsCreatingFamily] = useState(false)
   
   // Bulk delete state
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
@@ -72,6 +73,42 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     setEditingProduct(undefined)
     setActiveFormType(category)
     setIsEditDialogOpen(true)
+  }
+
+  // NEW: Handle Coffee Family creation
+  const handleAddNewFamily = () => {
+    console.log('🏗️ Creating new coffee family from scratch')
+    
+    // Create empty family structure
+    const emptyFamily: ProductFamily = {
+      familyKey: `NEW_FAMILY_${Date.now()}`,
+      base: {
+        id: crypto.randomUUID(),
+        sku: '',
+        productName: '',
+        description: '',
+        category: 'coffee',
+        price: 0,
+        roastLevel: 'medium',
+        origin: '',
+        tastingNotes: [],
+        format: 'whole-bean',
+        weight: '',
+        status: 'draft',
+        featured: false,
+        inStock: true,
+        images: [], // Add missing images property
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      variants: []
+    }
+    
+    setEditingFamily(emptyFamily)
+    setIsCreatingFamily(true)
+    setIsFamilyEditOpen(true)
+    
+    console.log('🏗️ Opening empty family editor for new family creation')
   }
 
   // Enhanced filtering state
@@ -928,6 +965,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               <DropdownMenuItem onClick={() => handleAddNewProduct('coffee')}>
                 <Coffee className="mr-2 h-4 w-4" />
                 Add Coffee Product
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNewFamily()}>
+                <Package className="mr-2 h-4 w-4" />
+                Coffee Family
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddNewProduct('subscription')}>
                 <RefreshCw className="mr-2 h-4 w-4" />

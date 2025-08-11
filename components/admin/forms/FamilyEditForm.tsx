@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check, Upload, Image as ImageIcon, X, Camera, Grid3X3 } from 'lucide-react';
+import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check, Upload, Image as ImageIcon, X, Camera, Grid3X3, Plus } from 'lucide-react';
 import { uploadProductImages, validateImageFiles } from '@/lib/blob-storage';
 
 interface FamilyEditFormProps {
@@ -59,6 +59,170 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
     });
     return variants;
   });
+
+  // PHASE 2: Price uniformity detection
+  const priceUniformity = useMemo(() => {
+    const variants = Object.values(variantData);
+    if (variants.length === 0) return { 
+      isUniform: true, 
+      commonPrice: 0, 
+      originalPrice: undefined,
+      priceRange: null 
+    };
+    
+    const prices = variants.map(v => v.price).filter(p => p > 0);
+    const originalPrices = variants.map(v => v.originalPrice).filter(p => p !== undefined && p > 0);
+    const uniquePrices = [...new Set(prices)];
+    const uniqueOriginalPrices = [...new Set(originalPrices)];
+    
+    return {
+      isUniform: uniquePrices.length <= 1,
+      commonPrice: uniquePrices[0] || 0,
+      originalPrice: uniqueOriginalPrices[0],
+      priceRange: uniquePrices.length > 1 ? `$${Math.min(...prices).toFixed(2)} - $${Math.max(...prices).toFixed(2)}` : null
+    };
+  }, [variantData]);
+
+  // PHASE 2: Update all variant prices (for sync functionality)
+  const updateAllVariantPrices = useCallback((price: number, originalPrice?: number) => {
+    console.log('💰 Syncing all variant prices to:', { price, originalPrice });
+    
+    setVariantData(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(sku => {
+        updated[sku] = {
+          ...updated[sku],
+          price: price,
+          originalPrice: originalPrice,
+          updatedAt: new Date()
+        };
+      });
+      return updated;
+    });
+    
+    toast.success(`All variant prices synced to $${price.toFixed(2)}`);
+  }, []);
+
+  const syncAllPrices = useCallback((targetPrice: number) => {
+    updateAllVariantPrices(targetPrice, priceUniformity.originalPrice);
+  }, [updateAllVariantPrices, priceUniformity.originalPrice]);
+
+  // PHASE 3: Variant creation for new families
+  const [addingVariant, setAddingVariant] = useState(false);
+  const [newVariantData, setNewVariantData] = useState({
+    sku: '',
+    format: 'whole-bean',
+    weight: '',
+    price: 0,
+    originalPrice: undefined as number | undefined,
+    shippingFirst: undefined as number | undefined,
+    shippingAdditional: undefined as number | undefined
+  });
+
+  const [skuValidation, setSkuValidation] = useState<{ valid: boolean; error?: string }>({ valid: true });
+
+  // Check if this is a new family being created (no existing variants)
+  const isCreatingNewFamily = family.variants.length === 0;
+
+  // Validate SKU uniqueness (simulated - in real app would check against all products)
+  const validateSku = useCallback((sku: string) => {
+    if (!sku.trim()) {
+      setSkuValidation({ valid: false, error: 'SKU is required' });
+      return false;
+    }
+
+    // Check against existing family variants
+    const existingVariant = Object.keys(variantData).includes(sku);
+    if (existingVariant) {
+      setSkuValidation({ valid: false, error: 'SKU already used in this family' });
+      return false;
+    }
+
+    // TODO: Check against all staged products (would need access to staging data)
+    
+    setSkuValidation({ valid: true });
+    return true;
+  }, [variantData]);
+
+  // Create new variant and add to family
+  const createVariant = useCallback(() => {
+    if (!validateSku(newVariantData.sku)) {
+      return;
+    }
+
+    // Process tasting notes from family data
+    const processedTastingNotes = familyData.tastingNotes
+      .split(',')
+      .map(note => note.trim())
+      .filter(note => note.length > 0);
+
+    // Create new product with family shared properties + variant specifics
+    const newProduct: Product = {
+      id: crypto.randomUUID(),
+      sku: newVariantData.sku,
+      productName: familyData.productName,
+      description: familyData.description,
+      category: 'coffee',
+      price: newVariantData.price,
+      originalPrice: newVariantData.originalPrice,
+      
+      // Shared family properties
+      roastLevel: familyData.roastLevel,
+      origin: familyData.origin,
+      tastingNotes: processedTastingNotes,
+      featured: familyData.featured,
+      status: familyData.status,
+      
+      // Variant-specific properties
+      format: newVariantData.format,
+      weight: newVariantData.weight,
+      
+      // Shipping
+      shippingFirst: newVariantData.shippingFirst,
+      shippingAdditional: newVariantData.shippingAdditional,
+      
+      // Defaults
+      inStock: true,
+      images: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Add to variant data state
+    setVariantData(prev => ({
+      ...prev,
+      [newProduct.sku]: newProduct
+    }));
+
+    // Reset form and close dialog
+    setNewVariantData({
+      sku: '',
+      format: 'whole-bean',
+      weight: '',
+      price: 0,
+      originalPrice: undefined,
+      shippingFirst: undefined,
+      shippingAdditional: undefined
+    });
+    setAddingVariant(false);
+    
+    console.log('✅ New variant created:', newProduct.sku);
+    toast.success(`Variant ${newProduct.sku} added to family!`);
+  }, [newVariantData, familyData, validateSku]);
+
+  const resetVariantForm = useCallback(() => {
+    setNewVariantData({
+      sku: '',
+      format: 'whole-bean',
+      weight: '',
+      price: 0,
+      originalPrice: undefined,
+      shippingFirst: undefined,
+      shippingAdditional: undefined
+    });
+    setSkuValidation({ valid: true });
+    setAddingVariant(false);
+  }, []);
 
   // Image upload state management
   const [images, setImages] = useState<{
@@ -559,15 +723,133 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
                   </Select>
                 </div>
               </div>
+
+              {/* PHASE 2: Smart Family Pricing Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Family Pricing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {priceUniformity.isUniform ? (
+                    // Enable price editing when prices are uniform
+                    <div className="space-y-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-green-700 flex items-center">
+                          <Check className="h-4 w-4 mr-2" />
+                          Uniform pricing detected - all variants have the same price
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="family-price">Family Price (applies to all variants) *</Label>
+                          <Input
+                            id="family-price"
+                            type="number"
+                            step="0.01"
+                            value={priceUniformity.commonPrice || ''}
+                            onChange={(e) => updateAllVariantPrices(parseFloat(e.target.value) || 0, priceUniformity.originalPrice)}
+                            placeholder="19.99"
+                            required
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Changes will apply to all {Object.keys(variantData).length} variants
+                          </p>
+                        </div>
+                        <div>
+                          <Label htmlFor="family-originalPrice">Original Price (optional)</Label>
+                          <Input
+                            id="family-originalPrice"
+                            type="number"
+                            step="0.01"
+                            value={priceUniformity.originalPrice || ''}
+                            onChange={(e) => updateAllVariantPrices(priceUniformity.commonPrice, e.target.value ? parseFloat(e.target.value) : undefined)}
+                            placeholder="24.99"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Grey out with sync option when prices are not uniform
+                    <div className="space-y-4">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-yellow-700 flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Non-uniform pricing detected across variants
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded border">
+                        <Label className="text-gray-500">Family Price (Non-uniform pricing detected)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value=""
+                          placeholder={priceUniformity.priceRange || ''}
+                          disabled
+                          className="bg-gray-100 text-gray-500 mt-1"
+                        />
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600">
+                              Variants have different prices ({priceUniformity.priceRange}). 
+                              Edit individually or sync to uniform price.
+                            </p>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => syncAllPrices(priceUniformity.commonPrice)}
+                              className="border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              Sync to ${priceUniformity.commonPrice.toFixed(2)}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditMode('individual')}
+                              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                            >
+                              <Package className="h-3 w-3 mr-1" />
+                              Edit Individual
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Price Summary */}
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 mb-2">Current Variant Prices:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                      {Object.values(variantData).map(variant => (
+                        <div key={variant.sku} className="flex justify-between text-blue-800">
+                          <span>{variant.formatCode}:</span>
+                          <span>${variant.price?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
         )}
 
-        {/* Individual Mode - Grid of Variant Forms */}
+        {/* Individual Mode - Grid of Variant Forms + Add Variant Cards */}
         {editMode === 'individual' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {family.variants.map((variant) => {
+              {/* Existing Variants */}
+              {Object.values(variantData).map((variant) => {
                 const variantState = variantData[variant.sku] || variant;
                 
                 return (
@@ -692,6 +974,58 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
                   </Card>
                 );
               })}
+
+              {/* PHASE 3: Add Variant Cards */}
+              {/* Show empty cards for new families, or single "Add Variant" card for existing families */}
+              {isCreatingNewFamily ? (
+                // New family: Show 3-6 empty "Create Variant" cards
+                Array.from({ length: Math.max(3, 6 - Object.keys(variantData).length) }).map((_, index) => (
+                  <Card key={`empty-${index}`} className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
+                    <CardContent className="flex flex-col items-center justify-center min-h-[300px] p-6">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                        <Plus className="h-8 w-8 text-blue-600" />
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-2">Create Variant</h4>
+                      <p className="text-sm text-gray-600 text-center mb-4">
+                        Add a new format variant<br/>to this coffee family
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => setAddingVariant(true)}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create Variant
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : Object.keys(variantData).length < 10 && (
+                // Existing family: Show single "Add Variant" card if under limit
+                <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
+                  <CardContent className="flex flex-col items-center justify-center min-h-[300px] p-6">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                      <Plus className="h-8 w-8 text-green-600" />
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-2">Add New Variant</h4>
+                    <p className="text-sm text-gray-600 text-center mb-4">
+                      Add another format<br/>to this family
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => setAddingVariant(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-300 text-green-700 hover:bg-green-50"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Variant
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
             
             {/* Sync Button for Individual Mode */}
@@ -965,6 +1299,174 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
             )}
           </Button>
         </div>
+
+        {/* PHASE 3: Add Variant Dialog */}
+        {addingVariant && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {isCreatingNewFamily ? 'Create New Variant' : 'Add Variant to Family'}
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetVariantForm}
+                  className="p-1"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {familyData.productName && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Family:</strong> {familyData.productName}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="variant-sku">SKU * (Must be unique)</Label>
+                  <Input
+                    id="variant-sku"
+                    value={newVariantData.sku}
+                    onChange={(e) => {
+                      const sku = e.target.value;
+                      setNewVariantData(prev => ({ ...prev, sku }));
+                      if (sku) validateSku(sku);
+                    }}
+                    placeholder="COFFEE-COLOMBIA-12OZ-WB"
+                    required
+                    className={!skuValidation.valid ? 'border-red-500' : ''}
+                  />
+                  {skuValidation.error && (
+                    <p className="text-sm text-red-600 mt-1">{skuValidation.error}</p>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Format *</Label>
+                    <Select 
+                      value={newVariantData.format} 
+                      onValueChange={(value) => setNewVariantData(prev => ({ ...prev, format: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="whole-bean">Whole Bean</SelectItem>
+                        <SelectItem value="ground">Ground</SelectItem>
+                        <SelectItem value="pods">Pods</SelectItem>
+                        <SelectItem value="instant">Instant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Weight/Size *</Label>
+                    <Input
+                      value={newVariantData.weight}
+                      onChange={(e) => setNewVariantData(prev => ({ ...prev, weight: e.target.value }))}
+                      placeholder="12oz, 1lb, 10-count"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Price *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newVariantData.price || ''}
+                      onChange={(e) => setNewVariantData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                      placeholder="19.99"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Original Price</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newVariantData.originalPrice || ''}
+                      onChange={(e) => setNewVariantData(prev => ({ 
+                        ...prev, 
+                        originalPrice: e.target.value ? parseFloat(e.target.value) : undefined 
+                      }))}
+                      placeholder="24.99"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Shipping (1st item)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newVariantData.shippingFirst || ''}
+                      onChange={(e) => setNewVariantData(prev => ({ 
+                        ...prev, 
+                        shippingFirst: e.target.value ? parseFloat(e.target.value) : undefined 
+                      }))}
+                      placeholder="5.99"
+                    />
+                  </div>
+                  <div>
+                    <Label>Shipping (Additional)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newVariantData.shippingAdditional || ''}
+                      onChange={(e) => setNewVariantData(prev => ({ 
+                        ...prev, 
+                        shippingAdditional: e.target.value ? parseFloat(e.target.value) : undefined 
+                      }))}
+                      placeholder="2.99"
+                    />
+                  </div>
+                </div>
+
+                {familyData.productName && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-2">
+                      <strong>Inherited from family:</strong>
+                    </p>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      <li>• Product Name: {familyData.productName}</li>
+                      <li>• Roast Level: {familyData.roastLevel}</li>
+                      <li>• Origin: {familyData.origin || 'Not set'}</li>
+                      <li>• Tasting Notes: {familyData.tastingNotes || 'Not set'}</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={resetVariantForm}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={createVariant}
+                  disabled={!newVariantData.sku || !newVariantData.format || !newVariantData.weight || newVariantData.price <= 0 || !skuValidation.valid}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Variant
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </DialogContent>
   );
