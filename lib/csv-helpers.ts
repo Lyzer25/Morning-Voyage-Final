@@ -156,8 +156,33 @@ export function normalizeWeight(v?: string): string {
 }
 
 export function normalizeBool(v: any): boolean {
+  console.log('🔧 FEATURED DEBUG: normalizeBool input:', {
+    value: v,
+    type: typeof v,
+    stringValue: v?.toString(),
+    originalInput: v
+  })
+  
+  if (typeof v === 'boolean') {
+    console.log('✅ FEATURED DEBUG: Already boolean:', v)
+    return v
+  }
+  
   const s = v?.toString().toLowerCase().trim()
-  return s === "true" || s === "yes" || s === "1" || s === "on"
+  const result = s === "true" || s === "yes" || s === "1" || s === "on"
+  
+  console.log('🔧 FEATURED DEBUG: normalizeBool result:', {
+    normalizedString: s,
+    finalResult: result,
+    matchedValues: {
+      isTrue: s === "true",
+      isYes: s === "yes", 
+      isOne: s === "1",
+      isOn: s === "on"
+    }
+  })
+  
+  return result
 }
 
 export function normalizeMoney(v: any): number {

@@ -34,7 +34,8 @@ import {
   Search,
   TestTube,
   Zap,
-  XCircle
+  XCircle,
+  Star
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -1172,6 +1173,33 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           }
           break
 
+        case 'featured-analysis':
+          const featuredResponse = await fetch('/api/debug/featured-analysis', { method: 'POST' })
+          const featuredData = await featuredResponse.json()
+          
+          if (!featuredResponse.ok) {
+            throw new Error(featuredData.error || 'Featured analysis failed')
+          }
+          
+          result = {
+            title: 'Featured Items Analysis',
+            status: featuredData.analysis.consistency.isConsistent ? 'success' : 'warning',
+            details: {
+              'Admin Featured Count': featuredData.analysis.admin.featuredCount,
+              'Blob Featured Count': featuredData.analysis.blobStorage.featuredCount,
+              'Front Page Featured Count': featuredData.analysis.frontPage?.featuredCount || 'N/A',
+              'Data Consistency': featuredData.analysis.consistency.isConsistent ? '✅ Consistent' : '❌ Inconsistent',
+              'Issues Found': featuredData.analysis.consistency.issues,
+              'Admin Featured Products': featuredData.analysis.admin.featuredProducts,
+              'Blob Featured Products': featuredData.analysis.blobStorage.featuredProducts,
+              'Boolean Conversion Issues': featuredData.analysis.blobStorage.booleanConversionIssues,
+              'CSV Analysis': featuredData.analysis.blobStorage.csvAnalysis,
+              'Recommendations': featuredData.analysis.recommendations
+            },
+            timestamp: new Date().toISOString()
+          }
+          break
+
         default:
           throw new Error('Unknown debug type')
       }
@@ -1277,6 +1305,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               <DropdownMenuItem onClick={() => handleVisualDebug('force-sync')}>
                 <Zap className="mr-2 h-4 w-4" />
                 Force Immediate Sync
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualDebug('featured-analysis')}>
+                <Star className="mr-2 h-4 w-4" />
+                Debug Featured Items
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
