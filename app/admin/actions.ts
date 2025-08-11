@@ -61,49 +61,57 @@ interface FormState {
 
 export async function exportCsvAction(): Promise<{ error?: string; csv?: string }> {
   try {
-    console.log('📥 Exporting raw CSV from blob storage');
+    console.log('📥 CSV EXPORT: Reading from blob storage (not staging)')
     
-    // Direct blob fetch - no processing
-    const { list } = await import('@vercel/blob');
-    const blobs = await list({ prefix: "products.csv" });
+    const { list } = await import('@vercel/blob')
+    const blobs = await list({ prefix: "products.csv" })
     
     if (!blobs.blobs || blobs.blobs.length === 0) {
-      return { error: 'No CSV file found in blob storage' };
+      console.log('❌ CSV EXPORT: No blob found - checking if empty state')
+      return { csv: 'sku,productName,category,price\n' } // Empty CSV template
     }
     
-    // Get the CSV file directly
-    const targetBlob = blobs.blobs[0];
-    console.log('📥 Found blob for export:', {
+    const targetBlob = blobs.blobs[0]
+    console.log('📥 CSV EXPORT: Found blob:', {
+      size: targetBlob.size,
       pathname: targetBlob.pathname,
-      url: targetBlob.url,
-      size: targetBlob.size
-    });
+      lastModified: new Date(targetBlob.uploadedAt).toISOString()
+    })
     
-    const response = await fetch(targetBlob.url);
+    // Force fresh fetch from blob (bypass any caches)
+    const response = await fetch(targetBlob.url, {
+      cache: 'no-store',
+      headers: { 
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
+    
     if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      throw new Error(`Blob fetch failed: ${response.status}`)
     }
     
-    const csvContent = await response.text();
+    const csvContent = await response.text()
     
+    console.log('✅ CSV EXPORT: Blob content retrieved:', {
+      contentLength: csvContent.length,
+      lineCount: csvContent.split('\n').length,
+      hasHeaders: csvContent.includes('sku') || csvContent.includes('SKU'),
+      firstLine: csvContent.split('\n')[0],
+      containsBlendComposition: csvContent.includes('BLEND COMPOSITION')
+    })
+    
+    // Verify content quality
     if (!csvContent || csvContent.trim().length === 0) {
-      return { error: 'CSV file is empty' };
+      console.warn('⚠️ CSV EXPORT: Blob is empty - this indicates blob write issue')
+      return { error: 'Blob storage is empty. Try deploying your changes first.' }
     }
     
-    console.log('✅ Raw CSV exported successfully:', {
-      blobUrl: targetBlob.url,
-      size: csvContent.length,
-      firstLine: csvContent.split('\n')[0]
-    });
-    
-    return { csv: csvContent };
+    return { csv: csvContent }
     
   } catch (error) {
-    console.error('❌ CSV export failed:', error);
-    const errorMessage = error instanceof Error 
-      ? `CSV export failed: ${error.message}` 
-      : "Failed to export CSV file.";
-    return { error: errorMessage };
+    console.error('❌ CSV EXPORT: Failed:', error)
+    return { error: `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}` }
   }
 }
 
@@ -265,7 +273,7 @@ export async function toggleStatusAction(sku: string, status: "active" | "draft"
 }
 
 // ENHANCED: Save all staged changes to production with comprehensive progress feedback
-export async function saveToProductionAction(products: Product[]): Promise<FormState> {
+export async function saveToProductionAction(products: Product[]): Promise<FormState & { needsRefresh?: boolean }> {
   try {
     console.log(`🚀 PRODUCTION DEPLOY: Starting deployment of ${products.length} products`)
     
@@ -314,7 +322,8 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     console.log(`🎉 PRODUCTION DEPLOY: Complete! Total time: ${totalTime}ms`)
     
     return { 
-      success: `🚀 Successfully deployed ${products.length} products to live site! Changes are now visible to customers. (${totalTime}ms)` 
+      success: `🚀 Successfully deployed ${products.length} products to live site! Changes are now visible to customers. (${totalTime}ms)`,
+      needsRefresh: true  // ← Signal for admin refresh
     }
   } catch (error) {
     console.error("❌ PRODUCTION DEPLOY: Failed with error:", error)
@@ -326,6 +335,181 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     
     return { 
       error: errorMessage + " Please try again or contact support if the problem persists."
+    }
+  }
+}
+
+// DEBUG FUNCTIONS: For troubleshooting blob storage issues
+export async function debugBlobStatus(): Promise<{
+  blobExists: boolean,
+  blobSize: number,
+  lastModified: string,
+  contentPreview: string,
+  lineCount: number,
+  headers: string
+}> {
+  try {
+    console.log('🔍 DEBUG: Checking blob storage status...')
+    
+    const { list } = await import('@vercel/blob')
+    const blobs = await list({ prefix: "products.csv" })
+    
+    if (!blobs.blobs || blobs.blobs.length === 0) {
+      return {
+        blobExists: false,
+        blobSize: 0,
+        lastModified: 'N/A',
+        contentPreview: 'No blob found',
+        lineCount: 0,
+        headers: 'N/A'
+      }
+    }
+    
+    const blob = blobs.blobs[0]
+    console.log('🔍 DEBUG: Found blob:', blob.pathname)
+    
+    const response = await fetch(blob.url, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob: ${response.status}`)
+    }
+    
+    const content = await response.text()
+    const lines = content.split('\n')
+    
+    console.log('✅ DEBUG: Blob analysis complete')
+    
+    return {
+      blobExists: true,
+      blobSize: blob.size,
+      lastModified: new Date(blob.uploadedAt).toISOString(),
+      contentPreview: content.substring(0, 500),
+      lineCount: lines.length,
+      headers: lines[0] || 'NO HEADERS'
+    }
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Blob status check failed:', error)
+    throw new Error(`Debug failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+export async function forceBlobRefresh(): Promise<{ success: boolean, message: string, details: any }> {
+  try {
+    console.log('🔄 DEBUG: Force refreshing blob with current products...')
+    
+    const products = await getProducts({ forceRefresh: true })
+    console.log('🔄 DEBUG: Got products:', products.length)
+    
+    if (products.length === 0) {
+      console.log('🔄 DEBUG: No products found - creating test product')
+      const testProduct: Product = {
+        id: crypto.randomUUID(),
+        sku: 'TEST-DEBUG-' + Date.now(),
+        productName: 'Debug Test Product',
+        category: 'coffee',
+        price: 9.99,
+        description: 'Debug test product created by force refresh',
+        roastLevel: 'medium',
+        origin: 'Test Origin',
+        format: 'whole-bean',
+        weight: '12oz',
+        tastingNotes: ['test', 'debug'],
+        featured: false,
+        status: 'draft' as const,
+        inStock: true,
+        images: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      await updateProducts([testProduct])
+      
+      return { 
+        success: true, 
+        message: `Created test product and refreshed blob (was empty)`,
+        details: { 
+          productCount: 1, 
+          testProductSku: testProduct.sku,
+          action: 'created_test_product'
+        }
+      }
+    }
+    
+    await updateProducts(products)
+    
+    return { 
+      success: true, 
+      message: `Refreshed blob with ${products.length} products`,
+      details: { 
+        productCount: products.length,
+        action: 'refresh_existing'
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Force refresh failed:', error)
+    return { 
+      success: false, 
+      message: `Force refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: { error: String(error) }
+    }
+  }
+}
+
+export async function testBlobWrite(): Promise<{ success: boolean, message: string, details: any }> {
+  try {
+    console.log('🧪 DEBUG: Testing basic blob write operation...')
+    
+    const testCsv = `sku,productName,category,price
+TEST-WRITE-${Date.now()},Test Write Product,coffee,12.99
+TEST-VERIFY-${Date.now()},Test Verify Product,coffee,15.99`
+    
+    console.log('🧪 DEBUG: Writing test CSV...')
+    const { put } = await import('@vercel/blob')
+    const result = await put('test-products.csv', testCsv, {
+      access: "public",
+      contentType: "text/csv",
+      allowOverwrite: true
+    })
+    
+    console.log('🧪 DEBUG: Test write successful, verifying...')
+    
+    // Verify write
+    const verifyResponse = await fetch(result.url, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    })
+    
+    if (!verifyResponse.ok) {
+      throw new Error(`Verification fetch failed: ${verifyResponse.status}`)
+    }
+    
+    const verifyContent = await verifyResponse.text()
+    
+    console.log('✅ DEBUG: Test write and verification complete')
+    
+    return {
+      success: true,
+      message: 'Blob write test successful',
+      details: {
+        testUrl: result.url,
+        originalLength: testCsv.length,
+        verifiedLength: verifyContent.length,
+        contentMatches: testCsv === verifyContent,
+        verifiedContent: verifyContent.substring(0, 200)
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Test blob write failed:', error)
+    return {
+      success: false,
+      message: `Test write failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: { error: String(error) }
     }
   }
 }

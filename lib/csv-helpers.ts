@@ -317,49 +317,67 @@ export function processCSVData(data: any[]): Product[] {
   })
 }
 
-// Add category-specific CSV export:
+// ENHANCED: Complete CSV export with ALL business fields
 export function exportProductsToCSV(products: Product[]): string {
-  const csvData = products.map(product => {
-    const baseData = {
-      sku: product.sku,
-      productName: product.productName,
-      CATEGORY: product.category?.toUpperCase(),
-      PRICE: product.price,
-      DESCRIPTION: product.description,
-      FEATURED: product.featured ? 'TRUE' : 'FALSE',
-      STATUS: product.status,
-      'Shipping(First Item)': product.shippingFirst || '',
-      'Shipping(Additional Item)': product.shippingAdditional || ''
-    }
+  console.log('🔍 CSV GENERATION: Processing', products.length, 'products')
+  
+  const csvData = products.map(product => ({
+    // Core required fields
+    'SKU': product.sku || '',
+    'PRODUCTNAME': product.productName || '',
+    'CATEGORY': product.category || '',
+    'PRICE': product.price || 0,
+    'ORIGINAL PRICE': product.originalPrice || '',
+    'DESCRIPTION': product.description || '',
+    'FEATURED': product.featured ? 'TRUE' : 'FALSE',
+    'STATUS': product.status || 'active',
     
-    // Add category-specific fields
-    if (product.category === 'coffee') {
-      return {
-        ...baseData,
-        'ROAST LEVEL': product.roastLevel || '',
-        ORIGIN: product.origin || '',
-        FORMAT: product.format || '',
-        WEIGHT: product.weight || '',
-        'TASTING NOTES': Array.isArray(product.tastingNotes) 
-          ? product.tastingNotes.join(', ')
-          : product.tastingNotes || ''
-      }
-    }
+    // Coffee-specific fields
+    'ROAST LEVEL': product.roastLevel || '',
+    'ORIGIN': Array.isArray(product.origin) ? product.origin.join(', ') : (product.origin || ''),
+    'BLEND COMPOSITION': product.blendComposition || '', // FIXED: Now included
+    'FORMAT': product.format || '',
+    'WEIGHT': product.weight || '',
+    'TASTING NOTES': Array.isArray(product.tastingNotes) 
+      ? product.tastingNotes.join(', ') 
+      : (product.tastingNotes || ''),
     
-    if (product.category === 'subscription') {
-      return {
-        ...baseData,
-        NOTIFICATION: product.notification || '',
-        'SUBSCRIPTION INTERVAL': product.subscriptionInterval || '',
-        'DELIVERY FREQUENCY': product.deliveryFrequency || '',
-        'NOTIFICATION ENABLED': product.notificationEnabled ? 'TRUE' : 'FALSE',
-        'MAX DELIVERIES': product.maxDeliveries || '',
-        'TRIAL DAYS': product.trialDays || 0
-      }
-    }
+    // Shipping fields (with exact header matching)
+    'SHIPPINGFIRST': product.shippingFirst || '',
+    'SHIPPINGADDITIONAL': product.shippingAdditional || '',
     
-    return baseData
+    // Enhanced subscription fields
+    'BILLING INTERVAL': product.billingInterval || '',
+    'DELIVERY FREQUENCY': product.deliveryFrequency || '',
+    'TRIAL PERIOD DAYS': product.trialPeriodDays || '',
+    'MAX DELIVERIES': product.maxDeliveries || '',
+    'ENABLE NOTIFICATION BANNER': product.enableNotificationBanner ? 'TRUE' : 'FALSE',
+    'NOTIFICATION MESSAGE': product.notificationMessage || '',
+    
+    // Gift bundle fields  
+    'BUNDLE TYPE': product.bundleType || '',
+    'BUNDLE CONTENTS': product.bundleContents ? 
+      product.bundleContents.map(item => `${item.sku}:${item.quantity}:${item.unitPrice}`).join(',') : '',
+    'BUNDLE DESCRIPTION': product.bundleDescription || '',
+    'GIFT MESSAGE': product.giftMessage || '',
+    'PACKAGING TYPE': product.packagingType || '',
+    'SEASONAL AVAILABILITY': product.seasonalAvailability || '',
+    
+    // Status fields
+    'IN STOCK': product.inStock ? 'TRUE' : 'FALSE'
+  }))
+  
+  const csv = Papa.unparse(csvData, { 
+    header: true,
+    skipEmptyLines: false 
   })
   
-  return Papa.unparse(csvData, { header: true })
+  console.log('✅ CSV GENERATION: Complete', {
+    outputLength: csv.length,
+    headerLine: csv.split('\n')[0],
+    totalLines: csv.split('\n').length,
+    includesBlendComposition: csv.includes('BLEND COMPOSITION')
+  })
+  
+  return csv
 }

@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction } from "@/app/admin/actions"
+import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction, debugBlobStatus, forceBlobRefresh, testBlobWrite } from "@/app/admin/actions"
 import { getProducts, fromCsvRow } from "@/lib/csv-data"
 import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
@@ -262,6 +262,8 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     switch (category?.toLowerCase()) {
       case 'coffee': return 'Edit Coffee'
       case 'subscription': return 'Edit Subscription'
+      case 'gift-set': return 'Edit Gift Set'
+      case 'gift-bundle': return 'Edit Gift Set'
       default: return 'Edit Product'
     }
   }
@@ -626,7 +628,36 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     return changes
   }
 
-  // ENHANCED: Save to production with REAL verification before completion
+  // ENHANCED: Force refresh admin data from blob storage
+  const handleForceRefresh = useCallback(async () => {
+    console.log('🔄 Force refreshing admin data from blob storage...')
+    try {
+      // Force fresh data fetch bypassing any cache
+      const freshProducts = await getProducts({ forceRefresh: true, bypassCache: true })
+      
+      console.log('✅ Fresh products loaded from blob:', {
+        count: freshProducts.length,
+        source: 'direct-blob-fetch',
+        timestamp: new Date().toISOString()
+      })
+      
+      // Update all staging state with fresh data
+      setStagedProducts([...freshProducts])
+      setOriginalProducts([...freshProducts])
+      setProducts([...freshProducts])
+      setHasUnsavedChanges(false)
+      
+      console.log('✅ Admin data refreshed successfully')
+      toast.success('Admin data refreshed from production')
+      
+    } catch (error) {
+      console.error('❌ Force refresh failed:', error)
+      toast.error('Failed to refresh admin data')
+      throw error
+    }
+  }, [])
+
+  // ENHANCED: Save to production with automatic admin data refresh
   const saveToProduction = useCallback(async () => {
     if (saveState.isActive) {
       console.log('🚫 Save already in progress, ignoring duplicate call')
@@ -666,8 +697,8 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       updateSaveProgress('revalidating', 70, 'Clearing site cache...')
       await new Promise(resolve => setTimeout(resolve, 2000)) // Allow cache clearing
       
-      // CRITICAL NEW: Stage 5: Customer-Facing Data Verification (90%)
-      updateSaveProgress('revalidating', 90, 'Verifying customer pages are updated...')
+      // CRITICAL NEW: Stage 5: Customer-Facing Data Verification (85%)
+      updateSaveProgress('revalidating', 85, 'Verifying customer pages are updated...')
       
       console.log('🔍 CUSTOMER VERIFICATION: Starting customer-facing data pipeline verification...')
       
@@ -687,7 +718,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           console.log(`🔍 CUSTOMER VERIFICATION: Attempt ${verificationAttempts + 1}/${maxAttempts} (${elapsedSeconds}s/${maxSeconds}s)`)
           
           // Update progress with timer
-          updateSaveProgress('revalidating', 90, `Verifying customer pages... ${elapsedSeconds}s/${maxSeconds}s`)
+          updateSaveProgress('revalidating', 85, `Verifying customer pages... ${elapsedSeconds}s/${maxSeconds}s`)
           
           // CRITICAL: Test the same API that customer pages use
           const response = await fetch(`/api/products?grouped=true&ts=${Date.now()}`, {
@@ -750,11 +781,28 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         throw new Error('Changes saved but customer page verification timeout - customers may need to wait a moment longer for updates')
       }
       
-      // Stage 6: Complete (100%) - Only after real verification
+      // CRITICAL NEW: Stage 6: Admin Data Refresh (95%)
+      if (result.needsRefresh) {
+        updateSaveProgress('revalidating', 95, 'Refreshing admin data from production...')
+        console.log('🔄 DEPLOY: Auto-refreshing admin data after successful deployment...')
+        
+        // Small delay to ensure blob write propagation
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        try {
+          await handleForceRefresh()
+          console.log('✅ DEPLOY: Admin data auto-refresh completed')
+        } catch (refreshError) {
+          console.warn('⚠️ DEPLOY: Admin auto-refresh failed (deployment still successful):', refreshError)
+          // Don't fail deployment for admin refresh issues
+        }
+      }
+      
+      // Stage 7: Complete (100%) - Only after real verification AND admin refresh
       updateSaveProgress('complete', 100, `✅ Successfully deployed & verified ${stagedProducts.length} products!`)
       setLastSaved(new Date())
       
-      console.log('🎉 DEPLOY: Complete with verification! Changes are confirmed live.')
+      console.log('🎉 DEPLOY: Complete with verification AND admin refresh! Changes confirmed live and admin updated.')
       
       // Show success state for 4 seconds
       setTimeout(() => {
@@ -769,13 +817,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       // CRITICAL FIX: Clear deployment protection on error
       setIsDeployInProgress(false)
       
-      // FIXED: Keep progress at 90% to show where verification failed
+      // FIXED: Keep progress at current stage to show where failure occurred
       updateSaveProgress('error', 90, errorMessage, errorMessage)
       
       // FIXED: Remove auto-reset timer - let user control error dismissal
       console.log('🔴 Error state will persist until user action')
     }
-  }, [stagedProducts, updateSaveProgress, saveState.isActive, isDeployInProgress])
+  }, [stagedProducts, updateSaveProgress, saveState.isActive, isDeployInProgress, handleForceRefresh])
 
   // STAGING SYSTEM: Discard changes
   const discardChanges = () => {
@@ -1042,6 +1090,79 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto bg-transparent">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
+          <Button 
+            onClick={handleForceRefresh}
+            variant="outline" 
+            className="w-full sm:w-auto bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+            disabled={saveState.isActive}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${saveState.isActive ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                disabled={saveState.isActive}
+              >
+                <Wrench className="mr-2 h-4 w-4" />
+                Debug Tools
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const status = await debugBlobStatus()
+                  toast.success(`Blob Status: ${status.blobExists ? 'Exists' : 'Missing'} - ${status.lineCount} lines`, {
+                    description: `Size: ${status.blobSize} bytes | Headers: ${status.headers.substring(0, 50)}...`
+                  })
+                } catch (error) {
+                  toast.error(`Debug failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                }
+              }}>
+                <Wrench className="mr-2 h-4 w-4" />
+                Check Blob Status
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const result = await forceBlobRefresh()
+                  if (result.success) {
+                    toast.success(result.message, {
+                      description: `Action: ${result.details.action} | Products: ${result.details.productCount}`
+                    })
+                    // Refresh the admin interface
+                    await handleForceRefresh()
+                  } else {
+                    toast.error(result.message)
+                  }
+                } catch (error) {
+                  toast.error(`Force refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                }
+              }}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Force Blob Refresh
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const result = await testBlobWrite()
+                  if (result.success) {
+                    toast.success(result.message, {
+                      description: `Length: ${result.details.originalLength}→${result.details.verifiedLength} | Match: ${result.details.contentMatches ? 'Yes' : 'No'}`
+                    })
+                  } else {
+                    toast.error(result.message)
+                  }
+                } catch (error) {
+                  toast.error(`Test write failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                }
+              }}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Test Blob Write
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">

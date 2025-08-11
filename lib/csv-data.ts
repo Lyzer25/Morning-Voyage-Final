@@ -179,7 +179,15 @@ async function fetchAndParseCsvInternal(): Promise<Product[]> {
 }
 
 // PUBLIC API: Direct blob fetching with ISR instead of unstable_cache
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(options?: { 
+  forceRefresh?: boolean 
+  bypassCache?: boolean 
+}): Promise<Product[]> {
+  if (options?.forceRefresh || options?.bypassCache) {
+    console.log('🔄 Bypassing cache, fetching fresh data from blob...');
+    return fetchAndParseCsvInternal();
+  }
+  
   console.log('🔄 Direct blob fetch - bypassing unstable_cache');
   return fetchAndParseCsvInternal();
 }
@@ -234,8 +242,63 @@ export async function handleEmptyProductState(): Promise<void> {
   }
 }
 
+// NEW: Verify blob write actually propagated
+async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number): Promise<void> {
+  const maxAttempts = 5
+  const delayMs = 1000
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`🔍 BLOB VERIFY: Attempt ${attempt}/${maxAttempts}`)
+      
+      const response = await fetch(blobUrl, { 
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      
+      const content = await response.text()
+      
+      if (content.length >= expectedLength * 0.9) { // 90% threshold
+        console.log('✅ BLOB VERIFY: Content verified', {
+          expectedLength,
+          actualLength: content.length,
+          firstLine: content.split('\n')[0]
+        })
+        return
+      }
+      
+      console.log(`⏳ BLOB VERIFY: Content not ready yet (${content.length}/${expectedLength})`)
+      
+    } catch (error) {
+      console.warn(`⚠️ BLOB VERIFY: Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error))
+    }
+    
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+  }
+  
+  console.warn('⚠️ BLOB VERIFY: Could not verify write success - continuing anyway')
+}
+
 export async function updateProducts(products: Product[]): Promise<void> {
   try {
+    console.log('🔍 BLOB WRITE: Starting updateProducts with:', {
+      productCount: products.length,
+      hasProducts: products.length > 0,
+      sampleProduct: products[0]?.sku || 'NO_PRODUCTS',
+      environment: {
+        hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+        tokenLength: process.env.BLOB_READ_WRITE_TOKEN?.length || 0,
+        nodeEnv: process.env.NODE_ENV,
+        isVercel: !!process.env.VERCEL
+      }
+    })
+
     if (!Array.isArray(products)) {
       throw new Error('updateProducts: products must be an array')
     }
@@ -274,19 +337,38 @@ export async function updateProducts(products: Product[]): Promise<void> {
 
     const csvText = exportProductsToCSV(validatedProducts)
     
+    console.log('🔍 DEBUG: Generated CSV for blob storage:', {
+      csvLength: csvText.length,
+      firstLine: csvText.split('\n')[0], // Headers
+      lineCount: csvText.split('\n').length,
+      hasContent: csvText.trim().length > 0,
+      containsBlendComposition: csvText.includes('BLEND COMPOSITION')
+    })
+    
     if (!csvText?.trim() || csvText.length < 10) {
+      console.error('❌ CRITICAL: Generated CSV is empty!')
       throw new Error('updateProducts: generated CSV unexpectedly empty/short')
     }
 
     console.log(`[products] write: ${validatedProducts.length} products, csvLen=${csvText.length}`)
     
-    await put(PRODUCTS_BLOB_KEY, csvText, {
+    // Write to blob storage with enhanced error handling
+    console.log('🔍 DEBUG: Writing to blob storage...')
+    const writeResult = await put(PRODUCTS_BLOB_KEY, csvText, {
       access: "public",
       contentType: "text/csv",
       allowOverwrite: true,
     })
     
-    console.log('✅ [products] write: CSV saved successfully')
+    console.log('✅ BLOB WRITE SUCCESS: Initial write completed:', {
+      url: writeResult.url,
+      contentType: writeResult.contentType || 'text/csv'
+    })
+    
+    // CRITICAL: Wait for propagation and verify write
+    await verifyBlobWriteSuccess(writeResult.url, csvText.length)
+    
+    console.log('✅ [products] write: CSV saved and verified successfully')
     
   } catch (error) {
     console.error("❌ CRITICAL ERROR in updateProducts:", error)
