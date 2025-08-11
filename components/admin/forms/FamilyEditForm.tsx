@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check, Upload, Image as ImageIcon, X, Camera, Grid3X3, Plus } from 'lucide-react';
+import { Coffee, Package, DollarSign, Truck, Loader2, AlertTriangle, Check, Upload, Image as ImageIcon, X, Camera, Grid3X3, Plus, CheckCircle, XCircle } from 'lucide-react';
 import { uploadProductImages, validateImageFiles } from '@/lib/blob-storage';
 
 interface FamilyEditFormProps {
@@ -847,15 +848,126 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
         {/* Individual Mode - Grid of Variant Forms + Add Variant Cards */}
         {editMode === 'individual' && (
           <div className="space-y-4">
+            {/* Family Status Overview Dashboard */}
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                {familyData.productName} - Variant Availability Status
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Available Variants */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <Label className="text-sm font-medium text-green-800">
+                      Available to Customers ({Object.values(variantData).filter(v => v.status === 'active').length})
+                    </Label>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.values(variantData)
+                      .filter(v => v.status === 'active')
+                      .map(v => (
+                        <div key={v.sku} className="text-xs text-green-700">
+                          {v.formatCode} ({v.weight}) - ${v.price?.toFixed(2)}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+                
+                {/* Unavailable Variants */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                    <Label className="text-sm font-medium text-gray-600">
+                      Unavailable ({Object.values(variantData).filter(v => v.status === 'draft').length})
+                    </Label>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.values(variantData)
+                      .filter(v => v.status === 'draft')
+                      .map(v => (
+                        <div key={v.sku} className="text-xs text-gray-500">
+                          {v.formatCode} ({v.weight}) - ${v.price?.toFixed(2)}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-blue-800">Quick Actions</Label>
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        // Make all variants available (use existing updateVariant pattern)
+                        Object.keys(variantData).forEach(sku => {
+                          updateVariant(sku, { status: 'active' });
+                        });
+                        toast.success('All variants made available');
+                      }}
+                      className="text-xs border-green-300 text-green-700 hover:bg-green-50"
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Make All Available
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        // Make all variants unavailable
+                        Object.keys(variantData).forEach(sku => {
+                          updateVariant(sku, { status: 'draft' });
+                        });
+                        toast.success('All variants made unavailable');
+                      }}
+                      className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
+                    >
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Make All Unavailable
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
               {/* Existing Variants */}
               {Object.values(variantData).map((variant) => {
                 const variantState = variantData[variant.sku] || variant;
                 
+                // Helper function for visual draft state styling
+                const getDraftCardStyle = (variant: Product) => {
+                  if (variant.status === 'draft') {
+                    return {
+                      cardClass: 'opacity-60 bg-gray-50 border-gray-300 relative',
+                      headerClass: 'bg-gray-100 border-gray-300',
+                      contentClass: 'opacity-75',
+                      titleClass: 'text-gray-500',
+                      subtitleClass: 'text-gray-400'
+                    };
+                  }
+                  return {
+                    cardClass: 'bg-white border-gray-200',
+                    headerClass: 'bg-gray-50 border-gray-200', 
+                    contentClass: '',
+                    titleClass: 'text-gray-900',
+                    subtitleClass: 'text-gray-600'
+                  };
+                };
+
+                const style = getDraftCardStyle(variantState);
+                
                 return (
-                  <Card key={variant.sku} className="relative">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center justify-between">
+                  <Card key={variant.sku} className={`relative transition-all duration-200 ${style.cardClass}`}>
+                    <CardHeader className={`pb-3 ${style.headerClass}`}>
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Badge 
                             variant="secondary" 
@@ -863,14 +975,57 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
                               variant.format === 'whole-bean' ? 'bg-amber-100 text-amber-800' :
                               variant.format === 'ground' ? 'bg-green-100 text-green-800' :
                               'bg-purple-100 text-purple-800'
-                            }`}
+                            } ${variantState.status === 'draft' ? 'opacity-60' : ''}`}
                           >
                             {variant.formatCode}
                           </Badge>
-                          <span>{variant.weight}</span>
+                          <Badge variant="secondary" className={variantState.status === 'draft' ? 'opacity-60' : ''}>
+                            ${variantState.price?.toFixed(2)}
+                          </Badge>
                         </div>
-                        <span className="text-xs text-gray-500">{variant.sku}</span>
-                      </CardTitle>
+                        
+                        {/* Individual Status Switch (same pattern as main product manager) */}
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={variantState.status === "active"}
+                            onCheckedChange={(checked) => updateVariant(variant.sku, { 
+                              status: checked ? "active" : "draft" 
+                            })}
+                            className="data-[state=checked]:bg-green-600"
+                            aria-label={`Toggle ${variant.formatCode} status`}
+                          />
+                          <Badge 
+                            className={`text-xs ${
+                              variantState.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {variantState.status === 'active' ? 'Live' : 'Draft'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <h4 className={`font-semibold ${style.titleClass}`}>
+                          {variant.formatCode} - {variant.weight}
+                        </h4>
+                        <p className={`text-sm ${style.subtitleClass}`}>
+                          SKU: {variant.sku}
+                        </p>
+                        
+                        {/* Status Description */}
+                        <p className={`text-xs ${
+                          variantState.status === 'active' 
+                            ? 'text-green-600' 
+                            : 'text-gray-500'
+                        }`}>
+                          {variantState.status === 'active' 
+                            ? '✓ Visible to customers' 
+                            : '○ Hidden from customers'
+                          }
+                        </p>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {/* Variant-Specific Fields */}
@@ -971,6 +1126,15 @@ export const FamilyEditForm: React.FC<FamilyEditFormProps> = ({
                         </div>
                       </div>
                     </CardContent>
+                    
+                    {/* Draft Overlay Indicator */}
+                    {variantState.status === 'draft' && (
+                      <div className="absolute inset-0 bg-gray-500/10 rounded-lg pointer-events-none">
+                        <div className="absolute top-2 right-2 bg-gray-600 text-white text-xs px-2 py-1 rounded font-medium">
+                          UNAVAILABLE
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 );
               })}

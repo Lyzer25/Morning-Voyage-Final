@@ -13,6 +13,7 @@ import {
   normalizeMoney,
   normalizeTastingNotes,
   normalizeRoastLevel,
+  processMultipleOrigins,
   norm
 } from "@/lib/csv-helpers"
 import { groupProductFamilies, convertFamiliesToGroupedProducts } from "@/lib/family-grouping"
@@ -44,10 +45,11 @@ export function fromCsvRow(row: Record<string, any>): Product {
     originalPrice: row["ORIGINAL PRICE"] ? normalizeMoney(row["ORIGINAL PRICE"]) : price,
     description: row["DESCRIPTION"]?.toString().trim() || '',
     roastLevel: normalizeRoastLevel(row["ROAST LEVEL"]),
-    origin: row["ORIGIN"]?.toString().trim() || '',
+    origin: processMultipleOrigins(row["ORIGIN"]),
     format: normalizeFormat(row["FORMAT"]),
     weight: normalizeWeight(row["WEIGHT"]),
     tastingNotes: normalizeTastingNotes(row["TASTING NOTES"]),
+    blendComposition: row["BLEND COMPOSITION"]?.toString().trim() || undefined,
     featured: normalizeBool(row["FEATURED"]),
     shippingFirst: row["SHIPPINGFIRST"] ? normalizeMoney(row["SHIPPINGFIRST"]) : undefined,
     shippingAdditional: row["SHIPPINGADDITIONAL"] ? normalizeMoney(row["SHIPPINGADDITIONAL"]) : undefined,
@@ -176,30 +178,23 @@ async function fetchAndParseCsvInternal(): Promise<Product[]> {
   }
 }
 
-// CENTRALIZED CACHE: Single unstable_cache for all product data
-const getAllProductsCached = unstable_cache(
-  fetchAndParseCsvInternal,
-  ['products-single-shot-v1'], // Bump version if parser logic changes
-  { 
-    revalidate: 3600, 
-    tags: [PRODUCTS_TAG] 
-  }
-);
-
-// PUBLIC API: Clean, optionless functions
+// PUBLIC API: Direct blob fetching with ISR instead of unstable_cache
 export async function getProducts(): Promise<Product[]> {
-  return getAllProductsCached();
+  console.log('🔄 Direct blob fetch - bypassing unstable_cache');
+  return fetchAndParseCsvInternal();
 }
 
 export async function getGroupedProducts(): Promise<any[]> {
-  const baseProducts = await getAllProductsCached();
+  console.log('🔄 Direct grouped products fetch - bypassing unstable_cache');
+  const baseProducts = await fetchAndParseCsvInternal();
   const coffeeProducts = baseProducts.filter(p => p.category?.toLowerCase() === 'coffee');
   const productFamilies = groupProductFamilies(coffeeProducts);
   return convertFamiliesToGroupedProducts(productFamilies);
 }
 
 export async function getProductsByCategory(category: string): Promise<Product[]> {
-  const baseProducts = await getAllProductsCached();
+  console.log('🔄 Direct category fetch - bypassing unstable_cache');
+  const baseProducts = await fetchAndParseCsvInternal();
   return baseProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
 }
 

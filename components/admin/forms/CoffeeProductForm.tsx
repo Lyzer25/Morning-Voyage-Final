@@ -185,6 +185,7 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
     tastingNotes: Array.isArray(product?.tastingNotes) 
       ? product.tastingNotes.join(', ') 
       : product?.tastingNotes || '',
+    blendComposition: product?.blendComposition || '',
     
     // Status fields
     featured: product?.featured || false,
@@ -482,6 +483,19 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
             />
             <p className="text-xs text-gray-500 mt-1">
               Enter tasting notes separated by commas
+            </p>
+          </div>
+          
+          <div>
+            <Label htmlFor="blendComposition">Blend Composition (Optional)</Label>
+            <Input
+              id="blendComposition"
+              value={formData.blendComposition}
+              onChange={(e) => setFormData(prev => ({...prev, blendComposition: e.target.value}))}
+              placeholder="e.g. 60% Colombian, 40% Brazilian"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Specify the blend ratios if this is a blend coffee
             </p>
           </div>
         </div>

@@ -61,15 +61,49 @@ interface FormState {
 
 export async function exportCsvAction(): Promise<{ error?: string; csv?: string }> {
   try {
-    const products = await getProducts()
-    if (products.length === 0) {
-      return { error: "No products to export." }
+    console.log('📥 Exporting raw CSV from blob storage');
+    
+    // Direct blob fetch - no processing
+    const { list } = await import('@vercel/blob');
+    const blobs = await list({ prefix: "products.csv" });
+    
+    if (!blobs.blobs || blobs.blobs.length === 0) {
+      return { error: 'No CSV file found in blob storage' };
     }
-    const csv = exportProductsToCSV(products)
-    return { csv }
+    
+    // Get the CSV file directly
+    const targetBlob = blobs.blobs[0];
+    console.log('📥 Found blob for export:', {
+      pathname: targetBlob.pathname,
+      url: targetBlob.url,
+      size: targetBlob.size
+    });
+    
+    const response = await fetch(targetBlob.url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+    }
+    
+    const csvContent = await response.text();
+    
+    if (!csvContent || csvContent.trim().length === 0) {
+      return { error: 'CSV file is empty' };
+    }
+    
+    console.log('✅ Raw CSV exported successfully:', {
+      blobUrl: targetBlob.url,
+      size: csvContent.length,
+      firstLine: csvContent.split('\n')[0]
+    });
+    
+    return { csv: csvContent };
+    
   } catch (error) {
-    console.error("Error exporting CSV:", error)
-    return { error: "Failed to export products." }
+    console.error('❌ CSV export failed:', error);
+    const errorMessage = error instanceof Error 
+      ? `CSV export failed: ${error.message}` 
+      : "Failed to export CSV file.";
+    return { error: errorMessage };
   }
 }
 

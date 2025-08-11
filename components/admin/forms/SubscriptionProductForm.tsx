@@ -31,22 +31,22 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
     originalPrice: product?.originalPrice || undefined,
     category: 'subscription',
     
-    // Subscription-specific fields
-    notification: product?.notification || '',
-    subscriptionInterval: product?.subscriptionInterval || 'monthly',
+    // Enhanced Subscription fields (supporting both naming conventions)
+    billingInterval: product?.billingInterval || product?.subscriptionInterval || 'monthly',
     deliveryFrequency: product?.deliveryFrequency || 'monthly',
-    notificationEnabled: product?.notificationEnabled || false,
+    trialPeriodDays: product?.trialPeriodDays || product?.trialDays || 0,
     maxDeliveries: product?.maxDeliveries || undefined,
-    trialDays: product?.trialDays || 0,
+    enableNotificationBanner: product?.enableNotificationBanner || product?.notificationEnabled || false,
+    notificationMessage: product?.notificationMessage || product?.notification || '',
     
     // Status fields
     featured: product?.featured || false,
     status: product?.status || 'active',
     inStock: product?.inStock !== false,
     
-    // Shipping (usually free for subscriptions)
-    shippingFirst: product?.shippingFirst || 0,
-    shippingAdditional: product?.shippingAdditional || 0
+    // Shipping configuration
+    shippingFirst: product?.shippingFirst || undefined,
+    shippingAdditional: product?.shippingAdditional || undefined
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,12 +54,12 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
     
     try {
       // Subscription-specific validation
-      if (!formData.subscriptionInterval) {
-        throw new Error('Subscription interval is required');
+      if (!formData.billingInterval) {
+        throw new Error('Billing interval is required');
       }
       
-      if (formData.trialDays < 0 || formData.trialDays > 90) {
-        throw new Error('Trial days must be between 0 and 90');
+      if (formData.trialPeriodDays < 0 || formData.trialPeriodDays > 90) {
+        throw new Error('Trial period days must be between 0 and 90');
       }
       
       const productData: Product = {
@@ -141,17 +141,16 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="subscriptionInterval">Billing Interval *</Label>
+              <Label htmlFor="billingInterval">Billing Interval *</Label>
               <Select
-                value={formData.subscriptionInterval}
-                onValueChange={(value) => setFormData(prev => ({...prev, subscriptionInterval: value}))}
+                value={formData.billingInterval}
+                onValueChange={(value) => setFormData(prev => ({...prev, billingInterval: value}))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select billing interval" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="quarterly">Quarterly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
@@ -180,14 +179,14 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="trialDays">Trial Period (days)</Label>
+              <Label htmlFor="trialPeriodDays">Trial Period (days)</Label>
               <Input
-                id="trialDays"
+                id="trialPeriodDays"
                 type="number"
                 min="0"
                 max="90"
-                value={formData.trialDays}
-                onChange={(e) => setFormData(prev => ({...prev, trialDays: parseInt(e.target.value) || 0}))}
+                value={formData.trialPeriodDays}
+                onChange={(e) => setFormData(prev => ({...prev, trialPeriodDays: parseInt(e.target.value) || 0}))}
                 placeholder="7"
               />
               <p className="text-xs text-gray-500 mt-1">0 = No trial period</p>
@@ -217,22 +216,22 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
           
           <div className="flex items-center space-x-2 mb-4">
             <Checkbox
-              id="notificationEnabled"
-              checked={formData.notificationEnabled}
-              onCheckedChange={(checked) => setFormData(prev => ({...prev, notificationEnabled: Boolean(checked)}))}
+              id="enableNotificationBanner"
+              checked={formData.enableNotificationBanner}
+              onCheckedChange={(checked) => setFormData(prev => ({...prev, enableNotificationBanner: Boolean(checked)}))}
             />
-            <Label htmlFor="notificationEnabled" className="text-sm">
+            <Label htmlFor="enableNotificationBanner" className="text-sm">
               Enable promotional notification banner
             </Label>
           </div>
           
-          {formData.notificationEnabled && (
+          {formData.enableNotificationBanner && (
             <div>
-              <Label htmlFor="notification">Notification Message</Label>
+              <Label htmlFor="notificationMessage">Notification Message</Label>
               <Input
-                id="notification"
-                value={formData.notification}
-                onChange={(e) => setFormData(prev => ({...prev, notification: e.target.value}))}
+                id="notificationMessage"
+                value={formData.notificationMessage}
+                onChange={(e) => setFormData(prev => ({...prev, notificationMessage: e.target.value}))}
                 placeholder="$10 off your first month!"
                 maxLength={60}
               />

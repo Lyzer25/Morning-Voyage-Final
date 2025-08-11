@@ -37,22 +37,83 @@ export const HEADER_ALIASES: Record<string, string> = {
   "tastingnotes": "TASTING NOTES",
   "notes": "TASTING NOTES",
   
+  // Blend composition fields
+  "blend composition": "BLEND COMPOSITION",
+  "blendcomposition": "BLEND COMPOSITION", 
+  "composition": "BLEND COMPOSITION",
+  "blend": "BLEND COMPOSITION",
+  
+  // Enhanced Subscription fields
+  "billing interval": "BILLING INTERVAL",
+  "billinginterval": "BILLING INTERVAL",
+  "subscription interval": "BILLING INTERVAL",
+  "interval": "BILLING INTERVAL",
+  "delivery frequency": "DELIVERY FREQUENCY",
+  "deliveryfrequency": "DELIVERY FREQUENCY",
+  "frequency": "DELIVERY FREQUENCY",
+  "trial period": "TRIAL PERIOD DAYS",
+  "trial period days": "TRIAL PERIOD DAYS",
+  "trialperioddays": "TRIAL PERIOD DAYS",
+  "trial days": "TRIAL PERIOD DAYS",
+  "trialdays": "TRIAL PERIOD DAYS",
+  "max deliveries": "MAX DELIVERIES",
+  "maxdeliveries": "MAX DELIVERIES",
+  "maximum deliveries": "MAX DELIVERIES",
+  "notification banner": "ENABLE NOTIFICATION BANNER",
+  "enable notification banner": "ENABLE NOTIFICATION BANNER",
+  "enablenotificationbanner": "ENABLE NOTIFICATION BANNER",
+  "notification enabled": "ENABLE NOTIFICATION BANNER",
+  "notification message": "NOTIFICATION MESSAGE",
+  "notificationmessage": "NOTIFICATION MESSAGE",
+  "banner message": "NOTIFICATION MESSAGE",
+  "promo message": "NOTIFICATION MESSAGE",
+  "in stock": "IN STOCK",
+  "instock": "IN STOCK",
+  "stock": "IN STOCK",
+  "available": "IN STOCK",
+  
+  // Gift Bundle fields
+  "bundle type": "BUNDLE TYPE",
+  "bundletype": "BUNDLE TYPE",
+  "type": "BUNDLE TYPE",
+  "bundle contents": "BUNDLE CONTENTS",
+  "bundlecontents": "BUNDLE CONTENTS",
+  "contents": "BUNDLE CONTENTS",
+  "items": "BUNDLE CONTENTS",
+  "bundle description": "BUNDLE DESCRIPTION",
+  "bundledescription": "BUNDLE DESCRIPTION",
+  "bundle desc": "BUNDLE DESCRIPTION",
+  "gift message": "GIFT MESSAGE",
+  "giftmessage": "GIFT MESSAGE",
+  "message": "GIFT MESSAGE",
+  "packaging type": "PACKAGING TYPE",
+  "packagingtype": "PACKAGING TYPE",
+  "packaging": "PACKAGING TYPE",
+  "box type": "PACKAGING TYPE",
+  "seasonal availability": "SEASONAL AVAILABILITY",
+  "seasonalavailability": "SEASONAL AVAILABILITY",
+  "seasonal": "SEASONAL AVAILABILITY",
+  "availability": "SEASONAL AVAILABILITY",
+  
   // Pricing fields
   "original price": "ORIGINAL PRICE",
   "originalprice": "ORIGINAL PRICE",
   "msrp": "ORIGINAL PRICE",
   
-  // Shipping fields (handle exact CSV quirks)
+  // Shipping fields (handle exact CSV quirks with spacing)
   "shipping( first item)": "SHIPPINGFIRST",
   "shipping(first item)": "SHIPPINGFIRST", 
   "shipping first item": "SHIPPINGFIRST",
   "shipping first": "SHIPPINGFIRST",
   "shippingfirst": "SHIPPINGFIRST",
+  "first item shipping": "SHIPPINGFIRST",
   "shipping(additional item)": "SHIPPINGADDITIONAL",
   "shipping( additional item)": "SHIPPINGADDITIONAL",
   "shipping additional item": "SHIPPINGADDITIONAL",
   "shipping additional": "SHIPPINGADDITIONAL",
   "shippingadditional": "SHIPPINGADDITIONAL",
+  "additional shipping": "SHIPPINGADDITIONAL",
+  "additional item shipping": "SHIPPINGADDITIONAL",
   
   // Status fields
   "status": "STATUS",
@@ -127,6 +188,66 @@ export function normalizeRoastLevel(v?: string): string {
   if (s.includes("dark")) return "dark"
   if (s.includes("medium")) return "medium"
   return s // Keep original if no standard match
+}
+
+// NEW: Process multiple origins (handle comma-separated values)
+export function processMultipleOrigins(originValue?: string): string | string[] | undefined {
+  if (!originValue) return undefined;
+  
+  const trimmed = originValue.toString().trim();
+  if (!trimmed) return undefined;
+  
+  // Check if comma-separated
+  if (trimmed.includes(',')) {
+    const origins = trimmed
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean);
+    
+    // Return as array if multiple, string if only one after processing
+    return origins.length > 1 ? origins : origins[0];
+  }
+  
+  return trimmed;
+}
+
+// NEW: Helper functions for subscription and gift bundle processing
+export function parseIntSafe(value: any): number | undefined {
+  if (value == null || value === '') return undefined;
+  const parsed = parseInt(value);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+export function parseBooleanSafe(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim();
+    return lower === 'true' || lower === '1' || lower === 'yes' || lower === 'on';
+  }
+  return false;
+}
+
+export function parseBundleContents(value: string): any[] {
+  if (!value || typeof value !== 'string') return [];
+  
+  try {
+    // Expected format: "SKU1:QTY1:PRICE1,SKU2:QTY2:PRICE2"
+    return value.split(',').map(item => {
+      const [sku, quantity, unitPrice] = item.trim().split(':');
+      if (!sku?.trim()) return null;
+      
+      return {
+        sku: sku.trim(),
+        productName: '', // Will be populated from SKU lookup if needed
+        quantity: parseInt(quantity) || 1,
+        unitPrice: parseFloat(unitPrice) || 0,
+        notes: ''
+      };
+    }).filter(Boolean); // Remove null entries
+  } catch (error) {
+    console.warn('Failed to parse bundle contents:', value, error);
+    return [];
+  }
 }
 
 // Enhanced transformHeader using new normalization system

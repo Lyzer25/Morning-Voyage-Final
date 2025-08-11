@@ -40,6 +40,7 @@ import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import { CoffeeProductForm } from "./forms/CoffeeProductForm"
 import { SubscriptionProductForm } from "./forms/SubscriptionProductForm"
+import { GiftBundleProductForm } from "./forms/GiftBundleProductForm"
 import { FamilyEditForm } from "./forms/FamilyEditForm"
 import ProductForm from "./product-form" // Assuming this is a general form
 import Papa from "papaparse"
@@ -58,7 +59,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
   const [deletingSku, setDeletingSku] = useState<string | null>(null)
-  const [activeFormType, setActiveFormType] = useState<'coffee' | 'subscription' | 'general'>('coffee')
+  const [activeFormType, setActiveFormType] = useState<'coffee' | 'subscription' | 'gift-set' | 'general'>('coffee')
   
   // Family editing state
   const [isFamilyEditOpen, setIsFamilyEditOpen] = useState(false)
@@ -69,7 +70,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
-  const handleAddNewProduct = (category: 'coffee' | 'subscription' | 'general') => {
+  const handleAddNewProduct = (category: 'coffee' | 'subscription' | 'gift-set' | 'general') => {
     setEditingProduct(undefined)
     setActiveFormType(category)
     setIsEditDialogOpen(true)
@@ -155,10 +156,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }, [])
 
-  const getCategoryFormType = (category: string): 'coffee' | 'subscription' | 'general' => {
+  const getCategoryFormType = (category: string): 'coffee' | 'subscription' | 'gift-set' | 'general' => {
     switch (category?.toLowerCase()) {
       case 'coffee': return 'coffee'
       case 'subscription': return 'subscription'
+      case 'gift-set': return 'gift-set'
       default: return 'general'
     }
   }
@@ -1061,6 +1063,10 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Add Subscription
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNewProduct('gift-set')}>
+                <Gift className="mr-2 h-4 w-4" />
+                Add Gift Bundle
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddNewProduct('general')}>
                 <Package className="mr-2 h-4 w-4" />
                 Add General Product
@@ -1716,6 +1722,15 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           <SubscriptionProductForm
             product={editingProduct}
             onSubmit={handleUpdateProduct}
+            onCancel={() => setIsEditDialogOpen(false)}
+            isSubmitting={isPending}
+          />
+        )}
+        
+        {activeFormType === 'gift-set' && (
+          <GiftBundleProductForm
+            product={editingProduct}
+            onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
             onCancel={() => setIsEditDialogOpen(false)}
             isSubmitting={isPending}
           />

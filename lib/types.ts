@@ -6,6 +6,14 @@ export interface ProductImage {
   order: number
 }
 
+export interface BundleItem {
+  sku: string
+  productName: string
+  quantity: number
+  unitPrice: number
+  notes?: string
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -23,22 +31,58 @@ export interface Product {
 
   // Coffee-specific fields
   roastLevel?: 'light' | 'medium' | 'medium-dark' | 'dark' | string;
-  origin?: string;
+  origin?: string | string[]; // Support multiple origins
   format?: 'whole-bean' | 'ground' | 'instant' | 'pods' | string;
   weight?: string;
   tastingNotes?: string[]; // Array of tasting notes
+  blendComposition?: string; // "60% Colombian, 40% Brazilian"
 
-  // Subscription-specific fields
+  // Enhanced Subscription fields (supporting both naming conventions)
   notification?: string;
   subscriptionInterval?: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly' | string;
-  deliveryFrequency?: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | string;
+  billingInterval?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | string; // NEW: Alternative naming
+  deliveryFrequency?: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly' | string;
   notificationEnabled?: boolean;
+  enableNotificationBanner?: boolean; // NEW: Alternative naming
+  notificationMessage?: string; // NEW: Message content
   maxDeliveries?: number;
   trialDays?: number;
+  trialPeriodDays?: number; // NEW: Alternative naming
+
+  // Gift Bundle fields
+  bundleType?: 'starter-pack' | 'premium-bundle' | 'custom-selection' | 'seasonal-gift' | string;
+  bundleContents?: BundleItem[];
+  bundleDescription?: string;
+  giftMessage?: string;
+  packagingType?: 'standard' | 'premium' | 'gift-box' | string;
+  seasonalAvailability?: string;
 
   // Shipping fields
   shippingFirst?: number;
   shippingAdditional?: number;
 
   [key: string]: any; // For other dynamic properties from CSV
+}
+
+// Specialized subscription interface
+export interface SubscriptionProduct extends Product {
+  category: 'subscription';
+  billingInterval: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  deliveryFrequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  trialPeriodDays: number;
+  maxDeliveries?: number;
+  enableNotificationBanner: boolean;
+  notificationMessage?: string;
+  inStock: boolean;
+}
+
+// Specialized gift bundle interface
+export interface GiftBundleProduct extends Product {
+  category: 'gift-set';
+  bundleType: 'starter-pack' | 'premium-bundle' | 'custom-selection' | 'seasonal-gift';
+  bundleContents: BundleItem[];
+  bundleDescription?: string;
+  giftMessage?: string;
+  packagingType?: 'standard' | 'premium' | 'gift-box';
+  seasonalAvailability?: string;
 }

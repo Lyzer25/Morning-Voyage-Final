@@ -125,7 +125,7 @@ export function groupProductsIntoFamilies(products: Product[]): VariantFamily[] 
         sharedProperties: {
           category: product.category,
           description: product.description,
-          origin: product.origin,
+    origin: Array.isArray(product.origin) ? product.origin.join(', ') : product.origin,
           roastLevel: product.roastLevel,
           tastingNotes: normalizeTastingNotes(product.tastingNotes),
           images: product.images
@@ -152,7 +152,7 @@ function extractSharedProperties(variants: Product[]): VariantFamily['sharedProp
   
   // Only include properties that are truly shared across all variants
   if (variants.every(v => v.origin === first.origin)) {
-    shared.origin = first.origin;
+    shared.origin = Array.isArray(first.origin) ? first.origin.join(', ') : first.origin;
   }
   
   if (variants.every(v => v.roastLevel === first.roastLevel)) {

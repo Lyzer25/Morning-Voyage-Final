@@ -70,7 +70,7 @@ export default function ProductForm({ product, isOpen, onOpenChange, onSubmit }:
         weight: formData.get("weight") as string || "",
         roastLevel: formData.get("roastLevel") as string || "",
         origin: formData.get("origin") as string || "",
-        tastingNotes: formData.get("tastingNotes") ? (formData.get("tastingNotes") as string).split(",").map(s => s.trim()).filter(Boolean).join(', ') : '',
+        tastingNotes: formData.get("tastingNotes") ? (formData.get("tastingNotes") as string).split(",").map(s => s.trim()).filter(Boolean) : [],
         featured: formData.get("featured") === "on",
         badge: formData.get("badge") as string || "",
         notification: formData.get("notification") as string || undefined,
