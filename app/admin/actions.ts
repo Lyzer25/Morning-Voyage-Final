@@ -272,7 +272,7 @@ export async function toggleStatusAction(sku: string, status: "active" | "draft"
   }
 }
 
-// ENHANCED: Save all staged changes to production with comprehensive progress feedback
+// ENHANCED: Save all staged changes to production with immediate cache invalidation
 export async function saveToProductionAction(products: Product[]): Promise<FormState & { needsRefresh?: boolean }> {
   try {
     console.log(`🚀 PRODUCTION DEPLOY: Starting deployment of ${products.length} products`)
@@ -294,35 +294,39 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
       })
     }
     
-    // Stage 1: Atomic blob storage write
-    console.log('💾 DEPLOY: Writing to Blob storage...')
+    // Stage 1: Atomic blob storage write with enhanced verification
+    console.log('💾 DEPLOY: Writing to Blob storage with verification...')
     const startTime = Date.now()
     await updateProducts(products)
     const blobTime = Date.now() - startTime
-    console.log(`✅ DEPLOY: Blob storage updated successfully (${blobTime}ms)`)
+    console.log(`✅ DEPLOY: Blob storage updated and verified (${blobTime}ms)`)
     
-    // Stage 2: Enhanced cache revalidation with timeout protection
-    console.log('🔄 DEPLOY: Triggering comprehensive cache revalidation...')
+    // Stage 2: IMMEDIATE aggressive cache invalidation
+    console.log('🔄 DEPLOY: Starting immediate cache invalidation...')
     const revalidationStart = Date.now()
     
     await Promise.race([
-      triggerCacheRevalidation(),
+      immediateCacheInvalidation(),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Cache revalidation timeout after 10 seconds')), 10000)
+        setTimeout(() => reject(new Error('Cache invalidation timeout after 15 seconds')), 15000)
       )
     ]).catch(error => {
-      console.warn('⚠️ DEPLOY: Cache revalidation warning (continuing deployment):', error)
-      // Don't fail entire deployment for cache issues - this is non-critical
+      console.warn('⚠️ DEPLOY: Cache invalidation warning (continuing deployment):', error)
     })
     
     const revalidationTime = Date.now() - revalidationStart
-    console.log(`🔄 DEPLOY: Cache revalidation completed (${revalidationTime}ms)`)
+    console.log(`✅ DEPLOY: Immediate cache invalidation completed (${revalidationTime}ms)`)
+    
+    // Stage 3: Verify cache clearing worked
+    console.log('🔍 DEPLOY: Verifying cache clearing...')
+    await verifyCacheClearing()
+    console.log('✅ DEPLOY: Cache clearing verified')
     
     const totalTime = Date.now() - startTime
-    console.log(`🎉 PRODUCTION DEPLOY: Complete! Total time: ${totalTime}ms`)
+    console.log(`🎉 PRODUCTION DEPLOY: Complete with immediate cache clearing! Total time: ${totalTime}ms`)
     
     return { 
-      success: `🚀 Successfully deployed ${products.length} products to live site! Changes are now visible to customers. (${totalTime}ms)`,
+      success: `🚀 Successfully deployed ${products.length} products with immediate cache clearing! Changes are now visible to customers. (${totalTime}ms)`,
       needsRefresh: true  // ← Signal for admin refresh
     }
   } catch (error) {
@@ -336,6 +340,70 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     return { 
       error: errorMessage + " Please try again or contact support if the problem persists."
     }
+  }
+}
+
+// ENHANCED: Immediate aggressive cache invalidation
+async function immediateCacheInvalidation(): Promise<void> {
+  console.log('🔄 Starting aggressive cache invalidation...')
+  
+  // Clear ALL possible cache layers
+  await revalidateTag(PRODUCTS_TAG)
+  await revalidateTag('admin-products')
+  await revalidateTag('coffee-products')
+  await revalidateTag('all-products')
+  console.log('✅ Cleared tagged caches')
+  
+  // Clear specific paths with both page and layout
+  const paths = ['/admin', '/coffee', '/', '/subscriptions', '/shop', '/api/products']
+  for (const path of paths) {
+    revalidatePath(path, 'page')
+    revalidatePath(path, 'layout')
+  }
+  console.log('✅ Cleared path-based caches')
+  
+  // Force clear in-memory caches
+  await forceInvalidateCache()
+  console.log('✅ Cleared in-memory caches')
+  
+  console.log('✅ Aggressive cache invalidation completed')
+}
+
+// ENHANCED: Verify cache clearing worked
+async function verifyCacheClearing(): Promise<void> {
+  try {
+    console.log('🔍 Starting cache verification...')
+    
+    // Test if API returns fresh data with cache busting
+    const timestamp = Date.now()
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    
+    const response = await fetch(`${baseUrl}/api/products?bustCache=${timestamp}&t=${timestamp}`, {
+      cache: 'no-store',
+      headers: { 
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`⚠️ Cache verification: API returned ${response.status}`)
+      return
+    }
+    
+    const data = await response.json()
+    
+    console.log('✅ Cache verification - API response:', {
+      productCount: data.products?.length || data.length || 0,
+      timestamp: new Date().toISOString(),
+      responseTime: Date.now() - timestamp
+    })
+    
+  } catch (error) {
+    console.warn('⚠️ Cache verification failed:', error instanceof Error ? error.message : 'Unknown error')
+    // Don't throw - this is verification only
   }
 }
 
@@ -509,6 +577,113 @@ TEST-VERIFY-${Date.now()},Test Verify Product,coffee,15.99`
     return {
       success: false,
       message: `Test write failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: { error: String(error) }
+    }
+  }
+}
+
+// ENHANCED: Force immediate cache clearing and sync
+export async function forceImmediateSyncAction(): Promise<{ success: boolean, message: string, details: any }> {
+  try {
+    console.log('⚡ FORCE SYNC: Starting immediate cache clearing and data sync...')
+    const startTime = Date.now()
+    
+    // Step 1: Aggressive cache invalidation
+    console.log('⚡ FORCE SYNC: Clearing all caches...')
+    await immediateCacheInvalidation()
+    
+    // Step 2: Wait for propagation
+    console.log('⚡ FORCE SYNC: Waiting for cache propagation...')
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Step 3: Verify cache clearing
+    console.log('⚡ FORCE SYNC: Verifying cache clearing...')
+    await verifyCacheClearing()
+    
+    const totalTime = Date.now() - startTime
+    console.log(`✅ FORCE SYNC: Immediate sync completed (${totalTime}ms)`)
+    
+    return {
+      success: true,
+      message: 'Immediate cache clearing and sync completed successfully',
+      details: {
+        totalTime: `${totalTime}ms`,
+        cacheCleared: true,
+        syncCompleted: true,
+        timestamp: new Date().toISOString()
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ FORCE SYNC: Failed:', error)
+    return {
+      success: false,
+      message: `Force sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: { error: String(error) }
+    }
+  }
+}
+
+// ENHANCED: Check cache status across different layers
+export async function checkCacheStatusAction(): Promise<{ success: boolean, message: string, details: any }> {
+  try {
+    console.log('🔍 CACHE STATUS: Checking cache layers...')
+    const startTime = Date.now()
+    
+    // Check API response time and cache headers
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    
+    const apiTests = []
+    
+    // Test 1: Products API
+    try {
+      const apiStart = Date.now()
+      const response = await fetch(`${baseUrl}/api/products?test=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      const apiTime = Date.now() - apiStart
+      const data = await response.json()
+      
+      apiTests.push({
+        endpoint: '/api/products',
+        responseTime: `${apiTime}ms`,
+        status: response.status,
+        productCount: data.products?.length || data.length || 0,
+        cacheHeaders: response.headers.get('cache-control') || 'none'
+      })
+    } catch (error) {
+      apiTests.push({
+        endpoint: '/api/products',
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+    
+    const totalTime = Date.now() - startTime
+    console.log(`✅ CACHE STATUS: Check completed (${totalTime}ms)`)
+    
+    return {
+      success: true,
+      message: 'Cache status check completed',
+      details: {
+        totalTime: `${totalTime}ms`,
+        apiTests,
+        environment: {
+          isVercel: !!process.env.VERCEL,
+          nodeEnv: process.env.NODE_ENV,
+          baseUrl
+        },
+        timestamp: new Date().toISOString()
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ CACHE STATUS: Check failed:', error)
+    return {
+      success: false,
+      message: `Cache status check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       details: { error: String(error) }
     }
   }

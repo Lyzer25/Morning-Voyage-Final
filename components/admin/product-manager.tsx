@@ -21,7 +21,21 @@ import {
   Download,
   Clock,
   Rocket,
-} from "lucide-react" 
+  Coffee,
+  RefreshCw,
+  Gift,
+  Wrench,
+  Edit,
+  Copy,
+  MoreHorizontal,
+  ChevronDown,
+  Package,
+  Users,
+  Search,
+  TestTube,
+  Zap,
+  XCircle
+} from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
@@ -34,7 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction, debugBlobStatus, forceBlobRefresh, testBlobWrite } from "@/app/admin/actions"
+import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction, debugBlobStatus, forceBlobRefresh, testBlobWrite, forceImmediateSyncAction, checkCacheStatusAction } from "@/app/admin/actions"
 import { getProducts, fromCsvRow } from "@/lib/csv-data"
 import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
@@ -46,9 +60,57 @@ import ProductForm from "./product-form" // Assuming this is a general form
 import Papa from "papaparse"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Coffee, RefreshCw, Gift, Wrench, Edit, Copy, MoreHorizontal, ChevronDown, Package, Users } from "lucide-react"
-import { Dialog } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { groupProductFamilies, ProductFamily } from "@/lib/family-grouping"
+
+// ENHANCED: Debug Result Interface for Visual Feedback
+interface DebugResult {
+  title: string
+  status: 'success' | 'warning' | 'error'
+  details: Record<string, any>
+  timestamp: string
+}
+
+// ENHANCED: Debug Result Modal Component
+const DebugResultModal = ({ result, isOpen, onClose }: {
+  result: DebugResult | null
+  isOpen: boolean
+  onClose: () => void
+}) => {
+  if (!result) return null
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {result.status === 'success' && <CheckCircle className="h-5 w-5 text-green-600" />}
+            {result.status === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-600" />}
+            {result.status === 'error' && <XCircle className="h-5 w-5 text-red-600" />}
+            {result.title}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="text-sm text-gray-500">
+            {result.timestamp}
+          </div>
+          
+          <div className="space-y-3">
+            {Object.entries(result.details).map(([key, value]) => (
+              <div key={key} className="p-3 bg-gray-50 rounded border">
+                <div className="font-medium text-gray-900 mb-1">{key}:</div>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter()
@@ -69,6 +131,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   // Bulk delete state
   const [selectedSkus, setSelectedSkus] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  // ENHANCED: Visual debug state management
+  const [debugResult, setDebugResult] = useState<DebugResult | null>(null)
+  const [showDebugModal, setShowDebugModal] = useState(false)
+  const [isDebugging, setIsDebugging] = useState(false)
 
   const handleAddNewProduct = (category: 'coffee' | 'subscription' | 'gift-set' | 'general') => {
     setEditingProduct(undefined)
@@ -1047,6 +1114,89 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     return true
   }, [])
 
+  // ENHANCED: Visual debug handler with modal results
+  const handleVisualDebug = useCallback(async (debugType: string) => {
+    try {
+      setIsDebugging(true)
+      let result: DebugResult
+
+      switch (debugType) {
+        case 'blob-analysis':
+          const blobStatus = await debugBlobStatus()
+          result = {
+            title: 'Blob Storage Analysis',
+            status: blobStatus.blobExists ? 'success' : 'warning',
+            details: {
+              'Blob Files Found': blobStatus.blobExists ? 'Yes' : 'No',
+              'Blob Size': `${blobStatus.blobSize} bytes`,
+              'Last Modified': blobStatus.lastModified,
+              'Line Count': blobStatus.lineCount,
+              'Headers Found': blobStatus.headers,
+              'Content Preview': blobStatus.contentPreview.substring(0, 500) + (blobStatus.contentPreview.length > 500 ? '...' : '')
+            },
+            timestamp: new Date().toISOString()
+          }
+          break
+
+        case 'test-write':
+          const writeTest = await testBlobWrite()
+          result = {
+            title: 'Blob Write Test',
+            status: writeTest.success ? 'success' : 'error',
+            details: writeTest.details,
+            timestamp: new Date().toISOString()
+          }
+          break
+
+        case 'cache-status':
+          const cacheStatus = await checkCacheStatusAction()
+          result = {
+            title: 'Cache Status Check',
+            status: cacheStatus.success ? 'success' : 'error',
+            details: cacheStatus.details,
+            timestamp: new Date().toISOString()
+          }
+          break
+
+        case 'force-sync':
+          const syncResult = await forceImmediateSyncAction()
+          result = {
+            title: 'Force Immediate Sync',
+            status: syncResult.success ? 'success' : 'error',
+            details: syncResult.details,
+            timestamp: new Date().toISOString()
+          }
+          // Also refresh admin data after sync
+          if (syncResult.success) {
+            await handleForceRefresh()
+          }
+          break
+
+        default:
+          throw new Error('Unknown debug type')
+      }
+
+      setDebugResult(result)
+      setShowDebugModal(true)
+      
+      // Also show toast for quick feedback
+      toast.success(`${result.title} completed - Click to view details`)
+
+    } catch (error) {
+      const errorResult: DebugResult = {
+        title: 'Debug Operation Failed',
+        status: 'error',
+        details: { error: error instanceof Error ? error.message : String(error) },
+        timestamp: new Date().toISOString()
+      }
+      setDebugResult(errorResult)
+      setShowDebugModal(true)
+      toast.error('Debug operation failed')
+    } finally {
+      setIsDebugging(false)
+    }
+  }, [handleForceRefresh])
+
   const isAllSelected = filteredProducts.length > 0 && selectedSkus.length === filteredProducts.length
   const isIndeterminate = selectedSkus.length > 0 && selectedSkus.length < filteredProducts.length
 
@@ -1112,54 +1262,21 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={async () => {
-                try {
-                  const status = await debugBlobStatus()
-                  toast.success(`Blob Status: ${status.blobExists ? 'Exists' : 'Missing'} - ${status.lineCount} lines`, {
-                    description: `Size: ${status.blobSize} bytes | Headers: ${status.headers.substring(0, 50)}...`
-                  })
-                } catch (error) {
-                  toast.error(`Debug failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                }
-              }}>
-                <Wrench className="mr-2 h-4 w-4" />
-                Check Blob Status
+              <DropdownMenuItem onClick={() => handleVisualDebug('blob-analysis')}>
+                <Search className="mr-2 h-4 w-4" />
+                Analyze Blob Storage
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={async () => {
-                try {
-                  const result = await forceBlobRefresh()
-                  if (result.success) {
-                    toast.success(result.message, {
-                      description: `Action: ${result.details.action} | Products: ${result.details.productCount}`
-                    })
-                    // Refresh the admin interface
-                    await handleForceRefresh()
-                  } else {
-                    toast.error(result.message)
-                  }
-                } catch (error) {
-                  toast.error(`Force refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                }
-              }}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Force Blob Refresh
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={async () => {
-                try {
-                  const result = await testBlobWrite()
-                  if (result.success) {
-                    toast.success(result.message, {
-                      description: `Length: ${result.details.originalLength}→${result.details.verifiedLength} | Match: ${result.details.contentMatches ? 'Yes' : 'No'}`
-                    })
-                  } else {
-                    toast.error(result.message)
-                  }
-                } catch (error) {
-                  toast.error(`Test write failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                }
-              }}>
-                <CheckCircle className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={() => handleVisualDebug('test-write')}>
+                <TestTube className="mr-2 h-4 w-4" />
                 Test Blob Write
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualDebug('cache-status')}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Check Cache Status
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleVisualDebug('force-sync')}>
+                <Zap className="mr-2 h-4 w-4" />
+                Force Immediate Sync
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1930,6 +2047,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Enhanced Debug Result Modal */}
+      <DebugResultModal 
+        result={debugResult}
+        isOpen={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+      />
     </div>
   )
 }

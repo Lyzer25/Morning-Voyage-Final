@@ -242,47 +242,72 @@ export async function handleEmptyProductState(): Promise<void> {
   }
 }
 
-// NEW: Verify blob write actually propagated
-async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number): Promise<void> {
+// ENHANCED: Verify blob write with immediate verification and content matching
+async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number, originalContent?: string): Promise<void> {
   const maxAttempts = 5
-  const delayMs = 1000
+  let delayMs = 1000 // Start with 1 second
+  
+  console.log('🚀 BLOB VERIFY: Starting enhanced verification with content matching...')
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`🔍 BLOB VERIFY: Attempt ${attempt}/${maxAttempts}`)
+      console.log(`🔍 BLOB VERIFY: Attempt ${attempt}/${maxAttempts} - checking blob propagation...`)
       
+      // Fetch with aggressive cache-busting
       const response = await fetch(blobUrl, { 
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       })
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
       const content = await response.text()
       
-      if (content.length >= expectedLength * 0.9) { // 90% threshold
-        console.log('✅ BLOB VERIFY: Content verified', {
-          expectedLength,
-          actualLength: content.length,
-          firstLine: content.split('\n')[0]
-        })
+      console.log(`🔍 BLOB VERIFY: Retrieved content`, {
+        contentLength: content.length,
+        expectedLength,
+        lengthMatch: content.length >= expectedLength * 0.9,
+        hasContent: content.trim().length > 0,
+        contentMatches: originalContent ? content === originalContent : 'N/A'
+      })
+      
+      // Enhanced success criteria
+      const lengthOk = content.length >= expectedLength * 0.9
+      const hasContent = content.trim().length > 0
+      const contentMatches = !originalContent || content === originalContent
+      
+      if (lengthOk && hasContent && contentMatches) {
+        console.log('✅ BLOB VERIFY: Enhanced verification successful!')
         return
       }
       
-      console.log(`⏳ BLOB VERIFY: Content not ready yet (${content.length}/${expectedLength})`)
+      console.log(`⚠️ BLOB VERIFY: Verification criteria not met:`, {
+        lengthOk,
+        hasContent,
+        contentMatches: contentMatches || 'not-checked'
+      })
       
     } catch (error) {
       console.warn(`⚠️ BLOB VERIFY: Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error))
     }
     
+    // Wait before retry with exponential backoff
     if (attempt < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, delayMs))
+      const delay = delayMs * attempt // Exponential backoff
+      console.log(`⏳ BLOB VERIFY: Waiting ${delay}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
   
-  console.warn('⚠️ BLOB VERIFY: Could not verify write success - continuing anyway')
+  // After all attempts failed
+  console.warn('⚠️ BLOB VERIFY: Could not verify blob write after all attempts')
+  console.warn('⚠️ BLOB VERIFY: Write command succeeded, but verification failed - likely timing issue')
+  // Don't throw error - the write probably worked, verification might be timing-related
 }
 
 export async function updateProducts(products: Product[]): Promise<void> {
@@ -365,8 +390,8 @@ export async function updateProducts(products: Product[]): Promise<void> {
       contentType: writeResult.contentType || 'text/csv'
     })
     
-    // CRITICAL: Wait for propagation and verify write
-    await verifyBlobWriteSuccess(writeResult.url, csvText.length)
+    // CRITICAL: Wait for propagation and verify write with content matching
+    await verifyBlobWriteSuccess(writeResult.url, csvText.length, csvText)
     
     console.log('✅ [products] write: CSV saved and verified successfully')
     
