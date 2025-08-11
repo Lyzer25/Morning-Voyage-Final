@@ -282,32 +282,32 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  // ✅ ENHANCED: Comprehensive category styling system with left borders
+  // ✅ ENHANCED: Comprehensive category styling system with reliable Tailwind classes
   const getCategoryStyle = (category: string) => {
     const styles: Record<string, { badge: string; row: string; icon: any }> = {
       'coffee': {
         badge: 'bg-amber-100 text-amber-800 border-amber-200',
-        row: 'hover:bg-amber-50/30 border-l-2 border-l-amber-300/50',
+        row: 'hover:bg-amber-100 border-l-2 border-l-amber-400',
         icon: Coffee
       },
       'coffee-family': {
         badge: 'bg-blue-100 text-blue-800 border-blue-200',
-        row: 'bg-blue-50/50 border-l-4 border-l-blue-400 hover:bg-blue-100/50',
+        row: 'bg-blue-50 border-l-4 border-l-blue-400 hover:bg-blue-100',
         icon: Coffee
       },
       'subscription': {
         badge: 'bg-purple-100 text-purple-800 border-purple-200',
-        row: 'hover:bg-purple-50/30 border-l-2 border-l-purple-300/50',
+        row: 'hover:bg-purple-100 border-l-2 border-l-purple-400',
         icon: Users
       },
       'gift-set': {
         badge: 'bg-green-100 text-green-800 border-green-200',
-        row: 'hover:bg-green-50/30 border-l-2 border-l-green-300/50',
+        row: 'hover:bg-green-100 border-l-2 border-l-green-400',
         icon: Gift
       },
       'equipment': {
         badge: 'bg-gray-100 text-gray-800 border-gray-200',
-        row: 'hover:bg-gray-50/30 border-l-2 border-l-gray-300/50',
+        row: 'hover:bg-gray-100 border-l-2 border-l-gray-400',
         icon: Package
       }
     }
