@@ -15,7 +15,25 @@ export function getFormatCodeFromSku(sku: string): string {
   return sku?.split("-").pop()?.toUpperCase() ?? ""
 }
 
-// Get family key - strip WB/GR/PODS suffixes, keep others intact
+// ✅ NEW: Extract core product name for name-based grouping
+export function extractCoreProductName(productName: string): string {
+  return productName
+    // Remove format specifications
+    .replace(/\s*-\s*(Whole Bean|Ground|Pods|Instant)\s*$/i, '')
+    // Remove roast level specifications  
+    .replace(/\s*-\s*(Light|Medium|Medium-Dark|Dark)(\s+Roast)?\s*$/i, '')
+    // Remove origin specifications if at end
+    .replace(/\s*-\s*[A-Z][a-z]+(\s+[A-Z][a-z]+)*\s*$/i, '')
+    // Remove size/weight specifications
+    .replace(/\s*-\s*(12oz|1lb|\d+\s*(oz|lb|count|ct|pack))\s*$/i, '')
+    // Remove parenthetical info
+    .replace(/\s*\([^)]*\)\s*$/g, '')
+    // Clean up extra spaces and dashes
+    .replace(/\s*-\s*$/, '')
+    .trim()
+}
+
+// LEGACY: Get family key - strip WB/GR/PODS suffixes, keep others intact (kept for compatibility)
 export function getFamilyKeyFromSku(sku: string): string {
   const code = getFormatCodeFromSku(sku)
   return (code === "WB" || code === "GR" || code === "PODS") 
@@ -23,42 +41,62 @@ export function getFamilyKeyFromSku(sku: string): string {
     : sku
 }
 
-// Group products into families, collapsing WB/GR into single families
+// ✅ ENHANCED: Group products into families using NAME-BASED grouping
 export function groupProductFamilies(products: Product[]): ProductFamily[] {
-  console.log(`🔄 Grouping ${products.length} products into families (WB/GR collapse)...`)
+  console.log(`🔄 Grouping ${products.length} products into families (NAME-BASED grouping)...`)
   
-  const map = new Map<string, ProductVariant[]>()
-  
-  for (const p of products) {
-    const v: ProductVariant = { ...p, formatCode: getFormatCodeFromSku(p.sku) }
-    const k = getFamilyKeyFromSku(p.sku)
-    const existing = map.get(k) ?? []
-    existing.push(v)
-    map.set(k, existing)
+  // Group by core product name, not SKU patterns
+  const grouped = products.reduce((acc, product) => {
+    const coreProductName = extractCoreProductName(product.productName)
     
-    console.log(`📦 Product: ${p.sku} → family: ${k} (format: ${v.formatCode})`)
-  }
-  
+    if (!acc[coreProductName]) {
+      acc[coreProductName] = []
+    }
+    acc[coreProductName].push(product)
+    return acc
+  }, {} as Record<string, Product[]>)
+
+  console.log('🔍 Name-based grouping results:', {
+    totalProducts: products.length,
+    uniqueNames: Object.keys(grouped).length,
+    nameGroups: Object.entries(grouped).map(([name, prods]) => ({
+      name,
+      count: prods.length,
+      skus: prods.map(p => p.sku)
+    }))
+  })
+
   const families: ProductFamily[] = []
   
-  for (const [familyKey, variants] of map.entries()) {
+  // Convert groups to families (only for groups with 2+ variants)
+  for (const [coreProductName, variants] of Object.entries(grouped)) {
     // ✅ CRITICAL FIX: Only create families with 2+ variants
     if (variants.length < 2) {
-      console.log(`⚠️ Skipping single variant: ${familyKey} → ${variants[0].formatCode} (will remain individual product)`)
+      console.log(`⚠️ Skipping single variant: ${coreProductName} → ${variants[0].sku} (will remain individual product)`)
       continue
     }
     
+    // Convert to ProductVariants with format codes
+    const productVariants: ProductVariant[] = variants.map(p => ({
+      ...p,
+      formatCode: getFormatCodeFromSku(p.sku)
+    }))
+
     // Prefer WB as base, else GR, else first variant
-    const baseVariant = variants.find(v => v.formatCode === "WB") 
-                     ?? variants.find(v => v.formatCode === "GR") 
-                     ?? variants[0]
+    const baseVariant = productVariants.find(v => v.formatCode === "WB") 
+                     ?? productVariants.find(v => v.formatCode === "GR") 
+                     ?? productVariants[0]
     
-    // PHASE 2: Assign coffee-family category to family base
+    // Create family with coffee-family category
     const familyBase = { ...baseVariant, category: 'coffee-family' }
     
-    families.push({ familyKey, base: familyBase, variants })
+    families.push({ 
+      familyKey: coreProductName, // Use core name as family key
+      base: familyBase, 
+      variants: productVariants 
+    })
     
-    console.log(`✅ Family: ${familyKey} → ${variants.length} variants (${variants.map(v => v.formatCode).join(', ')}) → base: ${familyBase.formatCode} → category: coffee-family`)
+    console.log(`✅ Family: "${coreProductName}" → ${variants.length} variants (${productVariants.map(v => `${v.formatCode}:${v.roastLevel || 'N/A'}:${v.origin || 'N/A'}`).join(', ')}) → base: ${familyBase.formatCode} → category: coffee-family`)
   }
   
   console.log(`🎯 Final result: ${products.length} products → ${families.length} families`)

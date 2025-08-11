@@ -282,12 +282,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  // ✅ ENHANCED: Comprehensive category styling system
+  // ✅ ENHANCED: Comprehensive category styling system with left borders
   const getCategoryStyle = (category: string) => {
     const styles: Record<string, { badge: string; row: string; icon: any }> = {
       'coffee': {
         badge: 'bg-amber-100 text-amber-800 border-amber-200',
-        row: 'hover:bg-amber-50/30',
+        row: 'hover:bg-amber-50/30 border-l-2 border-l-amber-300/50',
         icon: Coffee
       },
       'coffee-family': {
@@ -297,17 +297,17 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       },
       'subscription': {
         badge: 'bg-purple-100 text-purple-800 border-purple-200',
-        row: 'hover:bg-purple-50/30',
+        row: 'hover:bg-purple-50/30 border-l-2 border-l-purple-300/50',
         icon: Users
       },
       'gift-set': {
         badge: 'bg-green-100 text-green-800 border-green-200',
-        row: 'hover:bg-green-50/30',
+        row: 'hover:bg-green-50/30 border-l-2 border-l-green-300/50',
         icon: Gift
       },
       'equipment': {
         badge: 'bg-gray-100 text-gray-800 border-gray-200',
-        row: 'hover:bg-gray-50/30',
+        row: 'hover:bg-gray-50/30 border-l-2 border-l-gray-300/50',
         icon: Package
       }
     }
@@ -1569,7 +1569,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                 const product = item as Product & { isFamily: false }
                 
                 return (
-                  <TableRow key={product.sku}>
+                  <TableRow key={product.sku} className={`${getCategoryStyle(product.category).row} transition-colors duration-200`}>
                     <TableCell>
                       <Checkbox
                         checked={selectedSkus.includes(product.sku)}
