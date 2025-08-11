@@ -78,6 +78,9 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [roastFilter, setRoastFilter] = useState<string>('all') 
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  
+  // PHASE 3: View toggle state (family vs individual view)
+  const [viewMode, setViewMode] = useState<'family' | 'individual'>('family')
 
   // STAGING SYSTEM: Core state management
   const [stagedProducts, setStagedProducts] = useState<Product[]>([])
@@ -242,7 +245,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  // NEW: Dynamic category badge helper for families
+  // ENHANCED: Dynamic category badge helper with Coffee Family support
   const getCategoryBadge = (category: string) => {
     switch (category?.toLowerCase()) {
       case 'coffee':
@@ -250,6 +253,13 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
           <Badge variant="default" className="bg-amber-100 text-amber-800">
             <Coffee className="h-3 w-3 mr-1" />
             Coffee
+          </Badge>
+        )
+      case 'coffee-family':
+        return (
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            <Coffee className="h-3 w-3 mr-1" />
+            Coffee Family
           </Badge>
         )
       case 'subscription':
@@ -659,7 +669,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  // FAMILY-FIRST VIEW: Transform coffee products into families, keep others individual
+  // ENHANCED: Transform coffee products based on view mode (family vs individual)
   const displayData = useMemo(() => {
     // First, apply filters to get base products
     const baseFilteredProducts = stagedProducts.filter((p) => {
@@ -667,7 +677,25 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category?.toLowerCase().includes(searchTerm.toLowerCase())
       
-      const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
+      // ENHANCED: Smart category filtering that respects view mode
+      let matchesCategory = true;
+      if (categoryFilter !== 'all') {
+        if (categoryFilter === 'coffee') {
+          // When "coffee" is selected: show coffee families (in family view) or individual coffee items (in individual view)
+          if (viewMode === 'family') {
+            matchesCategory = p.category === 'coffee'  // Will be grouped into families
+          } else {
+            matchesCategory = p.category === 'coffee'  // Show as individual items
+          }
+        } else if (categoryFilter === 'coffee-family') {
+          // When "coffee-family" is selected: only show coffee families (regardless of view mode)
+          matchesCategory = p.category === 'coffee' && viewMode === 'family'
+        } else {
+          // Standard category matching
+          matchesCategory = p.category === categoryFilter
+        }
+      }
+      
       const matchesRoast = roastFilter === 'all' || 
         (p.category === 'coffee' && p.roastLevel === roastFilter) ||
         p.category !== 'coffee'
@@ -676,28 +704,38 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       return matchesSearch && matchesCategory && matchesRoast && matchesStatus
     })
 
-    // Separate coffee and non-coffee products
-    const coffeeProducts = baseFilteredProducts.filter(p => p.category === 'coffee')
-    const nonCoffeeProducts = baseFilteredProducts.filter(p => p.category !== 'coffee')
-    
-    // Group coffee products into families
-    const coffeeFamilies = coffeeProducts.length > 0 
-      ? groupProductFamilies(coffeeProducts)
-      : []
+    if (viewMode === 'individual') {
+      // INDIVIDUAL VIEW: Show all products as individual items (no family grouping)
+      console.log('📦 Individual view transformation:', {
+        totalFiltered: baseFilteredProducts.length,
+        allIndividual: true
+      })
+      
+      return baseFilteredProducts.map(product => ({ ...product, isFamily: false }))
+    } else {
+      // FAMILY VIEW: Group coffee into families, keep others individual (existing logic)
+      const coffeeProducts = baseFilteredProducts.filter(p => p.category === 'coffee')
+      const nonCoffeeProducts = baseFilteredProducts.filter(p => p.category !== 'coffee')
+      
+      // Group coffee products into families
+      const coffeeFamilies = coffeeProducts.length > 0 
+        ? groupProductFamilies(coffeeProducts)
+        : []
 
-    console.log('🏗️ Family view transformation:', {
-      totalFiltered: baseFilteredProducts.length,
-      coffeeProducts: coffeeProducts.length,
-      coffeeFamilies: coffeeFamilies.length,
-      nonCoffeeProducts: nonCoffeeProducts.length
-    })
-    
-    // Return mixed array: families (for coffee) + individual products (for non-coffee)
-    return [
-      ...coffeeFamilies.map(family => ({ ...family, isFamily: true })),
-      ...nonCoffeeProducts.map(product => ({ ...product, isFamily: false }))
-    ]
-  }, [stagedProducts, searchTerm, categoryFilter, roastFilter, statusFilter])
+      console.log('🏗️ Family view transformation:', {
+        totalFiltered: baseFilteredProducts.length,
+        coffeeProducts: coffeeProducts.length,
+        coffeeFamilies: coffeeFamilies.length,
+        nonCoffeeProducts: nonCoffeeProducts.length
+      })
+      
+      // Return mixed array: families (for coffee) + individual products (for non-coffee)
+      return [
+        ...coffeeFamilies.map(family => ({ ...family, isFamily: true, category: 'coffee-family' })),
+        ...nonCoffeeProducts.map(product => ({ ...product, isFamily: false }))
+      ]
+    }
+  }, [stagedProducts, searchTerm, categoryFilter, roastFilter, statusFilter, viewMode])
 
   // Legacy compatibility for places that expect filteredProducts
   const filteredProducts = displayData.flatMap((item: any) => 
@@ -1086,8 +1124,49 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         </div>
       )}
 
-      {/* Advanced Filters */}
+      {/* PHASE 3: View Toggle & Advanced Filters */}
       <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+        {/* View Mode Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">View Mode:</span>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setViewMode('family')}
+                variant={viewMode === 'family' ? 'default' : 'outline'}
+                size="sm"
+                className={viewMode === 'family' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'border-blue-300 text-blue-700 hover:bg-blue-100'
+                }
+              >
+                <Coffee className="h-3 w-3 mr-1" />
+                👨‍👩‍👧‍👦 Family View
+              </Button>
+              <Button
+                onClick={() => setViewMode('individual')}
+                variant={viewMode === 'individual' ? 'default' : 'outline'}
+                size="sm"
+                className={viewMode === 'individual' 
+                  ? 'bg-amber-600 text-white hover:bg-amber-700' 
+                  : 'border-amber-300 text-amber-700 hover:bg-amber-100'
+                }
+              >
+                <Package className="h-3 w-3 mr-1" />
+                📦 Individual Items
+              </Button>
+            </div>
+          </div>
+          
+          {/* View Mode Description */}
+          <div className="text-xs text-gray-600 max-w-xs">
+            {viewMode === 'family' 
+              ? 'Coffee products grouped into families, others shown individually' 
+              : 'All products shown as individual items (no family grouping)'
+            }
+          </div>
+        </div>
+        
         <div className="flex flex-wrap gap-4">
           {/* Category Filter */}
           <div className="flex flex-col min-w-40">
@@ -1099,6 +1178,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
             >
               <option value="all">All Categories ({stagedProducts.length})</option>
               <option value="coffee">Coffee ({stagedProducts.filter(p => p.category === 'coffee').length})</option>
+              <option value="coffee-family">Coffee Family ({viewMode === 'family' ? displayData.filter((item: any) => item.isFamily && item.category === 'coffee-family').length : 0})</option>
               <option value="subscription">Subscription ({stagedProducts.filter(p => p.category === 'subscription').length})</option>
               <option value="gift-set">Gift Set ({stagedProducts.filter(p => p.category === 'gift-set').length})</option>
             </select>
@@ -1398,6 +1478,12 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                               <div className="flex items-center space-x-2">
                                 <Coffee className="h-3 w-3" />
                                 <span>Coffee</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="coffee-family">
+                              <div className="flex items-center space-x-2">
+                                <Coffee className="h-3 w-3" />
+                                <span>Coffee Family</span>
                               </div>
                             </SelectItem>
                             <SelectItem value="subscription">

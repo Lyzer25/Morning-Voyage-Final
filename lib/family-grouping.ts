@@ -41,13 +41,16 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
   
   for (const [familyKey, variants] of map.entries()) {
     // Prefer WB as base, else GR, else first variant
-    const base = variants.find(v => v.formatCode === "WB") 
-              ?? variants.find(v => v.formatCode === "GR") 
-              ?? variants[0]
+    const baseVariant = variants.find(v => v.formatCode === "WB") 
+                     ?? variants.find(v => v.formatCode === "GR") 
+                     ?? variants[0]
     
-    families.push({ familyKey, base, variants })
+    // PHASE 2: Assign coffee-family category to family base
+    const familyBase = { ...baseVariant, category: 'coffee-family' }
     
-    console.log(`✅ Family: ${familyKey} → ${variants.length} variants (${variants.map(v => v.formatCode).join(', ')}) → base: ${base.formatCode}`)
+    families.push({ familyKey, base: familyBase, variants })
+    
+    console.log(`✅ Family: ${familyKey} → ${variants.length} variants (${variants.map(v => v.formatCode).join(', ')}) → base: ${familyBase.formatCode} → category: coffee-family`)
   }
   
   console.log(`🎯 Final result: ${products.length} products → ${families.length} families`)
