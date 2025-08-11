@@ -15,10 +15,12 @@ export function getFormatCodeFromSku(sku: string): string {
   return sku?.split("-").pop()?.toUpperCase() ?? ""
 }
 
-// Get family key - strip WB/GR suffixes, keep others intact
+// Get family key - strip WB/GR/PODS suffixes, keep others intact
 export function getFamilyKeyFromSku(sku: string): string {
   const code = getFormatCodeFromSku(sku)
-  return (code === "WB" || code === "GR") ? sku.replace(/-(WB|GR)$/i, "") : sku
+  return (code === "WB" || code === "GR" || code === "PODS") 
+    ? sku.replace(/-(WB|GR|PODS)$/i, "") 
+    : sku
 }
 
 // Group products into families, collapsing WB/GR into single families
@@ -40,6 +42,12 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
   const families: ProductFamily[] = []
   
   for (const [familyKey, variants] of map.entries()) {
+    // ✅ CRITICAL FIX: Only create families with 2+ variants
+    if (variants.length < 2) {
+      console.log(`⚠️ Skipping single variant: ${familyKey} → ${variants[0].formatCode} (will remain individual product)`)
+      continue
+    }
+    
     // Prefer WB as base, else GR, else first variant
     const baseVariant = variants.find(v => v.formatCode === "WB") 
                      ?? variants.find(v => v.formatCode === "GR") 

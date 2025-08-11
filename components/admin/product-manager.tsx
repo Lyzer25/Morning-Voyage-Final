@@ -282,52 +282,133 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }
 
-  // ENHANCED: Dynamic category badge helper with Coffee Family support
-  const getCategoryBadge = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case 'coffee':
-        return (
-          <Badge variant="default" className="bg-amber-100 text-amber-800">
-            <Coffee className="h-3 w-3 mr-1" />
-            Coffee
-          </Badge>
-        )
-      case 'coffee-family':
-        return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800">
-            <Coffee className="h-3 w-3 mr-1" />
-            Coffee Family
-          </Badge>
-        )
-      case 'subscription':
-        return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800">
-            <Users className="h-3 w-3 mr-1" />
-            Subscription
-          </Badge>
-        )
-      case 'gift-set':
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800">
-            <Gift className="h-3 w-3 mr-1" />
-            Gift Set
-          </Badge>
-        )
-      case 'equipment':
-        return (
-          <Badge variant="default" className="bg-purple-100 text-purple-800">
-            <Wrench className="h-3 w-3 mr-1" />
-            Equipment
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant="default" className="bg-gray-100 text-gray-800">
-            <Package className="h-3 w-3 mr-1" />
-            General
-          </Badge>
-        )
+  // ✅ ENHANCED: Comprehensive category styling system
+  const getCategoryStyle = (category: string) => {
+    const styles: Record<string, { badge: string; row: string; icon: any }> = {
+      'coffee': {
+        badge: 'bg-amber-100 text-amber-800 border-amber-200',
+        row: 'hover:bg-amber-50/30',
+        icon: Coffee
+      },
+      'coffee-family': {
+        badge: 'bg-blue-100 text-blue-800 border-blue-200',
+        row: 'bg-blue-50/50 border-l-4 border-l-blue-400 hover:bg-blue-100/50',
+        icon: Coffee
+      },
+      'subscription': {
+        badge: 'bg-purple-100 text-purple-800 border-purple-200',
+        row: 'hover:bg-purple-50/30',
+        icon: Users
+      },
+      'gift-set': {
+        badge: 'bg-green-100 text-green-800 border-green-200',
+        row: 'hover:bg-green-50/30',
+        icon: Gift
+      },
+      'equipment': {
+        badge: 'bg-gray-100 text-gray-800 border-gray-200',
+        row: 'hover:bg-gray-50/30',
+        icon: Package
+      }
     }
+    
+    return styles[category] || styles['coffee']
+  }
+
+  // ✅ NEW: Family category change handler
+  const handleFamilyCategoryChange = useCallback((family: ProductFamily, newCategory: string) => {
+    console.log('🏗️ FAMILY CATEGORY CHANGE:', family.familyKey, 'to', newCategory)
+    
+    if (newCategory === 'coffee-family') {
+      // Keep as family - ensure all variants are coffee category
+      setStagedProducts(prev => 
+        prev.map(p => 
+          family.variants.some(v => v.sku === p.sku)
+            ? { ...p, category: 'coffee' } // Variants stay as coffee
+            : p
+        )
+      )
+      toast.success(`Family "${family.base.productName}" category maintained as Coffee Family`)
+    } else {
+      // Convert family to individual items with new category
+      setStagedProducts(prev => 
+        prev.map(p => 
+          family.variants.some(v => v.sku === p.sku)
+            ? { ...p, category: newCategory } // All variants get new category
+            : p
+        )
+      )
+      toast.success(`Family "${family.base.productName}" converted to individual ${newCategory} products`)
+    }
+  }, [])
+
+  // ✅ ENHANCED: Category dropdown component for families and individuals
+  const CategoryDropdown = ({ item, onChange, isFamily = false }: { 
+    item: any, 
+    onChange: (item: any, newCategory: string) => void,
+    isFamily?: boolean 
+  }) => {
+    const style = getCategoryStyle(isFamily ? 'coffee-family' : item.category)
+    const Icon = style.icon
+    
+    return (
+      <Select 
+        value={isFamily ? 'coffee-family' : item.category || 'coffee'} 
+        onValueChange={(newCategory) => onChange(item, newCategory)}
+      >
+        <SelectTrigger className={`w-auto border-none ${style.badge}`}>
+          <div className="flex items-center gap-1">
+            <Icon className="h-3 w-3" />
+            <SelectValue />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="coffee">
+            <div className="flex items-center gap-2">
+              <Coffee className="h-3 w-3" />
+              Coffee
+            </div>
+          </SelectItem>
+          <SelectItem value="coffee-family">
+            <div className="flex items-center gap-2">
+              <Coffee className="h-3 w-3" />
+              Coffee Family
+            </div>
+          </SelectItem>
+          <SelectItem value="subscription">
+            <div className="flex items-center gap-2">
+              <Users className="h-3 w-3" />
+              Subscription
+            </div>
+          </SelectItem>
+          <SelectItem value="gift-set">
+            <div className="flex items-center gap-2">
+              <Gift className="h-3 w-3" />
+              Gift Set
+            </div>
+          </SelectItem>
+          <SelectItem value="equipment">
+            <div className="flex items-center gap-2">
+              <Package className="h-3 w-3" />
+              Equipment
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  // LEGACY: Keep badge function for backwards compatibility
+  const getCategoryBadge = (category: string) => {
+    const style = getCategoryStyle(category)
+    const Icon = style.icon
+    
+    return (
+      <Badge variant="default" className={style.badge}>
+        <Icon className="h-3 w-3 mr-1" />
+        {getCategoryDisplayName(category)}
+      </Badge>
+    )
   }
 
   // ENHANCED: Unified progress state management (FIXES DISAPPEARING PROGRESS BAR)
@@ -754,21 +835,27 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       const coffeeProducts = baseFilteredProducts.filter(p => p.category === 'coffee')
       const nonCoffeeProducts = baseFilteredProducts.filter(p => p.category !== 'coffee')
       
-      // Group coffee products into families
+      // Group coffee products into families (now with 2+ variant requirement)
       const coffeeFamilies = coffeeProducts.length > 0 
         ? groupProductFamilies(coffeeProducts)
         : []
+
+      // ✅ Get singles that didn't group into families
+      const familySkus = new Set(coffeeFamilies.flatMap(f => f.variants.map(v => v.sku)))
+      const singleCoffeeProducts = coffeeProducts.filter(p => !familySkus.has(p.sku))
 
       console.log('🏗️ Family view transformation:', {
         totalFiltered: baseFilteredProducts.length,
         coffeeProducts: coffeeProducts.length,
         coffeeFamilies: coffeeFamilies.length,
+        singleCoffeeProducts: singleCoffeeProducts.length,
         nonCoffeeProducts: nonCoffeeProducts.length
       })
       
-      // Return mixed array: families (for coffee) + individual products (for non-coffee)
+      // Return mixed array: families (for multi-variant coffee) + singles + individual products (for non-coffee)
       return [
         ...coffeeFamilies.map(family => ({ ...family, isFamily: true, category: 'coffee-family' })),
+        ...singleCoffeeProducts.map(product => ({ ...product, isFamily: false })),
         ...nonCoffeeProducts.map(product => ({ ...product, isFamily: false }))
       ]
     }
@@ -1401,7 +1488,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getCategoryBadge(baseProduct.category)}
+                      <CategoryDropdown 
+                        item={family} 
+                        onChange={handleFamilyCategoryChange}
+                        isFamily={true}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-600">
