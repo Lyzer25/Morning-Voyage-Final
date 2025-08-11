@@ -50,7 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { exportCsvAction, deleteProductAction, toggleFeaturedAction, bulkDeleteProductsAction, toggleStatusAction, saveToProductionAction, debugBlobStatus, forceBlobRefresh, testBlobWrite, forceImmediateSyncAction, checkCacheStatusAction } from "@/app/admin/actions"
-import { getProducts, fromCsvRow } from "@/lib/csv-data"
+import { getProducts, fromCsvRow, fetchDirectFromBlob } from "@/lib/csv-data"
 import { transformHeader, normalizeTastingNotes } from "@/lib/csv-helpers"
 import type { Product } from "@/lib/types"
 import { CoffeeProductForm } from "./forms/CoffeeProductForm"
@@ -194,6 +194,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isDeployInProgress, setIsDeployInProgress] = useState(false)
+
+  // DATA SOURCE TRACKING: New state for data source awareness
+  const [dataSource, setDataSource] = useState<'blob' | 'staging' | 'unknown'>('unknown')
+  const [lastSyncTime, setLastSyncTime] = useState<string>('')
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const handleCategoryChange = useCallback(async (productSku: string, newCategory: string) => {
     try {
@@ -629,7 +634,63 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
   }, [isParsingCsv])
 
-  // STAGING SYSTEM: Initialize staging data (including empty state)
+  // NEW: Sync from blob storage functionality
+  const handleSyncFromBlob = useCallback(async () => {
+    if (isSyncing) {
+      console.log('🚫 Sync already in progress, ignoring duplicate call')
+      return
+    }
+    
+    setIsSyncing(true)
+    try {
+      toast.loading('Syncing from blob storage...', { id: 'sync-from-blob' })
+      
+      console.log('🔄 Syncing admin from blob storage...')
+      
+      // Force read directly from blob storage
+      const blobProducts = await fetchDirectFromBlob()
+      
+      console.log('✅ Blob sync result:', {
+        productsLoaded: blobProducts.length,
+        featuredCount: blobProducts.filter(p => p.featured === true).length,
+        syncTimestamp: new Date().toISOString()
+      })
+      
+      // Update staging to match blob
+      setStagedProducts(blobProducts)
+      setOriginalProducts(blobProducts)
+      setProducts(blobProducts)
+      setHasUnsavedChanges(false)
+      setDataSource('blob')
+      setLastSyncTime(new Date().toISOString())
+      
+      toast.success(`Synced ${blobProducts.length} products from blob storage`, { id: 'sync-from-blob' })
+      
+      // Show visual confirmation
+      setDebugResult({
+        title: 'Sync from Blob Storage',
+        status: 'success',
+        details: {
+          'Products Synced': blobProducts.length,
+          'Featured Products': blobProducts.filter(p => p.featured === true).length,
+          'Sync Source': 'blob-storage',
+          'Sync Time': new Date().toISOString(),
+          'Previous Count': stagedProducts.length
+        },
+        timestamp: new Date().toISOString()
+      })
+      setShowDebugModal(true)
+      
+    } catch (error) {
+      console.error('❌ Blob sync failed:', error)
+      toast.error('Failed to sync from blob storage', { id: 'sync-from-blob' })
+      setDataSource('unknown')
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [isSyncing, stagedProducts.length])
+
+  // STAGING SYSTEM: Initialize staging data with blob storage source tracking
   useEffect(() => {
     // CRITICAL FIX: Don't reset staging if a deployment is in progress.
     if (isDeployInProgress) {
@@ -640,6 +701,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     console.log('🔍 initialProducts changed:', {
       length: initialProducts.length,
       first: initialProducts[0]?.productName || 'EMPTY',
+      featuredCount: initialProducts.filter(p => p.featured === true).length,
       timestamp: new Date().toISOString()
     })
     
@@ -647,8 +709,16 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     setStagedProducts([...initialProducts])
     setOriginalProducts([...initialProducts])
     setHasUnsavedChanges(false)
-    console.log('🎭 Staging system initialized with', initialProducts.length, 'products')
+    setDataSource('blob') // Since admin page loads from blob storage
+    setLastSyncTime(new Date().toISOString())
+    console.log('🎭 Staging system initialized with', initialProducts.length, 'products from blob storage')
   }, [initialProducts, isDeployInProgress])
+
+  // STAGING SYSTEM: Update data source based on changes
+  useEffect(() => {
+    const hasChanges = JSON.stringify(stagedProducts) !== JSON.stringify(originalProducts)
+    setDataSource(hasChanges ? 'staging' : 'blob')
+  }, [stagedProducts, originalProducts])
 
   // STAGING SYSTEM: Detect changes
   useEffect(() => {

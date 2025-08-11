@@ -63,10 +63,90 @@ export function fromCsvRow(row: Record<string, any>): Product {
   return product
 }
 
-// SINGLE-SHOT: Core CSV fetch and parse function (called once per build/runtime)
-async function fetchAndParseCsvInternal(): Promise<Product[]> {
+
+// NEW: Direct blob fetch function that completely bypasses all caching
+export async function fetchDirectFromBlob(): Promise<Product[]> {
   try {
-    console.log('📊 Starting single-shot CSV fetch and parse...');
+    console.log('🔄 Direct blob fetch starting...')
+    
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.warn('⚠️ No blob token available')
+      return []
+    }
+    
+    // Get blob files
+    const blobs = await list({ prefix: PRODUCTS_BLOB_KEY, limit: 10 })
+    
+    if (!blobs.blobs || blobs.blobs.length === 0) {
+      console.warn('⚠️ No blob files found')
+      return []
+    }
+    
+    const targetBlob = blobs.blobs[0]
+    console.log('🔍 Reading from blob:', targetBlob.url)
+    
+    // Fetch with aggressive cache busting
+    const response = await fetch(targetBlob.url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Blob fetch failed: ${response.status}`)
+    }
+    
+    const csvContent = await response.text()
+    console.log('✅ Blob content fetched:', {
+      size: csvContent.length,
+      lines: csvContent.split('\n').length
+    })
+    
+    if (!csvContent?.trim()) {
+      console.log('📊 Empty CSV content - returning empty array')
+      return []
+    }
+    
+    // Parse CSV directly
+    const parsed = Papa.parse(csvContent, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      transformHeader: (h) => HEADER_ALIASES[norm(h)] ?? h.trim().toUpperCase()
+    })
+    
+    if (parsed.errors.length > 0) {
+      console.warn('⚠️ CSV parse errors:', parsed.errors)
+    }
+    
+    if (!parsed.data || !Array.isArray(parsed.data) || parsed.data.length === 0) {
+      console.log('📊 No data rows in CSV - returning empty array')
+      return []
+    }
+    
+    // Process the data using existing fromCsvRow function
+    const products = parsed.data.map((rawRow: any) => fromCsvRow(rawRow))
+    
+    console.log('✅ Direct blob fetch complete:', {
+      productsLoaded: products.length,
+      featuredCount: products.filter(p => p.featured === true).length
+    })
+    
+    return products
+    
+  } catch (error) {
+    console.error('❌ Direct blob fetch failed:', error)
+    throw error
+  }
+}
+
+// ENHANCED: Updated fetchAndParseCsvInternal to support cache bypassing
+async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]> {
+  try {
+    console.log('📊 Starting CSV fetch and parse...', { bypassCache });
     
     // CRITICAL: Fail fast during build if no blob token
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -104,10 +184,19 @@ async function fetchAndParseCsvInternal(): Promise<Product[]> {
       size: targetBlob.size,
     });
 
-    // Fetch CSV with proper caching
-    const response = await fetch(targetBlob.url, {
+    // Fetch CSV with conditional caching based on bypassCache parameter
+    const fetchOptions = bypassCache ? {
+      cache: 'no-store' as RequestCache,
+      headers: { 
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    } : {
       next: { revalidate: 3600, tags: [PRODUCTS_TAG] }
-    });
+    };
+    
+    const response = await fetch(targetBlob.url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
@@ -178,23 +267,41 @@ async function fetchAndParseCsvInternal(): Promise<Product[]> {
   }
 }
 
-// PUBLIC API: Direct blob fetching with ISR instead of unstable_cache
+// PUBLIC API: Enhanced getProducts with proper cache control
 export async function getProducts(options?: { 
+  source?: 'blob-storage' | 'staging' | 'cache'
   forceRefresh?: boolean 
   bypassCache?: boolean 
 }): Promise<Product[]> {
-  if (options?.forceRefresh || options?.bypassCache) {
-    console.log('🔄 Bypassing cache, fetching fresh data from blob...');
-    return fetchAndParseCsvInternal();
-  }
+  const source = options?.source || 'cache'
   
-  console.log('🔄 Direct blob fetch - bypassing unstable_cache');
-  return fetchAndParseCsvInternal();
+  console.log('🔍 getProducts called with:', { source, options })
+  
+  switch (source) {
+    case 'blob-storage':
+      console.log('📦 Fetching directly from blob storage...')
+      return await fetchDirectFromBlob()
+      
+    case 'staging':
+      console.log('📝 Using staging data...')
+      // Return staging data if available (implementation depends on how staging is stored)
+      return [] // Implementation would depend on staging storage mechanism
+      
+    case 'cache':
+    default:
+      if (options?.forceRefresh || options?.bypassCache) {
+        console.log('🔄 Bypassing cache, fetching fresh data...')
+        return await fetchAndParseCsvInternal(true)
+      }
+      
+      console.log('💾 Using cached data...')
+      return await fetchAndParseCsvInternal(false)
+  }
 }
 
 export async function getGroupedProducts(): Promise<any[]> {
   console.log('🔄 Direct grouped products fetch - bypassing unstable_cache');
-  const baseProducts = await fetchAndParseCsvInternal();
+  const baseProducts = await fetchAndParseCsvInternal(false);
   const coffeeProducts = baseProducts.filter(p => p.category?.toLowerCase() === 'coffee');
   const productFamilies = groupProductFamilies(coffeeProducts);
   return convertFamiliesToGroupedProducts(productFamilies);
@@ -202,7 +309,7 @@ export async function getGroupedProducts(): Promise<any[]> {
 
 export async function getProductsByCategory(category: string): Promise<Product[]> {
   console.log('🔄 Direct category fetch - bypassing unstable_cache');
-  const baseProducts = await fetchAndParseCsvInternal();
+  const baseProducts = await fetchAndParseCsvInternal(false);
   return baseProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
 }
 

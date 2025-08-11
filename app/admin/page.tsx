@@ -7,8 +7,20 @@ export const revalidate = 0
 
 export default async function AdminPage() {
   try {
-    // Admin should always get fresh data, never cached
-    const initialProducts = await getProducts()
+    // CRITICAL FIX: Admin should always get fresh data directly from blob storage
+    console.log('🚀 Admin page: Loading data directly from blob storage...')
+    const initialProducts = await getProducts({ 
+      source: 'blob-storage',
+      forceRefresh: true,
+      bypassCache: true 
+    })
+    
+    console.log('✅ Admin page: Loaded blob storage data:', {
+      productCount: initialProducts.length,
+      featuredCount: initialProducts.filter(p => p.featured === true).length,
+      source: 'blob-storage',
+      timestamp: new Date().toISOString()
+    })
     
     return (
       <div>
