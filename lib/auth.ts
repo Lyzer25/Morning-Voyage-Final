@@ -154,19 +154,44 @@ export async function getServerSession(): Promise<SessionData | null> {
 export async function clearSession(): Promise<void> {
   try {
     const cookieStore: any = await (nextHeaders as any).cookies();
+
+    // Prefer the delete API when available
     if (cookieStore.delete) {
-      cookieStore.delete('mv_session');
-    } else {
-      // Fallback: overwrite with expired cookie
+      try {
+        // Modern signature: cookieStore.delete(name)
+        cookieStore.delete('mv_session');
+      } catch {
+        try {
+          // Some runtimes expect object form
+          cookieStore.delete({ name: 'mv_session', path: '/' });
+        } catch {
+          // Fallback to setting expired cookie below
+          cookieStore.set({
+            name: 'mv_session',
+            value: '',
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 0,
+          });
+        }
+      }
+      return;
+    }
+
+    // Fallback: overwrite with expired cookie (ensure sameSite lax for broader compatibility)
+    if (cookieStore.set) {
       cookieStore.set({
         name: 'mv_session',
         value: '',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
         maxAge: 0,
       });
+      return;
     }
   } catch (err) {
     // Some Next versions may not expose delete; attempt to overwrite with expired cookie
@@ -177,7 +202,7 @@ export async function clearSession(): Promise<void> {
         value: '',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
         maxAge: 0,
       });

@@ -30,6 +30,24 @@ export default function ClientHeader({ session }: { session?: SessionData | null
     }
   }
 
+  // Sign-out handler: call logout API then redirect to login
+  const handleSignOut = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json().catch(() => null);
+      // Redirect regardless, prefer server-provided redirect when present
+      const redirectTo = data?.redirect || '/account/login';
+      window.location.href = redirectTo;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Logout error:', err);
+      window.location.href = '/account/login';
+    }
+  };
+
   const navItems = [
     { name: "Coffee", href: "/coffee", badge: "New" },
     { name: "Subscriptions", href: "/subscriptions", badge: "Up to 50% Off" },
@@ -229,14 +247,12 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                       Admin
                     </a>
                   )}
-                  <form action="/api/auth/signout" method="POST" className="inline">
-                    <button
-                      type="submit"
-                      className="text-gray-500 hover:text-gray-700 text-sm"
-                    >
-                      Sign Out
-                    </button>
-                  </form>
+                  <button
+                    onClick={handleSignOut}
+                    className="text-gray-500 hover:text-gray-700 text-sm"
+                  >
+                    Sign Out
+                  </button>
                 </div>
               ) : (
                 <a

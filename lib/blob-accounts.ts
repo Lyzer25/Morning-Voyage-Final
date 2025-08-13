@@ -157,6 +157,32 @@ export async function getAllAccounts(): Promise<UserAccount[]> {
 }
 
 /**
+ * Get a user account by id (reads the individual account JSON blob).
+ */
+export async function getUserById(userId: string): Promise<UserAccount | null> {
+  try {
+    if (!userId) return null;
+    const blobs = await list({ prefix: `accounts/${userId}.json`, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
+    if (!downloadUrl) return null;
+
+    const res = await fetch(downloadUrl, { cache: 'no-store' });
+    if (!res.ok) {
+      console.warn('getUserById: fetch failed', { url: downloadUrl, status: res.status });
+      return null;
+    }
+
+    const account = await res.json();
+    return account as UserAccount;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('getUserById: failed to read account', { userId, error: (err as any)?.message || err });
+    return null;
+  }
+}
+
+/**
  * Password reset token storage (stored in a single JSON blob).
  */
 const PASSWORD_RESET_TOKENS_KEY = 'auth/password-reset-tokens.json';

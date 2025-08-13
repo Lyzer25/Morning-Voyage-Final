@@ -1,6 +1,7 @@
 import { getServerSession } from "@/lib/auth";
 import { getAllAccounts } from "@/lib/blob-accounts";
 import { redirect } from "next/navigation";
+import SuspendButton from '@/components/admin/suspend-button';
 
 export const revalidate = 0;
 export const dynamic = 'force-dynamic';
@@ -144,12 +145,13 @@ export default async function AdminAccountsPage() {
                       {account.profile?.last_login ? new Date(account.profile.last_login).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">
+                      <a
+                        href={`/admin/accounts/edit/${account.id}`}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
                         Edit
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        Suspend
-                      </button>
+                      </a>
+                      <SuspendButton id={account.id} status={account.status} />
                     </td>
                   </tr>
                 ))}
