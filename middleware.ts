@@ -26,9 +26,15 @@ export async function middleware(request: NextRequest) {
       const session = payload as any;
 
       console.log('MIDDLEWARE: JWT verified successfully for:', session?.email);
+      console.log('MIDDLEWARE: Payload keys:', Object.keys(session || {}));
+      console.log('MIDDLEWARE: Session role:', session?.role);
+      console.log('MIDDLEWARE: Session payload:', JSON.stringify(session || {}, null, 2));
 
       if (pathname.startsWith('/admin') && session?.role !== 'admin') {
-        console.log(`MIDDLEWARE: User ${session?.email} is not admin, redirecting to account`);
+        console.log(`MIDDLEWARE: Admin access denied`);
+        console.log(`MIDDLEWARE: User role:`, session?.role);
+        console.log(`MIDDLEWARE: Expected: admin`);
+        console.log(`MIDDLEWARE: Session data:`, JSON.stringify(session || {}, null, 2));
         return NextResponse.redirect(new URL('/account', request.url));
       }
 

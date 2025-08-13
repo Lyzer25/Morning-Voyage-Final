@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LoginPage() {
   const [isSignup, setIsSignup] = useState(false);
@@ -10,7 +10,35 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [checkingSession, setCheckingSession] = useState(true);
   
+  // Check if already logged in on page load
+  useEffect(() => {
+    let mounted = true;
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session-check');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.session) {
+            // Already logged in, redirect based on role
+            const redirectPath = data.role === 'admin' ? '/admin' : '/account';
+            // Use full navigation so server components pick up cookie/server session
+            window.location.href = redirectPath;
+            return;
+          }
+        }
+      } catch {
+        // Ignore errors, show login page
+      } finally {
+        if (mounted) setCheckingSession(false);
+      }
+    };
+    
+    checkSession();
+    return () => { mounted = false; };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -51,7 +79,22 @@ export default function LoginPage() {
         
         if (response.ok) {
           setMessage(data.message);
-          // Force a full navigation so server components pick up the session cookie
+
+          // Redirect based on role (use session-check endpoint)
+          try {
+            const checkResponse = await fetch('/api/auth/session-check');
+            if (checkResponse.ok) {
+              const sessionData = await checkResponse.json();
+              const redirectPath = sessionData.role === 'admin' ? '/admin' : '/account';
+              // Use full navigation so server components pick up cookie/server session
+              window.location.href = redirectPath;
+              return;
+            }
+          } catch {
+            // fallback
+          }
+
+          // Fallback if session-check fails
           window.location.href = '/account';
         } else {
           setError(data.error);
@@ -73,6 +116,18 @@ export default function LoginPage() {
     setShowResetPassword(false);
     setIsSignup(false);
   };
+  
+  // Show loading while checking session
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
