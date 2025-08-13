@@ -39,7 +39,6 @@
     "@radix-ui/react-tooltip": "latest",
     "@remix-run/react": "latest",
     "@sveltejs/kit": "latest",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/papaparse": "^5.3.16",
     "@vercel/analytics": "latest",
     "@vercel/blob": "latest",
@@ -73,6 +72,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
