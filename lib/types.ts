@@ -86,3 +86,50 @@ export interface GiftBundleProduct extends Product {
   packagingType?: 'standard' | 'premium' | 'gift-box';
   seasonalAvailability?: string;
 }
+
+/**
+ * Account & Session Types (Phase 1)
+ */
+
+export interface UserAccount {
+  id: string;
+  email: string;
+  role: 'admin' | 'customer';
+  status: 'active' | 'suspended' | 'deleted';
+  subscriber: {
+    is_subscriber: boolean;
+    tier: 'basic' | 'premium' | null;
+    expires_at: string | null;
+  };
+  profile: {
+    display_name: string;
+    created_at: string;
+    last_login: string;
+  };
+}
+
+export interface SessionData {
+  userId: string;
+  email: string;
+  role: 'admin' | 'customer';
+  isSubscriber: boolean;
+}
+
+export interface CartItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  base_price: number;
+  line_total: number;
+}
+
+export interface ShoppingCart {
+  id: string;
+  user_id?: string;
+  session_id: string;
+  items: CartItem[];
+  totals: { subtotal: number; total: number; };
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+}
