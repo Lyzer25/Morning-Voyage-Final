@@ -115,15 +115,30 @@ export default async function AdminPage() {
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full text-left px-4 py-2 text-sm bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700">
-                  View All Accounts
-                </button>
-                <button className="w-full text-left px-4 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md text-green-700">
-                  Manage Subscriptions
-                </button>
-                <button className="w-full text-left px-4 py-2 text-sm bg-purple-50 hover:bg-purple-100 rounded-md text-purple-700">
-                  View Orders
-                </button>
+                <a 
+                  href="/admin/accounts"
+                  className="w-full text-left px-4 py-2 text-sm bg-blue-50 hover:bg-blue-100 rounded-md text-blue-700 block transition-colors"
+                >
+                  👥 View All Accounts
+                </a>
+                <a 
+                  href="/admin/products"
+                  className="w-full text-left px-4 py-2 text-sm bg-green-50 hover:bg-green-100 rounded-md text-green-700 block transition-colors"
+                >
+                  📦 Manage Products
+                </a>
+                <a 
+                  href="/admin/subscriptions"
+                  className="w-full text-left px-4 py-2 text-sm bg-purple-50 hover:bg-purple-100 rounded-md text-purple-700 block transition-colors"
+                >
+                  ⭐ Manage Subscriptions
+                </a>
+                <a 
+                  href="/admin/orders"
+                  className="w-full text-left px-4 py-2 text-sm bg-orange-50 hover:bg-orange-100 rounded-md text-orange-700 block transition-colors"
+                >
+                  🛍️ View Orders
+                </a>
               </div>
             </div>
 
