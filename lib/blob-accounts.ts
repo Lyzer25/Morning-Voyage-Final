@@ -90,3 +90,47 @@ async function getAccountIndex(): Promise<{ total_accounts: number; emails_to_id
     return { total_accounts: 0, emails_to_ids: {}, last_updated: new Date().toISOString() };
   }
 }
+
+/**
+ * Get all non-deleted user accounts, sorted by creation date (newest first).
+ */
+export async function getAllAccounts(): Promise<UserAccount[]> {
+  try {
+    const index = await getAccountIndex();
+    const accounts: UserAccount[] = [];
+
+    const ids = Object.values(index.emails_to_ids || {});
+    for (const userId of ids) {
+      try {
+        const downloadUrl = await vercelBlob.getDownloadUrl(`accounts/${userId}.json`);
+        if (!downloadUrl) continue;
+
+        const res = await fetch(downloadUrl);
+        if (!res.ok) continue;
+
+        const account = await res.json() as UserAccount;
+        if (account && account.status !== 'deleted') {
+          accounts.push(account);
+        }
+      } catch (err) {
+        // Skip failed account reads
+        // eslint-disable-next-line no-console
+        console.warn(`Failed to read account ${userId}`, { error: (err as any)?.message || err });
+        continue;
+      }
+    }
+
+    // Sort by profile.created_at descending (newest first)
+    accounts.sort((a, b) => {
+      const aTime = new Date(a.profile.created_at).getTime();
+      const bTime = new Date(b.profile.created_at).getTime();
+      return bTime - aTime;
+    });
+
+    return accounts;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to get all accounts:', error);
+    return [];
+  }
+}
