@@ -1,4 +1,4 @@
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import PageTransition from "@/components/ui/page-transition"
 import { getGroupedProducts } from "@/lib/csv-data"
@@ -38,7 +38,7 @@ export default async function CoffeePage() {
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-            <Header />
+          
             <div className="container mx-auto px-4 py-8">
               <h1 className="text-3xl font-bold mb-8">Premium Coffee</h1>
               <div className="bg-red-100 p-4 rounded">
@@ -59,7 +59,7 @@ export default async function CoffeePage() {
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-            <Header />
+          
             <div className="container mx-auto px-4 py-16 text-center">
               <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Coffee Collection</h1>
               <div className="max-w-md mx-auto bg-blue-50 p-8 rounded-lg border">
@@ -92,7 +92,7 @@ export default async function CoffeePage() {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+          
           <CoffeePageClient initialProducts={groupedCoffeeProducts} />
           <Footer />
         </div>
@@ -105,7 +105,7 @@ export default async function CoffeePage() {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+          
           <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Coffee Collection</h1>
             <div className="bg-red-100 p-4 rounded max-w-md mx-auto">

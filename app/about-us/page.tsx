@@ -2,7 +2,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Coffee, Target, Users, Compass, Award, Package, Rocket } from "lucide-react"
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import Link from "next/link"
 
@@ -53,7 +53,7 @@ const principles = [
 export default function AboutUsPage() {
   return (
     <div className="bg-[#F6F1EB] text-[#4B2E2E]">
-      <Header />
+      
       <main>
         {/* Hero Section */}
         <section className="py-20 md:py-32 text-center bg-white/30 backdrop-blur-md">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import ShopHero from "@/components/shop/shop-hero"
 import ProductGrid from "@/components/shop/product-grid"
@@ -164,7 +164,7 @@ case "featured":
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-      <Header />
+      
 
       <main className="relative overflow-hidden pt-24">
         <ShopHero />

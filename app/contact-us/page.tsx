@@ -1,5 +1,5 @@
 import type React from "react"
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import { ContactForm } from "@/components/contact/contact-form"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ const SocialLink = ({
 export default function ContactUsPage() {
   return (
     <div className="bg-[#F6F1EB] min-h-screen">
-      <Header />
+      
       <main>
         <div className="container mx-auto px-4 py-24 sm:py-32">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-start">

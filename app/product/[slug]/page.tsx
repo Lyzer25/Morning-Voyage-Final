@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation"
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import ProductDetail from "@/components/product/product-detail"
 import ProductRecommendations from "@/components/product/product-recommendations"
@@ -62,7 +62,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-            <Header />
+          
             <div className="container mx-auto px-4 py-16 text-center">
               <h1 className="text-4xl font-bold text-[#4B2E2E] mb-4">Product Not Found</h1>
               <p className="text-[#6E6658] mb-8">Unable to load product data. Please try again later.</p>
@@ -96,7 +96,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+            
 
           <main className="relative overflow-hidden pt-24">
             <ProductDetail product={product} />
@@ -112,7 +112,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+          
           <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-4xl font-bold text-red-600 mb-4">Error Loading Product</h1>
             <p className="text-[#6E6658] mb-8">There was an error loading this product. Please try again later.</p>

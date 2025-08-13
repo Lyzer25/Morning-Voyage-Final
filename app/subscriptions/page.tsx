@@ -1,4 +1,4 @@
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import SubscriptionHero from "@/components/subscriptions/subscription-hero"
 import SubscriptionPlans from "@/components/subscriptions/subscription-plans"
@@ -48,7 +48,7 @@ export default async function SubscriptionsPage() {
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-            <Header />
+          
             <main className="relative overflow-hidden pt-24">
               <SubscriptionHero />
               <div className="container mx-auto px-4 py-16 text-center">
@@ -89,7 +89,7 @@ export default async function SubscriptionsPage() {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+          
 
           <main className="relative overflow-hidden pt-24">
             <SubscriptionHero />
@@ -108,7 +108,7 @@ export default async function SubscriptionsPage() {
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-          <Header />
+          
           <main className="relative overflow-hidden pt-24">
             <SubscriptionHero />
             <div className="container mx-auto px-4 py-16 text-center">

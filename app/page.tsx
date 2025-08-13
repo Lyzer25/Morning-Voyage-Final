@@ -4,7 +4,7 @@ import ProductShowcase from "@/components/sections/product-showcase"
 import BrandStory from "@/components/sections/brand-story"
 import Testimonials from "@/components/sections/testimonials"
 import Newsletter from "@/components/sections/newsletter"
-import Header from "@/components/layout/header.server"
+ 
 import Footer from "@/components/layout/footer"
 import { getGroupedProducts } from "@/lib/csv-data"
 
@@ -41,7 +41,7 @@ export default async function HomePage() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-        <Header />
+        
         <main className="relative overflow-hidden">
           <Hero />
           <Features />
@@ -59,7 +59,7 @@ export default async function HomePage() {
     // Fallback UI for production reliability
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
-        <Header />
+        
         <main className="relative overflow-hidden">
           <Hero />
           <Features />

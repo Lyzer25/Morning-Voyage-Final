@@ -6,6 +6,7 @@ import "./globals.css"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Suspense } from "react"
+import HeaderServer from "@/components/layout/header.server"
 
 export const metadata: Metadata = {
   title: "Morning Voyage",
@@ -30,6 +31,7 @@ html {
        `}</style>
       </head>
       <body>
+        <HeaderServer />
         <Suspense fallback={null}>{children}</Suspense>
         <Analytics />
         <SpeedInsights />
