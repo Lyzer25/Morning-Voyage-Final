@@ -3,22 +3,40 @@ import jwt from 'jsonwebtoken';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+  console.log(`MIDDLEWARE: Processing ${pathname}`);
+
   if (pathname.startsWith('/admin') || (pathname.startsWith('/account') && !pathname.includes('/login'))) {
+    console.log(`MIDDLEWARE: Protected route ${pathname}, checking session...`);
+
     try {
+      // Debug cookie reading in middleware
       const sessionCookie = request.cookies.get('mv_session');
+      console.log('MIDDLEWARE: Session cookie exists:', !!sessionCookie?.value);
       if (!sessionCookie?.value) {
+        console.log('MIDDLEWARE: No session cookie, redirecting to login');
         return NextResponse.redirect(new URL('/account/login', request.url));
       }
-      
+
+      console.log('MIDDLEWARE: Attempting JWT verification...');
+      console.log('MIDDLEWARE: AUTH_SECRET exists:', !!process.env.AUTH_SECRET);
+
       const session = jwt.verify(sessionCookie.value, process.env.AUTH_SECRET!) as any;
+      console.log('MIDDLEWARE: JWT verified successfully for:', session.email);
+
       if (pathname.startsWith('/admin') && session.role !== 'admin') {
+        console.log(`MIDDLEWARE: User ${session.email} is not admin, redirecting to account`);
         return NextResponse.redirect(new URL('/account', request.url));
       }
-    } catch {
+
+      console.log(`MIDDLEWARE: Access granted to ${pathname} for ${session.email}`);
+
+    } catch (error) {
+      console.error('MIDDLEWARE: Session verification failed:', error);
       return NextResponse.redirect(new URL('/account/login', request.url));
     }
   }
+
+  console.log(`MIDDLEWARE: Allowing request to ${pathname}`);
   return NextResponse.next();
 }
 
