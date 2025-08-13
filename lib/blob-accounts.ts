@@ -1,4 +1,4 @@
-import * as vercelBlob from '@vercel/blob';
+import { put, getDownloadUrl } from '@vercel/blob';
 import type { UserAccount, PasswordResetToken } from './types';
 
 /**
@@ -7,19 +7,21 @@ import type { UserAccount, PasswordResetToken } from './types';
 export async function saveUserAccount(account: UserAccount): Promise<void> {
   try {
     const key = `accounts/${account.id}.json`;
-    await vercelBlob.put(key, JSON.stringify(account, null, 2), {
+    // Write account JSON (stringify)
+    await put(key, JSON.stringify(account, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
     });
 
+    // Update index (ensure emails stored in lowercase)
     const index = await getAccountIndex();
     index.emails_to_ids = index.emails_to_ids || {};
-    index.emails_to_ids[account.email] = account.id;
+    index.emails_to_ids[account.email.toLowerCase()] = account.id;
     index.total_accounts = Object.keys(index.emails_to_ids).length;
     index.last_updated = new Date().toISOString();
 
-    await vercelBlob.put('accounts/index.json', JSON.stringify(index, null, 2), {
+    await put('accounts/index.json', JSON.stringify(index, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
@@ -36,17 +38,24 @@ export async function saveUserAccount(account: UserAccount): Promise<void> {
  */
 export async function getUserByEmail(email: string): Promise<UserAccount | null> {
   try {
+    const normalizedEmail = (email || '').toLowerCase();
     const index = await getAccountIndex();
     if (!index || !index.emails_to_ids) return null;
-    const userId = index.emails_to_ids[email];
+    const userId = index.emails_to_ids[normalizedEmail];
     if (!userId) return null;
 
-    const downloadUrl = await vercelBlob.getDownloadUrl(`accounts/${userId}.json`);
-    if (!downloadUrl) return null;
+    const downloadUrl = await getDownloadUrl(`accounts/${userId}.json`);
+    if (!downloadUrl) {
+      console.warn('getUserByEmail: downloadUrl not found for', userId);
+      return null;
+    }
 
     try {
-      const res = await fetch(downloadUrl);
-      if (!res.ok) return null;
+      const res = await fetch(downloadUrl, { cache: 'no-store' });
+      if (!res.ok) {
+        console.error('getUserByEmail: fetch failed', { url: downloadUrl, status: res.status });
+        return null;
+      }
       const account = await res.json();
       return account as UserAccount;
     } catch (err) {
@@ -66,13 +75,16 @@ export async function getUserByEmail(email: string): Promise<UserAccount | null>
  */
 async function getAccountIndex(): Promise<{ total_accounts: number; emails_to_ids: Record<string, string>; last_updated: string }> {
   try {
-    const downloadUrl = await vercelBlob.getDownloadUrl('accounts/index.json');
+    const downloadUrl = await getDownloadUrl('accounts/index.json');
     if (!downloadUrl) {
       return { total_accounts: 0, emails_to_ids: {}, last_updated: new Date().toISOString() };
     }
     try {
-      const res = await fetch(downloadUrl);
-      if (!res.ok) return { total_accounts: 0, emails_to_ids: {}, last_updated: new Date().toISOString() };
+      const res = await fetch(downloadUrl, { cache: 'no-store' });
+      if (!res.ok) {
+        console.warn('getAccountIndex: fetch failed', { url: downloadUrl, status: res.status });
+        return { total_accounts: 0, emails_to_ids: {}, last_updated: new Date().toISOString() };
+      }
       const data = await res.json();
       return {
         total_accounts: data.total_accounts || 0,
@@ -102,10 +114,10 @@ export async function getAllAccounts(): Promise<UserAccount[]> {
     const ids = Object.values(index.emails_to_ids || {});
     for (const userId of ids) {
       try {
-        const downloadUrl = await vercelBlob.getDownloadUrl(`accounts/${userId}.json`);
+        const downloadUrl = await getDownloadUrl(`accounts/${userId}.json`);
         if (!downloadUrl) continue;
 
-        const res = await fetch(downloadUrl);
+        const res = await fetch(downloadUrl, { cache: 'no-store' });
         if (!res.ok) continue;
 
         const account = await res.json() as UserAccount;
@@ -147,7 +159,7 @@ export async function savePasswordResetToken(token: PasswordResetToken): Promise
     const updated = existing.filter(t => t.user_id !== token.user_id);
     updated.push(token);
 
-    await vercelBlob.put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(updated, null, 2), {
+    await put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(updated, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
@@ -177,7 +189,7 @@ export async function markPasswordResetTokenUsed(tokenString: string): Promise<v
     const idx = tokens.findIndex(t => t.token === tokenString);
     if (idx >= 0) {
       tokens[idx].used = true;
-      await vercelBlob.put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(tokens, null, 2), {
+      await put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(tokens, null, 2), {
         access: 'public',
         contentType: 'application/json',
         allowOverwrite: true,
@@ -191,9 +203,9 @@ export async function markPasswordResetTokenUsed(tokenString: string): Promise<v
 
 async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
   try {
-    const downloadUrl = await vercelBlob.getDownloadUrl(PASSWORD_RESET_TOKENS_KEY);
+    const downloadUrl = await getDownloadUrl(PASSWORD_RESET_TOKENS_KEY);
     if (!downloadUrl) return [];
-    const res = await fetch(downloadUrl);
+    const res = await fetch(downloadUrl, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data as PasswordResetToken[] : [];
@@ -201,5 +213,39 @@ async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
     // eslint-disable-next-line no-console
     console.warn('No password reset tokens found or failed to read', { error: (err as any)?.message || err });
     return [];
+  }
+}
+
+/**
+ * Test helper: write & read a debug JSON file to verify blob I/O
+ */
+export async function testAccountStorage(): Promise<{ ok: boolean; details?: any }> {
+  const key = `accounts/debug-test-${Date.now()}.json`;
+  const payload = { test: 'account-storage', time: new Date().toISOString() };
+
+  try {
+    await put(key, JSON.stringify(payload, null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      allowOverwrite: true,
+    });
+
+    const url = await getDownloadUrl(key);
+    if (!url) {
+      return { ok: false, details: { error: 'getDownloadUrl returned falsy', key } };
+    }
+
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      return { ok: false, details: { error: 'fetch failed', status: res.status, url } };
+    }
+    const body = await res.text();
+    const snippet = body.substring(0, 1000);
+
+    return { ok: true, details: { key, url, snippet } };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('testAccountStorage error', err);
+    return { ok: false, details: { error: (err as any)?.message || String(err) } };
   }
 }
