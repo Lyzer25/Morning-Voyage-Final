@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,18 +17,22 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/account/login', request.url));
       }
 
-      console.log('MIDDLEWARE: Attempting JWT verification...');
+      console.log('MIDDLEWARE: Attempting JWT verification with jose...');
       console.log('MIDDLEWARE: AUTH_SECRET exists:', !!process.env.AUTH_SECRET);
 
-      const session = jwt.verify(sessionCookie.value, process.env.AUTH_SECRET!) as any;
-      console.log('MIDDLEWARE: JWT verified successfully for:', session.email);
+      // Edge-compatible JWT verify using jose
+      const secretKey = new TextEncoder().encode(process.env.AUTH_SECRET || '');
+      const { payload } = await jwtVerify(sessionCookie.value, secretKey);
+      const session = payload as any;
 
-      if (pathname.startsWith('/admin') && session.role !== 'admin') {
-        console.log(`MIDDLEWARE: User ${session.email} is not admin, redirecting to account`);
+      console.log('MIDDLEWARE: JWT verified successfully for:', session?.email);
+
+      if (pathname.startsWith('/admin') && session?.role !== 'admin') {
+        console.log(`MIDDLEWARE: User ${session?.email} is not admin, redirecting to account`);
         return NextResponse.redirect(new URL('/account', request.url));
       }
 
-      console.log(`MIDDLEWARE: Access granted to ${pathname} for ${session.email}`);
+      console.log(`MIDDLEWARE: Access granted to ${pathname} for ${session?.email}`);
 
     } catch (error) {
       console.error('MIDDLEWARE: Session verification failed:', error);
