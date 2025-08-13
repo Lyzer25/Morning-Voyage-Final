@@ -1,21 +1,30 @@
 import { getServerSession } from "@/lib/auth";
-import HeaderClient from "./header";
+import HeaderWithFallback from "./header-with-fallback";
  
 // Force fresh server-side rendering for header so session state is always current
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
  
 export default async function HeaderServer() {
+  // Log render attempts with timestamp for debugging
+  // eslint-disable-next-line no-console
+  console.log('🔄 HeaderServer rendering at:', new Date().toISOString());
+
   try {
     const session = await getServerSession();
-    // Debug logging for troubleshooting session propagation (remove in production)
     // eslint-disable-next-line no-console
-    console.log('HeaderServer render:', session ? `Logged in: ${session.email}` : 'Not logged in');
-    return <HeaderClient session={session} key={`header-${Date.now()}-${Math.random()}`} />;
+    console.log('📡 HeaderServer session:', session ? `✅ ${session.email}` : '❌ No session');
+
+    // Force unique key to avoid any client-side reuse/hydration issues
+    const uniqueKey = `header-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    // Use the fallback-wrapping client so the client can double-check session if needed
+    return <HeaderWithFallback initialSession={session} key={uniqueKey} />;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('HeaderServer error:', error);
-    return <HeaderClient session={null} key={`header-error-${Date.now()}`} />;
+    console.error('❌ HeaderServer error:', error);
+    return <HeaderWithFallback initialSession={null} key={`header-error-${Date.now()}`} />;
   }
 }
