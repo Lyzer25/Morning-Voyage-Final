@@ -1,4 +1,4 @@
-import { put, getDownloadUrl } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 import type { UserAccount, PasswordResetToken } from './types';
 
 /**
@@ -44,9 +44,12 @@ export async function getUserByEmail(email: string): Promise<UserAccount | null>
     const userId = index.emails_to_ids[normalizedEmail];
     if (!userId) return null;
 
-    const downloadUrl = await getDownloadUrl(`accounts/${userId}.json`);
+    // Use list() to locate the blob and get a usable url (matches admin patterns)
+    const blobs = await list({ prefix: `accounts/${userId}.json`, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
     if (!downloadUrl) {
-      console.warn('getUserByEmail: downloadUrl not found for', userId);
+      console.warn('getUserByEmail: blob url not found for', userId);
       return null;
     }
 
@@ -75,7 +78,10 @@ export async function getUserByEmail(email: string): Promise<UserAccount | null>
  */
 async function getAccountIndex(): Promise<{ total_accounts: number; emails_to_ids: Record<string, string>; last_updated: string }> {
   try {
-    const downloadUrl = await getDownloadUrl('accounts/index.json');
+    // Use list() to locate the index blob and fetch via its url (matches admin pattern)
+    const blobs = await list({ prefix: 'accounts/index.json', limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
     if (!downloadUrl) {
       return { total_accounts: 0, emails_to_ids: {}, last_updated: new Date().toISOString() };
     }
@@ -114,7 +120,10 @@ export async function getAllAccounts(): Promise<UserAccount[]> {
     const ids = Object.values(index.emails_to_ids || {});
     for (const userId of ids) {
       try {
-        const downloadUrl = await getDownloadUrl(`accounts/${userId}.json`);
+        // Use list() to locate the account blob and fetch via its url
+        const blobs = await list({ prefix: `accounts/${userId}.json`, limit: 1 });
+        const blobItem = blobs?.blobs?.[0];
+        const downloadUrl = blobItem?.url;
         if (!downloadUrl) continue;
 
         const res = await fetch(downloadUrl, { cache: 'no-store' });
@@ -203,7 +212,10 @@ export async function markPasswordResetTokenUsed(tokenString: string): Promise<v
 
 async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
   try {
-    const downloadUrl = await getDownloadUrl(PASSWORD_RESET_TOKENS_KEY);
+    // Use list() to locate the password-reset-tokens blob and fetch via its url
+    const blobs = await list({ prefix: PASSWORD_RESET_TOKENS_KEY, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
     if (!downloadUrl) return [];
     const res = await fetch(downloadUrl, { cache: 'no-store' });
     if (!res.ok) return [];
@@ -224,15 +236,20 @@ export async function testAccountStorage(): Promise<{ ok: boolean; details?: any
   const payload = { test: 'account-storage', time: new Date().toISOString() };
 
   try {
-    await put(key, JSON.stringify(payload, null, 2), {
+    const writeResult = await put(key, JSON.stringify(payload, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
     });
 
-    const url = await getDownloadUrl(key);
+    // Prefer the immediate write result URL; fallback to list() if needed
+    const url = writeResult?.url || (await (async () => {
+      const blobs = await list({ prefix: key, limit: 1 });
+      return blobs?.blobs?.[0]?.url;
+    })());
+
     if (!url) {
-      return { ok: false, details: { error: 'getDownloadUrl returned falsy', key } };
+      return { ok: false, details: { error: 'blob url not found after write', key } };
     }
 
     const res = await fetch(url, { cache: 'no-store' });
