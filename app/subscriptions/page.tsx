@@ -1,4 +1,4 @@
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import SubscriptionHero from "@/components/subscriptions/subscription-hero"
 import SubscriptionPlans from "@/components/subscriptions/subscription-plans"

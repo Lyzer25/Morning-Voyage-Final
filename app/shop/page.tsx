@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import ShopHero from "@/components/shop/shop-hero"
 import ProductGrid from "@/components/shop/product-grid"
@@ -12,7 +12,7 @@ import { Filter, Grid3X3, List, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 // Mock product data - in real app this would come from your CSV/API
-const products = [
+const products: any = [
   {
     id: 1,
     name: "Morning Blend",
@@ -135,7 +135,7 @@ export default function ShopPage() {
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((product) => {
+const filtered = products.filter((product: any) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -148,17 +148,17 @@ export default function ShopPage() {
 
     // Sort products
     switch (sortBy) {
-      case "price-low":
-        return filtered.sort((a, b) => a.price - b.price)
-      case "price-high":
-        return filtered.sort((a, b) => b.price - a.price)
-      case "rating":
-        return filtered.sort((a, b) => b.rating - a.rating)
-      case "newest":
-        return filtered.sort((a, b) => b.id - a.id)
-      case "featured":
+case "price-low":
+        return filtered.sort((a: any, b: any) => a.price - b.price)
+case "price-high":
+        return filtered.sort((a: any, b: any) => b.price - a.price)
+case "rating":
+        return filtered.sort((a: any, b: any) => b.rating - a.rating)
+case "newest":
+        return filtered.sort((a: any, b: any) => b.id - a.id)
+case "featured":
       default:
-        return filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+        return filtered.sort((a: any, b: any) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
     }
   }, [searchQuery, selectedCategory, selectedSubcategory, priceRange, sortBy])
 

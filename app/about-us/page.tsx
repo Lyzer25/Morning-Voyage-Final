@@ -2,7 +2,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Coffee, Target, Users, Compass, Award, Package, Rocket } from "lucide-react"
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import Link from "next/link"
 

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation"
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import ProductDetail from "@/components/product/product-detail"
 import ProductRecommendations from "@/components/product/product-recommendations"

@@ -1,4 +1,4 @@
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import PageTransition from "@/components/ui/page-transition"
 import { getGroupedProducts } from "@/lib/csv-data"

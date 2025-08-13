@@ -4,7 +4,7 @@ import ProductShowcase from "@/components/sections/product-showcase"
 import BrandStory from "@/components/sections/brand-story"
 import Testimonials from "@/components/sections/testimonials"
 import Newsletter from "@/components/sections/newsletter"
-import Header from "@/components/layout/header"
+import Header from "@/components/layout/header.server"
 import Footer from "@/components/layout/footer"
 import { getGroupedProducts } from "@/lib/csv-data"
 
