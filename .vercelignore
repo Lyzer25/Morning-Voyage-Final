@@ -1,0 +1,5 @@
+# Ignore npm lock and local node_modules so Vercel prefers pnpm when pnpm-lock.yaml is present
+package-lock.json
+node_modules
+.env.local
+.DS_Store
