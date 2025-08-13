@@ -96,6 +96,11 @@ export interface UserAccount {
   email: string;
   role: 'admin' | 'customer';
   status: 'active' | 'suspended' | 'deleted';
+
+  // Password authentication
+  password_hash: string;
+  email_verified: boolean;
+
   subscriber: {
     is_subscriber: boolean;
     tier: 'basic' | 'premium' | null;
@@ -103,9 +108,20 @@ export interface UserAccount {
   };
   profile: {
     display_name: string;
+    preferences?: Record<string, any>;
     created_at: string;
     last_login: string;
+    password_changed_at?: string;
   };
+}
+
+export interface PasswordResetToken {
+  token: string;
+  user_id: string;
+  email: string;
+  expires_at: string;
+  created_at: string;
+  used: boolean;
 }
 
 export interface SessionData {

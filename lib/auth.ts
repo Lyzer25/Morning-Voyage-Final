@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import type { SessionData } from './types';
 
@@ -153,5 +154,69 @@ export async function clearSession(): Promise<void> {
       // eslint-disable-next-line no-console
       console.error('Failed to clear session cookie', e);
     }
+  }
+}
+
+/**
+ * Password utilities
+ */
+
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 12;
+  return bcrypt.hash(password, saltRounds);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+export function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+
+  if (!/(?=.*[a-z])/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+
+  if (!/(?=.*[A-Z])/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+
+  if (!/(?=.*\d)/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Password reset token (JWT) helpers
+ */
+export async function createPasswordResetToken(userId: string, email: string): Promise<string> {
+  if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
+  const token = jwt.sign(
+    { userId, email, type: 'password_reset' },
+    AUTH_SECRET,
+    { expiresIn: '1h' }
+  );
+  return token;
+}
+
+export async function verifyPasswordResetToken(token: string): Promise<{ userId: string; email: string } | null> {
+  if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
+  try {
+    const decoded = jwt.verify(token, AUTH_SECRET) as any;
+    if (decoded && decoded.type === 'password_reset' && decoded.userId && decoded.email) {
+      return { userId: decoded.userId, email: decoded.email };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

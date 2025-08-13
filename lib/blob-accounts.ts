@@ -1,5 +1,5 @@
 import * as vercelBlob from '@vercel/blob';
-import type { UserAccount } from './types';
+import type { UserAccount, PasswordResetToken } from './types';
 
 /**
  * Save a user account JSON to blob storage and update accounts/index.json
@@ -131,6 +131,75 @@ export async function getAllAccounts(): Promise<UserAccount[]> {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to get all accounts:', error);
+    return [];
+  }
+}
+
+/**
+ * Password reset token storage (stored in a single JSON blob).
+ */
+const PASSWORD_RESET_TOKENS_KEY = 'auth/password-reset-tokens.json';
+
+export async function savePasswordResetToken(token: PasswordResetToken): Promise<void> {
+  try {
+    const existing = await getPasswordResetTokens();
+    // Remove any existing tokens for the same user
+    const updated = existing.filter(t => t.user_id !== token.user_id);
+    updated.push(token);
+
+    await vercelBlob.put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(updated, null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      allowOverwrite: true,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save password reset token', { error: (err as any)?.message || err });
+    throw err;
+  }
+}
+
+export async function getPasswordResetToken(tokenString: string): Promise<PasswordResetToken | null> {
+  try {
+    const tokens = await getPasswordResetTokens();
+    const found = tokens.find(t => t.token === tokenString && !t.used && new Date(t.expires_at) > new Date());
+    return found || null;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to get password reset token', { error: (err as any)?.message || err });
+    return null;
+  }
+}
+
+export async function markPasswordResetTokenUsed(tokenString: string): Promise<void> {
+  try {
+    const tokens = await getPasswordResetTokens();
+    const idx = tokens.findIndex(t => t.token === tokenString);
+    if (idx >= 0) {
+      tokens[idx].used = true;
+      await vercelBlob.put(PASSWORD_RESET_TOKENS_KEY, JSON.stringify(tokens, null, 2), {
+        access: 'public',
+        contentType: 'application/json',
+        allowOverwrite: true,
+      });
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to mark password reset token used', { error: (err as any)?.message || err });
+  }
+}
+
+async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
+  try {
+    const downloadUrl = await vercelBlob.getDownloadUrl(PASSWORD_RESET_TOKENS_KEY);
+    if (!downloadUrl) return [];
+    const res = await fetch(downloadUrl);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data as PasswordResetToken[] : [];
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('No password reset tokens found or failed to read', { error: (err as any)?.message || err });
     return [];
   }
 }
