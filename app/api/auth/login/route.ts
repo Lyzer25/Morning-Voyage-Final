@@ -37,17 +37,73 @@ export async function POST(request: NextRequest) {
       role: user.role,
       isSubscriber: user.subscriber.is_subscriber
     };
-    const sessionToken = await createSessionToken(sessionData);
-    await setSessionCookie(sessionToken);
 
-    return NextResponse.json({
+    console.log('Login: creating session token for', user.email);
+    const sessionToken = await createSessionToken(sessionData);
+    console.log('Login: session token created:', !!sessionToken);
+
+    // Attempt to set cookie via the helper (server cookie store)
+    try {
+      console.log('Login: calling setSessionCookie');
+      await setSessionCookie(sessionToken);
+      console.log('Login: setSessionCookie call completed');
+    } catch (err) {
+      console.warn('Login: setSessionCookie failed:', (err as any)?.message || err);
+    }
+
+    // Build response and also set cookie on the NextResponse to ensure compatibility
+    const res = NextResponse.json({
       success: true,
       message: 'Login successful',
       user: {
         email: user.email,
         displayName: user.profile.display_name
+      },
+      debug: {
+        sessionCreated: !!sessionToken,
+        userId: user.id,
+        email: user.email
       }
     });
+
+    // Try both cookie APIs for compatibility across Next versions/runtimes
+    try {
+      const secure = process.env.NODE_ENV === 'production';
+      // Preferred modern API
+      if (res.cookies && typeof res.cookies.set === 'function') {
+        try {
+          // object form
+          // @ts-ignore - runtime check
+          res.cookies.set({
+            name: 'mv_session',
+            value: sessionToken,
+            httpOnly: true,
+            secure,
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60
+          });
+        } catch {
+          try {
+            // tuple form
+            // @ts-ignore - runtime check
+            res.cookies.set('mv_session', sessionToken, {
+              httpOnly: true,
+              secure,
+              sameSite: 'strict',
+              path: '/',
+              maxAge: 7 * 24 * 60 * 60
+            });
+          } catch (e) {
+            console.warn('Login: res.cookies.set failed', (e as any)?.message || e);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Login: failed to set cookie on NextResponse', (err as any)?.message || err);
+    }
+
+    return res;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Login failed:', error);

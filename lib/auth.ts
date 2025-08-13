@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import * as nextHeaders from 'next/headers';
 import type { SessionData } from './types';
 
 const AUTH_SECRET = process.env.AUTH_SECRET;
@@ -58,12 +58,10 @@ export async function createSessionToken(userData: SessionData): Promise<string>
  * Set session cookie on the server (httpOnly).
  */
 export async function setSessionCookie(token: string): Promise<void> {
-  // cookies() is from next/headers and works in server components / route handlers.
-  // Use options that align with production settings.
+  // Use next/headers via namespace import for runtime compatibility
   const secure = process.env.NODE_ENV === 'production';
   try {
-    // Some Next versions expose cookies() as an async API; normalize by awaiting and treating as any.
-    const cookieStore: any = await (cookies as any)();
+    const cookieStore: any = await (nextHeaders as any).cookies();
     cookieStore.set({
       name: 'mv_session',
       value: token,
@@ -74,10 +72,9 @@ export async function setSessionCookie(token: string): Promise<void> {
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
     });
   } catch (err) {
-    // Fallback to older signature if available
+    // Fallback: try alternate signature
     try {
-      const cookieStore: any = await (cookies as any)();
-      // Some runtimes expect (name, value, options)
+      const cookieStore: any = await (nextHeaders as any).cookies();
       cookieStore.set('mv_session', token, {
         httpOnly: true,
         secure,
@@ -98,21 +95,55 @@ export async function setSessionCookie(token: string): Promise<void> {
 export async function getServerSession(): Promise<SessionData | null> {
   if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
   try {
-    const cookieStore: any = await (cookies as any)();
-    const cookie = cookieStore.get('mv_session');
+    // Log that we're checking cookies (will appear in server logs)
+    // eslint-disable-next-line no-console
+    console.log('getServerSession: checking cookie store for mv_session');
+
+    const cookieStore: any = await (nextHeaders as any).cookies();
+    const cookie = cookieStore.get ? cookieStore.get('mv_session') : null;
     const token = cookie?.value;
-    if (!token) return null;
-    const decoded = jwt.verify(token, AUTH_SECRET) as any;
-    // Minimal validation of payload shape
-    if (!decoded || !decoded.userId || !decoded.email) return null;
-    const session: SessionData = {
-      userId: decoded.userId,
-      email: decoded.email,
-      role: decoded.role === 'admin' ? 'admin' : 'customer',
-      isSubscriber: !!decoded.isSubscriber,
-    };
-    return session;
-  } catch {
+
+    // eslint-disable-next-line no-console
+    console.log('getServerSession: cookie present:', !!token);
+
+    if (!token) {
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: no session token found in cookies');
+      return null;
+    }
+
+    try {
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: verifying JWT token (redacted)...');
+      const decoded = jwt.verify(token, AUTH_SECRET) as any;
+
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: jwt verified, payload keys:', Object.keys(decoded || {}));
+
+      if (!decoded || !decoded.userId || !decoded.email) {
+        // eslint-disable-next-line no-console
+        console.log('getServerSession: decoded payload missing required fields', decoded);
+        return null;
+      }
+
+      const session: SessionData = {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role === 'admin' ? 'admin' : 'customer',
+        isSubscriber: !!decoded.isSubscriber,
+      };
+
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: returning session for', session.email);
+      return session;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('getServerSession: jwt verification failed', (err as any)?.message || err);
+      return null;
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('getServerSession: failed to read cookies', (err as any)?.message || err);
     return null;
   }
 }
@@ -122,7 +153,7 @@ export async function getServerSession(): Promise<SessionData | null> {
  */
 export async function clearSession(): Promise<void> {
   try {
-    const cookieStore: any = await (cookies as any)();
+    const cookieStore: any = await (nextHeaders as any).cookies();
     if (cookieStore.delete) {
       cookieStore.delete('mv_session');
     } else {
@@ -140,7 +171,7 @@ export async function clearSession(): Promise<void> {
   } catch (err) {
     // Some Next versions may not expose delete; attempt to overwrite with expired cookie
     try {
-      const cookieStore: any = await (cookies as any)();
+      const cookieStore: any = await (nextHeaders as any).cookies();
       cookieStore.set({
         name: 'mv_session',
         value: '',

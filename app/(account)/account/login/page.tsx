@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [isSignup, setIsSignup] = useState(false);
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +51,8 @@ export default function LoginPage() {
         
         if (response.ok) {
           setMessage(data.message);
-          // Redirect to account page after successful auth
-          setTimeout(() => router.push('/account'), 1000);
+          // Force a full navigation so server components pick up the session cookie
+          window.location.href = '/account';
         } else {
           setError(data.error);
         }
