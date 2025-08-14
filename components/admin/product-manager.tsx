@@ -764,7 +764,7 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     return changes
   }
 
-  // FIXED: Refresh using the same method as working debug sync
+  // ENHANCED: Refresh using Force Immediate Sync logic (moved from debug tools)
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   const handleForceRefresh = useCallback(async () => {
@@ -774,15 +774,26 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     }
     
     setIsRefreshing(true)
-    console.log('🔄 Force refreshing admin data from blob storage...')
+    console.log('🔄 Refresh Data: Using Force Immediate Sync logic...')
     
     try {
-      // Use the same direct blob fetch that works in debug tool
+      // Step 1: Run the working Force Immediate Sync server action
+      console.log('⚡ Refresh Data: Running cache invalidation and sync...')
+      const syncResult = await forceImmediateSyncAction()
+      
+      if (!syncResult.success) {
+        throw new Error(syncResult.message)
+      }
+      
+      console.log('✅ Refresh Data: Cache sync completed:', syncResult.details)
+      
+      // Step 2: Refresh admin data (same as debug tool does after sync)
+      console.log('🔄 Refresh Data: Loading fresh admin data...')
       const freshProducts = await fetchDirectFromBlob()
       
       console.log('✅ Fresh products loaded from blob:', {
         count: freshProducts.length,
-        source: 'direct-blob-fetch',
+        source: 'direct-blob-fetch-after-sync',
         timestamp: new Date().toISOString()
       })
       
@@ -794,13 +805,40 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       setDataSource('blob')
       setLastSyncTime(new Date().toISOString())
       
-      console.log('✅ Admin data refreshed successfully')
-      toast.success(`Refreshed ${freshProducts.length} products from live data`)
+      console.log('✅ Refresh Data: Complete with cache sync + admin refresh')
+      toast.success(`Cache synced and refreshed ${freshProducts.length} products from live data`)
+      
+      // Show debug result modal (same as debug tool)
+      setDebugResult({
+        title: 'Refresh Data Complete',
+        status: 'success',
+        details: {
+          'Cache Sync': syncResult.success ? '✅ Success' : '❌ Failed',
+          'Products Loaded': freshProducts.length,
+          'Sync Details': syncResult.details,
+          'Admin Refresh': 'Complete',
+          'Total Time': syncResult.details?.totalTime || 'N/A',
+          'Timestamp': new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      })
+      setShowDebugModal(true)
       
     } catch (error) {
-      console.error('❌ Force refresh failed:', error)
-      toast.error('Failed to refresh admin data')
-      throw error
+      console.error('❌ Refresh Data failed:', error)
+      toast.error(`Refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Show error in debug modal
+      setDebugResult({
+        title: 'Refresh Data Failed',
+        status: 'error',
+        details: {
+          'Error': error instanceof Error ? error.message : String(error),
+          'Timestamp': new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      })
+      setShowDebugModal(true)
     } finally {
       setIsRefreshing(false)
     }
@@ -1412,10 +1450,6 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
               <DropdownMenuItem onClick={() => handleVisualDebug('cache-status')}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Check Cache Status
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleVisualDebug('force-sync')}>
-                <Zap className="mr-2 h-4 w-4" />
-                Force Immediate Sync
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleVisualDebug('featured-analysis')}>
                 <Star className="mr-2 h-4 w-4" />
