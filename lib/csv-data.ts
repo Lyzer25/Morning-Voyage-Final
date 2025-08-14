@@ -54,8 +54,36 @@ export function fromCsvRow(row: Record<string, any>): Product {
     featured: normalizeBool(row["FEATURED"]),
     shippingFirst: row["SHIPPINGFIRST"] ? normalizeMoney(row["SHIPPINGFIRST"]) : undefined,
     shippingAdditional: row["SHIPPINGADDITIONAL"] ? normalizeMoney(row["SHIPPINGADDITIONAL"]) : undefined,
+    // Notification / banner mappings (normalized and backward-compatible)
+    enableNotificationBanner: normalizeBool(
+      row["ENABLE NOTIFICATION BANNER"] ??
+      row["PROMOTIONAL_NOTIFICATION_ENABLED"] ??
+      row["PROMOTIONAL NOTIFICATION ENABLED"] ??
+      row["NOTIFICATION ENABLED"] ??
+      row["NOTIFICATION_ENABLED"] ??
+      row["ENABLENOTIFICATIONBANNER"] ??
+      row["promotional_notification_enabled"] ??
+      row["enable_notification_banner"] ??
+      row["notificationEnabled"] ??
+      false
+    ),
+    notificationEnabled: normalizeBool(
+      row["NOTIFICATION ENABLED"] ??
+      row["NOTIFICATION_ENABLED"] ??
+      row["notificationEnabled"] ??
+      row["promotional_notification_enabled"] ??
+      false
+    ),
+    notificationMessage: (row["NOTIFICATION MESSAGE"]?.toString().trim()) ||
+                         (row["NOTIFICATION"]?.toString().trim()) ||
+                         (row["NOTIFICATION_MESSAGE"]?.toString().trim()) ||
+                         row["notificationMessage"] ||
+                         '',
+    // Backwards compatible alias
+    notification: (row["NOTIFICATION"]?.toString().trim()) || (row["NOTIFICATION MESSAGE"]?.toString().trim()) || '',
+    // Preserve explicit in-stock if provided, otherwise default to true
     status: row["STATUS"]?.toString().toLowerCase() || "active",
-    inStock: true,
+    inStock: row["IN STOCK"] !== undefined ? normalizeBool(row["IN STOCK"]) : true,
     images: [],
     createdAt: new Date(),
     updatedAt: new Date(),
