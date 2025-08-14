@@ -1,6 +1,7 @@
 import type React from "react"
  
 import Footer from "@/components/layout/footer"
+export const dynamic = 'force-dynamic';
 import { ContactForm } from "@/components/contact/contact-form"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

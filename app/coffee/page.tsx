@@ -3,10 +3,11 @@ import Footer from "@/components/layout/footer"
 import PageTransition from "@/components/ui/page-transition"
 import { getGroupedProducts } from "@/lib/csv-data"
 import CoffeePageClient from "@/components/coffee/coffee-page-client"
+import { devLog, buildLog, prodError } from "@/lib/logger"
 
 // STATIC ISR: Build-safe static generation with 1-hour revalidation
 export const dynamic = 'force-static'
-export const revalidate = 3600
+export const revalidate = 60
 
 // Add metadata for better SEO and caching
 export async function generateMetadata() {
@@ -24,17 +25,17 @@ export async function generateMetadata() {
 
 export default async function CoffeePage() {
   try {
-    console.log('☕ CoffeePage: Starting to load...');
+    devLog('☕ CoffeePage: Starting to load...');
     
     // SINGLE-SHOT: Use new getGroupedProducts() directly (already filtered to coffee only)
     const groupedCoffeeProducts = await getGroupedProducts()
     
-    console.log('☕ Grouped coffee products received:', groupedCoffeeProducts?.length || 0);
-    console.log('☕ Products type:', typeof groupedCoffeeProducts);
-    console.log('☕ Is array?', Array.isArray(groupedCoffeeProducts));
+    devLog('☕ Grouped coffee products received:', groupedCoffeeProducts?.length || 0);
+    devLog('☕ Products type:', typeof groupedCoffeeProducts);
+    devLog('☕ Is array?', Array.isArray(groupedCoffeeProducts));
 
     if (!groupedCoffeeProducts || !Array.isArray(groupedCoffeeProducts)) {
-      console.error('❌ Coffee page: Products is not an array:', typeof groupedCoffeeProducts);
+      prodError('❌ Coffee page: Products is not an array:', typeof groupedCoffeeProducts);
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -55,7 +56,7 @@ export default async function CoffeePage() {
     
     // Handle empty product state
     if (groupedCoffeeProducts.length === 0) {
-      console.log('☕ Empty coffee product state detected - showing appropriate empty state');
+      devLog('☕ Empty coffee product state detected - showing appropriate empty state');
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -79,14 +80,14 @@ export default async function CoffeePage() {
       );
     }
     
-    console.log('☕ COFFEE PAGE: Final grouped coffee products:', {
+    buildLog('☕ COFFEE PAGE: Final grouped coffee products:', {
       count: groupedCoffeeProducts.length,
       sample: groupedCoffeeProducts[0]?.productName || 'None'
     });
     
     // Add performance logging for Vercel
     if (process.env.VERCEL) {
-      console.log(`🔍 Vercel ISR: Coffee page generated at ${new Date().toISOString()}`)
+      buildLog(`🔍 Vercel ISR: Coffee page generated at ${new Date().toISOString()}`)
     }
 
     return (
@@ -99,7 +100,7 @@ export default async function CoffeePage() {
       </PageTransition>
     )
   } catch (error) {
-    console.error("❌ Error loading coffee page:", error)
+    prodError("❌ Error loading coffee page:", error)
     
     // Enhanced fallback UI with debug info
     return (

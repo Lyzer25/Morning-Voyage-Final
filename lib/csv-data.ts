@@ -17,6 +17,7 @@ import {
   norm
 } from "@/lib/csv-helpers"
 import { groupProductFamilies, convertFamiliesToGroupedProducts } from "@/lib/family-grouping"
+import { devLog, prodError, buildLog } from "@/lib/logger"
 
 // CRITICAL: Centralized blob key for consistency
 export const PRODUCTS_BLOB_KEY = "products.csv"
@@ -30,7 +31,7 @@ export function fromCsvRow(row: Record<string, any>): Product {
   const requiredFields = ['SKU', 'PRODUCTNAME', 'CATEGORY', 'PRICE'];
   const missing = requiredFields.filter(field => !row[field]);
   if (missing.length > 0) {
-    console.error(`❌ Missing required fields: ${missing.join(', ')}`, row);
+    prodError(`❌ Missing required fields: ${missing.join(', ')}`, row);
     throw new Error(`Missing required fields: ${missing.join(', ')}`);
   }
   
@@ -67,10 +68,10 @@ export function fromCsvRow(row: Record<string, any>): Product {
 // NEW: Direct blob fetch function that completely bypasses all caching
 export async function fetchDirectFromBlob(): Promise<Product[]> {
   try {
-    console.log('🔄 Direct blob fetch starting...')
+    devLog('🔄 Direct blob fetch starting...')
     
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.warn('⚠️ No blob token available')
+      buildLog('⚠️ No blob token available')
       return []
     }
     
@@ -78,12 +79,12 @@ export async function fetchDirectFromBlob(): Promise<Product[]> {
     const blobs = await list({ prefix: PRODUCTS_BLOB_KEY, limit: 10 })
     
     if (!blobs.blobs || blobs.blobs.length === 0) {
-      console.warn('⚠️ No blob files found')
+      buildLog('⚠️ No blob files found')
       return []
     }
     
     const targetBlob = blobs.blobs[0]
-    console.log('🔍 Reading from blob:', targetBlob.url)
+    devLog('🔍 Reading from blob:', targetBlob.url)
     
     // Fetch with aggressive cache busting
     const response = await fetch(targetBlob.url, {
@@ -100,13 +101,13 @@ export async function fetchDirectFromBlob(): Promise<Product[]> {
     }
     
     const csvContent = await response.text()
-    console.log('✅ Blob content fetched:', {
+    devLog('✅ Blob content fetched:', {
       size: csvContent.length,
       lines: csvContent.split('\n').length
     })
     
     if (!csvContent?.trim()) {
-      console.log('📊 Empty CSV content - returning empty array')
+      devLog('📊 Empty CSV content - returning empty array')
       return []
     }
     
@@ -119,26 +120,26 @@ export async function fetchDirectFromBlob(): Promise<Product[]> {
     })
     
     if (parsed.errors.length > 0) {
-      console.warn('⚠️ CSV parse errors:', parsed.errors)
+      devLog('⚠️ CSV parse errors:', parsed.errors)
     }
     
     if (!parsed.data || !Array.isArray(parsed.data) || parsed.data.length === 0) {
-      console.log('📊 No data rows in CSV - returning empty array')
+      devLog('📊 No data rows in CSV - returning empty array')
       return []
     }
     
     // Process the data using existing fromCsvRow function
     const products = parsed.data.map((rawRow: any) => fromCsvRow(rawRow))
     
-    console.log('✅ Direct blob fetch complete:', {
+    devLog('✅ Direct blob fetch complete:', {
       productsLoaded: products.length,
       featuredCount: products.filter(p => p.featured === true).length
     })
     
     return products
     
-  } catch (error) {
-    console.error('❌ Direct blob fetch failed:', error)
+    } catch (error) {
+    prodError('❌ Direct blob fetch failed:', error)
     throw error
   }
 }
@@ -146,39 +147,39 @@ export async function fetchDirectFromBlob(): Promise<Product[]> {
 // ENHANCED: Updated fetchAndParseCsvInternal to support cache bypassing
 async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]> {
   try {
-    console.log('📊 Starting CSV fetch and parse...', { bypassCache });
+    buildLog('📊 Starting CSV fetch and parse...', { bypassCache });
     
     // CRITICAL: Fail fast during build if no blob token
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       const isBuild = process.env.VERCEL === '1' || process.env.VERCEL_BUILD === '1';
       if (isBuild) {
-        console.error("❌ BUILD FAILURE: No blob token during build");
+        prodError("❌ BUILD FAILURE: No blob token during build");
         throw new Error('BLOB_READ_WRITE_TOKEN required during build');
       }
-      console.log('📊 No blob token available - returning empty array (local dev)')
+      devLog('📊 No blob token available - returning empty array (local dev)')
       return []
     }
 
     // Find the CSV blob
-    console.log('📊 Looking for blob file:', PRODUCTS_BLOB_KEY);
+    devLog('📊 Looking for blob file:', PRODUCTS_BLOB_KEY);
     const blob = await list({ prefix: PRODUCTS_BLOB_KEY, limit: 10 });
     
     if (!blob.blobs || blob.blobs.length === 0) {
-      console.log('❌ NO BLOB FILES FOUND with prefix:', PRODUCTS_BLOB_KEY);
+      buildLog('❌ NO BLOB FILES FOUND with prefix:', PRODUCTS_BLOB_KEY);
       
       // CRITICAL: Fail fast during build
       const isBuild = process.env.VERCEL === '1' || process.env.VERCEL_BUILD === '1';
       if (isBuild) {
-        console.error("❌ BUILD FAILURE: No CSV blob found during build");
+        prodError("❌ BUILD FAILURE: No CSV blob found during build");
         throw new Error('CSV blob not found during build');
       }
       
-      console.log('📊 No blob found - returning empty array (local dev)');
+      devLog('📊 No blob found - returning empty array (local dev)');
       return [];
     }
 
     const targetBlob = blob.blobs[0];
-    console.log('📊 Found blob file:', {
+    devLog('📊 Found blob file:', {
       pathname: targetBlob.pathname,
       url: targetBlob.url,
       size: targetBlob.size,
@@ -193,7 +194,7 @@ async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]>
         'Expires': '0'
       }
     } : {
-      next: { revalidate: 3600, tags: [PRODUCTS_TAG] }
+      next: { revalidate: 60, tags: [PRODUCTS_TAG] }
     };
     
     const response = await fetch(targetBlob.url, fetchOptions);
@@ -218,7 +219,7 @@ async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]>
     });
 
     if (parseResult.errors && parseResult.errors.length > 0) {
-      console.error('❌ CSV parsing errors:', parseResult.errors);
+      prodError('❌ CSV parsing errors:', parseResult.errors);
     }
 
     if (!parseResult.data || !Array.isArray(parseResult.data)) {
@@ -226,7 +227,7 @@ async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]>
     }
 
     if (parseResult.data.length === 0) {
-      console.log('📊 CSV contains no data rows - returning empty array');
+      devLog('📊 CSV contains no data rows - returning empty array');
       return [];
     }
 
@@ -241,28 +242,28 @@ async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]>
 
     // VALIDATION: Verify all tastingNotes are arrays
     const tastingNotesValidation = validatedProducts.every(p => Array.isArray(p.tastingNotes));
-    console.log('✅ tastingNotes normalized', { 
+    devLog('✅ tastingNotes normalized', { 
       allArrays: tastingNotesValidation,
       sampleProduct: validatedProducts[0]?.productName || 'None',
       sampleNotes: validatedProducts[0]?.tastingNotes || []
     });
 
     // CRITICAL: Single, easy-to-grep marker - appears ONCE per build worker
-    console.log('🧩 CSV parsed once', { count: validatedProducts.length });
+    buildLog('🧩 CSV parsed once', { count: validatedProducts.length });
     
     return validatedProducts;
   } catch (error) {
-    console.error("❌ CRITICAL ERROR in CSV fetch/parse:", error);
+    prodError("❌ CRITICAL ERROR in CSV fetch/parse:", error);
     
     // CRITICAL: Fail fast during build
     const isBuild = process.env.VERCEL === '1' || process.env.VERCEL_BUILD === '1';
     if (isBuild) {
-      console.error("❌ BUILD FAILURE: CSV parsing failed during build");
+      prodError("❌ BUILD FAILURE: CSV parsing failed during build");
       throw error;
     }
     
     // Return empty array for local dev errors
-    console.log("📊 Runtime error fallback - returning empty array");
+    devLog("📊 Runtime error fallback - returning empty array");
     return [];
   }
 }
@@ -276,39 +277,38 @@ export async function getProducts(options?: {
   // Build-time optimization: skip expensive CSV fetching during local/CI production builds
   // Vercel provides VERCEL_ENV; allow Vercel deployments to continue fetching.
   if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
-    // eslint-disable-next-line no-console
-    console.log('⏭️ Skipping CSV fetch during local production build (no VERCEL_ENV)');
+    buildLog('⏭️ Skipping CSV fetch during local production build (no VERCEL_ENV)');
     return [];
   }
 
   const source = options?.source || 'cache'
   
-  console.log('🔍 getProducts called with:', { source, options })
+  devLog('🔍 getProducts called with:', { source, options })
   
   switch (source) {
     case 'blob-storage':
-      console.log('📦 Fetching directly from blob storage...')
+      devLog('📦 Fetching directly from blob storage...')
       return await fetchDirectFromBlob()
       
     case 'staging':
-      console.log('📝 Using staging data...')
+      devLog('📝 Using staging data...')
       // Return staging data if available (implementation depends on how staging is stored)
       return [] // Implementation would depend on staging storage mechanism
       
     case 'cache':
     default:
       if (options?.forceRefresh || options?.bypassCache) {
-        console.log('🔄 Bypassing cache, fetching fresh data...')
+        devLog('🔄 Bypassing cache, fetching fresh data...')
         return await fetchAndParseCsvInternal(true)
       }
       
-      console.log('💾 Using cached data...')
+      devLog('💾 Using cached data...')
       return await fetchAndParseCsvInternal(false)
   }
 }
 
 export async function getGroupedProducts(): Promise<any[]> {
-  console.log('🔄 Direct grouped products fetch - bypassing unstable_cache');
+  devLog('🔄 Direct grouped products fetch - bypassing unstable_cache');
   const baseProducts = await fetchAndParseCsvInternal(false);
   const coffeeProducts = baseProducts.filter(p => p.category?.toLowerCase() === 'coffee');
   const productFamilies = groupProductFamilies(coffeeProducts);
@@ -316,15 +316,15 @@ export async function getGroupedProducts(): Promise<any[]> {
 }
 
 export async function getProductsByCategory(category: string): Promise<Product[]> {
-  console.log('🔄 Direct category fetch - bypassing unstable_cache');
+  devLog('🔄 Direct category fetch - bypassing unstable_cache');
   const baseProducts = await fetchAndParseCsvInternal(false);
   return baseProducts.filter(p => p.category?.toLowerCase() === category.toLowerCase());
 }
 
 // ADMIN FUNCTIONS: Keep existing signatures for compatibility
 export async function handleEmptyProductState(): Promise<void> {
-  try {
-    console.log('🗑️ Handling empty product state - user deleted all products')
+    try {
+    buildLog('🗑️ Handling empty product state - user deleted all products')
     
     const emptyProductTemplate: Partial<Product> = {
       sku: '',
@@ -343,16 +343,16 @@ export async function handleEmptyProductState(): Promise<void> {
     
     const csvText = Papa.unparse([emptyProductTemplate], { header: true }).split('\n')[0] + '\n'
     
-    console.log('🗑️ Saving empty state to Vercel Blob...')
+    devLog('🗑️ Saving empty state to Vercel Blob...')
     await put(PRODUCTS_BLOB_KEY, csvText, {
       access: "public",
       contentType: "text/csv",
       allowOverwrite: true,
     })
     
-    console.log("✅ Empty product state saved successfully")
+    devLog("✅ Empty product state saved successfully")
   } catch (error) {
-    console.error("❌ CRITICAL ERROR in handleEmptyProductState:", error)
+    prodError("❌ CRITICAL ERROR in handleEmptyProductState:", error)
     throw error
   }
 }
@@ -362,11 +362,11 @@ async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number, o
   const maxAttempts = 5
   let delayMs = 1000 // Start with 1 second
   
-  console.log('🚀 BLOB VERIFY: Starting enhanced verification with content matching...')
+  devLog('🚀 BLOB VERIFY: Starting enhanced verification with content matching...')
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`🔍 BLOB VERIFY: Attempt ${attempt}/${maxAttempts} - checking blob propagation...`)
+      devLog(`🔍 BLOB VERIFY: Attempt ${attempt}/${maxAttempts} - checking blob propagation...`)
       
       // Fetch with aggressive cache-busting
       const response = await fetch(blobUrl, { 
@@ -383,7 +383,7 @@ async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number, o
       
       const content = await response.text()
       
-      console.log(`🔍 BLOB VERIFY: Retrieved content`, {
+      devLog(`🔍 BLOB VERIFY: Retrieved content`, {
         contentLength: content.length,
         expectedLength,
         lengthMatch: content.length >= expectedLength * 0.9,
@@ -397,43 +397,42 @@ async function verifyBlobWriteSuccess(blobUrl: string, expectedLength: number, o
       const contentMatches = !originalContent || content === originalContent
       
       if (lengthOk && hasContent && contentMatches) {
-        console.log('✅ BLOB VERIFY: Enhanced verification successful!')
+        devLog('✅ BLOB VERIFY: Enhanced verification successful!')
         return
       }
       
-      console.log(`⚠️ BLOB VERIFY: Verification criteria not met:`, {
+      devLog(`⚠️ BLOB VERIFY: Verification criteria not met:`, {
         lengthOk,
         hasContent,
         contentMatches: contentMatches || 'not-checked'
       })
       
     } catch (error) {
-      console.warn(`⚠️ BLOB VERIFY: Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error))
+      buildLog(`⚠️ BLOB VERIFY: Attempt ${attempt} failed:`, error instanceof Error ? error.message : String(error))
     }
     
     // Wait before retry with exponential backoff
     if (attempt < maxAttempts) {
       const delay = delayMs * attempt // Exponential backoff
-      console.log(`⏳ BLOB VERIFY: Waiting ${delay}ms before retry...`)
+      devLog(`⏳ BLOB VERIFY: Waiting ${delay}ms before retry...`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
   
   // After all attempts failed
-  console.warn('⚠️ BLOB VERIFY: Could not verify blob write after all attempts')
-  console.warn('⚠️ BLOB VERIFY: Write command succeeded, but verification failed - likely timing issue')
+  buildLog('⚠️ BLOB VERIFY: Could not verify blob write after all attempts')
+  buildLog('⚠️ BLOB VERIFY: Write command succeeded, but verification failed - likely timing issue')
   // Don't throw error - the write probably worked, verification might be timing-related
 }
 
 export async function updateProducts(products: Product[]): Promise<void> {
   try {
-    console.log('🔍 BLOB WRITE: Starting updateProducts with:', {
+    buildLog('🔍 BLOB WRITE: Starting updateProducts', {
       productCount: products.length,
       hasProducts: products.length > 0,
       sampleProduct: products[0]?.sku || 'NO_PRODUCTS',
       environment: {
         hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
-        tokenLength: process.env.BLOB_READ_WRITE_TOKEN?.length || 0,
         nodeEnv: process.env.NODE_ENV,
         isVercel: !!process.env.VERCEL
       }
@@ -462,7 +461,7 @@ export async function updateProducts(products: Product[]): Promise<void> {
       return product
     })
     
-    console.log('[products] write: validating', {
+    devLog('[products] write: validating', {
       total: validatedProducts.length,
       coffee: validatedProducts.filter(p => p.category === 'coffee').length,
       subscription: validatedProducts.filter(p => p.category === 'subscription').length,
@@ -470,14 +469,14 @@ export async function updateProducts(products: Product[]): Promise<void> {
     })
 
     if (validatedProducts.length === 0) {
-      console.log('[products] write: empty products - calling handleEmptyProductState')
-      await handleEmptyProductState()
-      return
+    devLog('[products] write: empty products - calling handleEmptyProductState')
+    await handleEmptyProductState()
+    return
     }
 
     const csvText = exportProductsToCSV(validatedProducts)
     
-    console.log('🔍 DEBUG: Generated CSV for blob storage:', {
+    devLog('🔍 DEBUG: Generated CSV for blob storage:', {
       csvLength: csvText.length,
       firstLine: csvText.split('\n')[0], // Headers
       lineCount: csvText.split('\n').length,
@@ -486,21 +485,21 @@ export async function updateProducts(products: Product[]): Promise<void> {
     })
     
     if (!csvText?.trim() || csvText.length < 10) {
-      console.error('❌ CRITICAL: Generated CSV is empty!')
+      prodError('❌ CRITICAL: Generated CSV is empty!')
       throw new Error('updateProducts: generated CSV unexpectedly empty/short')
     }
 
-    console.log(`[products] write: ${validatedProducts.length} products, csvLen=${csvText.length}`)
+    devLog(`[products] write: ${validatedProducts.length} products, csvLen=${csvText.length}`)
     
     // Write to blob storage with enhanced error handling
-    console.log('🔍 DEBUG: Writing to blob storage...')
+    devLog('🔍 DEBUG: Writing to blob storage...')
     const writeResult = await put(PRODUCTS_BLOB_KEY, csvText, {
       access: "public",
       contentType: "text/csv",
       allowOverwrite: true,
     })
     
-    console.log('✅ BLOB WRITE SUCCESS: Initial write completed:', {
+    devLog('✅ BLOB WRITE SUCCESS: Initial write completed:', {
       url: writeResult.url,
       contentType: writeResult.contentType || 'text/csv'
     })
@@ -508,10 +507,10 @@ export async function updateProducts(products: Product[]): Promise<void> {
     // CRITICAL: Wait for propagation and verify write with content matching
     await verifyBlobWriteSuccess(writeResult.url, csvText.length, csvText)
     
-    console.log('✅ [products] write: CSV saved and verified successfully')
+    devLog('✅ [products] write: CSV saved and verified successfully')
     
   } catch (error) {
-    console.error("❌ CRITICAL ERROR in updateProducts:", error)
+    prodError("❌ CRITICAL ERROR in updateProducts:", error)
     throw error
   }
 }

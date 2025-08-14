@@ -5,10 +5,11 @@ import ProductDetail from "@/components/product/product-detail"
 import ProductRecommendations from "@/components/product/product-recommendations"
 import PageTransition from "@/components/ui/page-transition"
 import { getGroupedProducts } from "@/lib/csv-data"
+import { devLog, buildLog, prodError } from "@/lib/logger"
 
-// STATIC ISR: Build-safe static generation with 1-hour revalidation
+ // STATIC ISR: Build-safe static generation with 1-hour revalidation
 export const dynamic = 'force-static'
-export const revalidate = 3600
+export const revalidate = 60
 export const dynamicParams = false // prebuild all slugs
 
 interface ProductPageProps {
@@ -43,22 +44,22 @@ function findProductBySlug(products: any[], slug: string) {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   try {
-    console.log(`🔍 ProductPage: Loading product for slug: ${params.slug}`)
+    devLog(`🔍 ProductPage: Loading product for slug: ${params.slug}`)
     
     // Check for old SKU-based URLs and redirect to family URLs
     if (params.slug.match(/-wb$|-gr$/i)) {
       const familySlug = params.slug.replace(/-wb$|-gr$/i, '')
-      console.log(`🔄 Redirecting old SKU slug ${params.slug} to family slug ${familySlug}`)
+      devLog(`🔄 Redirecting old SKU slug ${params.slug} to family slug ${familySlug}`)
       redirect(`/product/${familySlug}`)
     }
     
     // SINGLE-SHOT: Use getGroupedProducts() directly
     const groupedProducts = await getGroupedProducts()
 
-    console.log(`📊 ProductPage: ${groupedProducts.length} grouped products available`)
+    devLog(`📊 ProductPage: ${groupedProducts.length} grouped products available`)
 
     if (!groupedProducts || groupedProducts.length === 0) {
-      console.error('❌ ProductPage: No grouped products available')
+      prodError('❌ ProductPage: No grouped products available')
       return (
         <PageTransition>
           <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -77,8 +78,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
     const product = findProductBySlug(groupedProducts, params.slug)
 
     if (!product) {
-      console.log(`❌ Product not found for slug: ${params.slug}`)
-      console.log('Available products:', groupedProducts.map(p => ({
+      devLog(`❌ Product not found for slug: ${params.slug}`)
+      devLog('Available products:', groupedProducts.map(p => ({
         baseSku: p.baseSku,
         productName: p.productName,
         slug: generateSlug(p.productName || "")
@@ -86,7 +87,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       notFound()
     }
 
-    console.log(`✅ Found product: ${product.productName}`)
+    buildLog(`✅ Found product: ${product.productName}`)
 
     // Get related products (same category, different product)
     const relatedProducts = groupedProducts
@@ -108,7 +109,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </PageTransition>
     )
   } catch (error) {
-    console.error('❌ ProductPage: Error loading product:', error)
+    prodError('❌ ProductPage: Error loading product:', error)
     return (
       <PageTransition>
         <div className="min-h-screen bg-gradient-to-br from-[#F6F1EB] via-white to-[#E7CFC7]">
@@ -132,15 +133,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
 // SINGLE-SHOT: Generate static params using same cached data
 export async function generateStaticParams() {
   try {
-    console.log('🏗️ generateStaticParams: Starting single-shot static generation...')
+    buildLog('🏗️ generateStaticParams: Starting single-shot static generation...')
     
     // SINGLE-SHOT: Reuse the same cached grouped products
     const groupedProducts = await getGroupedProducts()
     
-    console.log('🏗️ generateStaticParams: Generated products:', groupedProducts?.length || 0)
+    buildLog('🏗️ generateStaticParams: Generated products:', groupedProducts?.length || 0)
     
     if (!groupedProducts || groupedProducts.length === 0) {
-      console.warn('⚠️ generateStaticParams: No products found, returning empty array')
+      buildLog('⚠️ generateStaticParams: No products found, returning empty array')
       return []
     }
     
@@ -149,15 +150,15 @@ export async function generateStaticParams() {
       slug: generateSlug(product.productName || product.baseSku || ""),
     }))
     
-    console.log('🏗️ generateStaticParams: Generated params:', params.length)
+    buildLog('🏗️ generateStaticParams: Generated params:', params.length)
     params.forEach((param, i) => {
-      console.log(`  ${i + 1}. ${param.slug}`)
+      devLog(`  ${i + 1}. ${param.slug}`)
     })
     
     return params
     
   } catch (error) {
-    console.error('❌ generateStaticParams: Error during static generation:', error)
+    prodError('❌ generateStaticParams: Error during static generation:', error)
     // CRITICAL: Always return empty array to prevent build failure
     return []
   }

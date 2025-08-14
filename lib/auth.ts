@@ -2,14 +2,14 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import * as nextHeaders from 'next/headers';
 import type { SessionData } from './types';
+import { devLog, prodError, buildLog } from "@/lib/logger";
 
 const AUTH_SECRET = process.env.AUTH_SECRET;
 
 if (!AUTH_SECRET) {
   // Fail fast during dev/build so the developer knows to set the env var.
   // This file is used on the server only.
-  // eslint-disable-next-line no-console
-  console.error('Missing AUTH_SECRET environment variable. Set AUTH_SECRET in your environment.');
+  buildLog('Missing AUTH_SECRET environment variable. Set AUTH_SECRET in your environment.');
 }
 
 /**
@@ -83,8 +83,7 @@ export async function setSessionCookie(token: string): Promise<void> {
         maxAge: 7 * 24 * 60 * 60,
       });
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to set session cookie', e);
+      prodError('Failed to set session cookie', e);
     }
   }
 }
@@ -96,43 +95,27 @@ export async function getServerSession(): Promise<SessionData | null> {
   if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
   try {
     // Log that we're checking cookies (development only)
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: checking cookie store for mv_session');
-    }
+    devLog('getServerSession: checking cookie store for mv_session');
 
     const cookieStore: any = await (nextHeaders as any).cookies();
     const cookie = cookieStore.get ? cookieStore.get('mv_session') : null;
     const token = cookie?.value;
 
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: cookie present:', !!token);
-    }
+    devLog('getServerSession: cookie present:', !!token);
 
     if (!token) {
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: no session token found in cookies');
+      devLog('getServerSession: no session token found in cookies');
       return null;
     }
 
     try {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.log('getServerSession: verifying JWT token (redacted)...');
-      }
+      devLog('getServerSession: verifying JWT token (redacted)...');
       const decoded = jwt.verify(token, AUTH_SECRET) as any;
 
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.log('getServerSession: jwt verified, payload keys:', Object.keys(decoded || {}));
-      }
+      devLog('getServerSession: jwt verified, payload keys:', Object.keys(decoded || {}));
 
       if (!decoded || !decoded.userId || !decoded.email) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.log('getServerSession: decoded payload missing required fields', decoded);
-        }
+        devLog('getServerSession: decoded payload missing required fields', decoded);
         return null;
       }
 
@@ -143,23 +126,14 @@ export async function getServerSession(): Promise<SessionData | null> {
         isSubscriber: !!decoded.isSubscriber,
       };
 
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.log('getServerSession: returning session for', session.email);
-      }
+      devLog('getServerSession: returning session for', session.email);
       return session;
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('getServerSession: jwt verification failed', (err as any)?.message || err);
-      }
+      devLog('getServerSession: jwt verification failed', (err as any)?.message || err);
       return null;
     }
   } catch (err) {
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.error('getServerSession: failed to read cookies', (err as any)?.message || err);
-    }
+    devLog('getServerSession: failed to read cookies', (err as any)?.message || err);
     return null;
   }
 }
@@ -223,8 +197,7 @@ export async function clearSession(): Promise<void> {
         maxAge: 0,
       });
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to clear session cookie', e);
+      prodError('Failed to clear session cookie', e);
     }
   }
 }
