@@ -15,21 +15,31 @@ export default function ClientHeader({ session }: { session?: SessionData | null
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [hasAnimated, setHasAnimated] = useState(false)
 
-  // Prevent sign-in flash: delay showing the Sign In CTA for 500ms
+  // Prevent sign-in flash: delay showing the Sign In CTA; only show on public pages
   const [showSignIn, setShowSignIn] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!session) setShowSignIn(true);
-    }, 500);
+  // Detect auth/admin pages on the client so we never show Sign In there
+  const isAuthPage =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.startsWith('/admin') ||
+      window.location.pathname.startsWith('/account'));
 
+  useEffect(() => {
+    // Increase delay to 750ms and only show when not on auth pages
+    const timer = setTimeout(() => {
+      if (!session && !isAuthPage) {
+        setShowSignIn(true);
+      }
+    }, 750); // Increased from 500ms
+
+    // Immediately hide if session exists
     if (session) {
       setShowSignIn(false);
       clearTimeout(timer);
     }
 
     return () => clearTimeout(timer);
-  }, [session]);
+  }, [session, isAuthPage]);
 
 
   useEffect(() => {
@@ -271,18 +281,23 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                     Sign Out
                   </button>
                 </div>
-              ) : (
-                <a
-                  href="/account/login"
-                  className={`text-blue-600 hover:text-blue-700 transition-opacity duration-500 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}
-                  style={{
+              ) : !isAuthPage && showSignIn ? (
+                <a 
+                  href="/account/login" 
+                  className={`
+                    bg-gradient-to-r from-amber-900 to-amber-800 hover:from-amber-800 hover:to-amber-700
+                    text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg hover:shadow-xl
+                    transition-all duration-300 transform hover:scale-105 border border-amber-700
+                    ${showSignIn ? 'opacity-100' : 'opacity-0'}
+                  `}
+                  style={{ 
                     visibility: showSignIn ? 'visible' : 'hidden',
-                    transitionDelay: showSignIn ? '0ms' : '500ms'
+                    transitionDelay: showSignIn ? '0ms' : '750ms'
                   }}
                 >
                   Sign In
                 </a>
-              )}
+              ) : null}
             </div>
 
             {/* Subscribe Button */}
@@ -374,18 +389,18 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                     <a href="/account" className="text-[#4B2E2E] font-semibold">My Account</a>
                     {session.role === 'admin' && <a href="/admin" className="text-purple-700 font-semibold">Admin</a>}
                   </div>
-                ) : (
+                ) : !isAuthPage && showSignIn ? (
                   <a
                     href="/account/login"
-                    className={`w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold transition-opacity duration-500 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full text-center bg-gradient-to-r from-amber-900 to-amber-800 hover:from-amber-800 hover:to-amber-700 text-white py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}
                     style={{
                       visibility: showSignIn ? 'visible' : 'hidden',
-                      transitionDelay: showSignIn ? '0ms' : '500ms'
+                      transitionDelay: showSignIn ? '0ms' : '750ms'
                     }}
                   >
                     Sign In
                   </a>
-                )}
+                ) : null}
 
                 <Button
                   size="icon"

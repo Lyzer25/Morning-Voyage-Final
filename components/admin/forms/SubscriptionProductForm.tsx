@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,29 @@ export const SubscriptionProductForm: React.FC<SubscriptionProductFormProps> = (
     shippingFirst: product?.shippingFirst || undefined,
     shippingAdditional: product?.shippingAdditional || undefined
   });
+
+  // Keep form data in sync when the product prop changes (fixes stale data when editing multiple products)
+  useEffect(() => {
+    setFormData({
+      sku: product?.sku || '',
+      productName: product?.productName || '',
+      description: product?.description || '',
+      price: product?.price || 0,
+      originalPrice: product?.originalPrice || undefined,
+      category: 'subscription',
+      billingInterval: product?.billingInterval || product?.subscriptionInterval || 'monthly',
+      deliveryFrequency: product?.deliveryFrequency || 'monthly',
+      trialPeriodDays: product?.trialPeriodDays || product?.trialDays || 0,
+      maxDeliveries: product?.maxDeliveries || undefined,
+      enableNotificationBanner: product?.enableNotificationBanner || product?.notificationEnabled || false,
+      notificationMessage: product?.notificationMessage || product?.notification || '',
+      featured: product?.featured || false,
+      status: product?.status || 'active',
+      inStock: product?.inStock !== false,
+      shippingFirst: product?.shippingFirst || undefined,
+      shippingAdditional: product?.shippingAdditional || undefined
+    });
+  }, [product]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

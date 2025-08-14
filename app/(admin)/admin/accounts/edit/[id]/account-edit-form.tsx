@@ -451,12 +451,6 @@ export default function AccountEditForm({ account }: AccountEditFormProps) {
 
             <div className="space-x-3">
               <button
-                type="button"
-                className="px-4 py-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
-              >
-                Reset Password
-              </button>
-              <button
                 type="submit"
                 disabled={isLoading}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
