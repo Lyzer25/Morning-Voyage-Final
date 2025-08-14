@@ -15,6 +15,22 @@ export default function ClientHeader({ session }: { session?: SessionData | null
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [hasAnimated, setHasAnimated] = useState(false)
 
+  // Prevent sign-in flash: delay showing the Sign In CTA for 500ms
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!session) setShowSignIn(true);
+    }, 500);
+
+    if (session) {
+      setShowSignIn(false);
+      clearTimeout(timer);
+    }
+
+    return () => clearTimeout(timer);
+  }, [session]);
+
   // Debug: log session prop every render/change to help troubleshoot hydration/issues
   useEffect(() => {
     // eslint-disable-next-line no-console
@@ -263,7 +279,11 @@ export default function ClientHeader({ session }: { session?: SessionData | null
               ) : (
                 <a
                   href="/account/login"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium"
+                  className={`text-blue-600 hover:text-blue-700 transition-opacity duration-500 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}
+                  style={{
+                    visibility: showSignIn ? 'visible' : 'hidden',
+                    transitionDelay: showSignIn ? '0ms' : '500ms'
+                  }}
                 >
                   Sign In
                 </a>
@@ -360,7 +380,16 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                     {session.role === 'admin' && <a href="/admin" className="text-purple-700 font-semibold">Admin</a>}
                   </div>
                 ) : (
-                  <a href="/account/login" className="w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold">Sign In</a>
+                  <a
+                    href="/account/login"
+                    className={`w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold transition-opacity duration-500 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}
+                    style={{
+                      visibility: showSignIn ? 'visible' : 'hidden',
+                      transitionDelay: showSignIn ? '0ms' : '500ms'
+                    }}
+                  >
+                    Sign In
+                  </a>
                 )}
 
                 <Button
