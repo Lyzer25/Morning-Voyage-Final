@@ -15,77 +15,63 @@ export default function ClientHeader({ session }: { session?: SessionData | null
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [hasAnimated, setHasAnimated] = useState(false)
 
-  // ENHANCED: Aggressive sign-in flash prevention with client verification
+  // SIMPLIFIED: Clean session-aware sign-in detection
   const [showSignIn, setShowSignIn] = useState(false);
   const [isClient, setIsClient] = useState(false);
-
-  // Detect auth/admin pages on the client so we never show Sign In there
-  const isAuthPage =
-    typeof window !== 'undefined' &&
-    (window.location.pathname.startsWith('/admin') ||
-      window.location.pathname.startsWith('/account') ||
-      window.location.pathname.startsWith('/api'));
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Client-side session verification fallback
   useEffect(() => {
-    // If no session provided from server, check client-side
-    if (!session && isClient && !isAuthPage) {
-      const checkClientSession = async () => {
-        try {
-          const res = await fetch('/api/auth/session-check', { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.session) {
-              console.log('HeaderClient: Detected session via client check');
-              return true; // Found session, don't show sign-in
-            }
-          }
-        } catch (err) {
-          console.warn('HeaderClient: Session check failed:', err);
-        }
-        return false; // No session found
-      };
-
-      // Check for session, then set timer if none found
-      checkClientSession().then(hasSession => {
-        if (!hasSession) {
-          const timer = setTimeout(() => {
-            setShowSignIn(true);
-          }, 1000); // Increased to 1 second
-          return () => clearTimeout(timer);
-        }
-      });
-    }
-  }, [session, isClient, isAuthPage]);
-
-  useEffect(() => {
-    // Don't show sign in button at all if we have a session
+    // Clear logic: if we have a session from server, never show Sign In
     if (session) {
       setShowSignIn(false);
       return;
     }
 
-    // Only show sign in after delay on public pages
-    const timer = setTimeout(() => {
-      if (!session && isClient) {
-        const path = window.location.pathname;
-        const isAuthPage = path.startsWith('/admin') || path.startsWith('/account') || path.startsWith('/api');
-        if (!isAuthPage) {
-          setShowSignIn(true);
-        }
-      }
-    }, 1000); // Increased to 1 second
+    // Only check for sign-in visibility if we're client-side and have no server session
+    if (!isClient) return;
 
-    return () => clearTimeout(timer);
+    const path = window.location.pathname;
+    const isAuthPage = path.startsWith('/admin') || path.startsWith('/account') || path.startsWith('/api');
+    
+    // Never show Sign In on auth pages
+    if (isAuthPage) {
+      setShowSignIn(false);
+      return;
+    }
+
+    // For public pages without server session, do client-side session check first
+    const checkAndSetSignIn = async () => {
+      try {
+        const res = await fetch('/api/auth/session-check', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session) {
+            // Found session via client check - don't show sign in
+            setShowSignIn(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('HeaderClient: Session check failed:', err);
+      }
+      
+      // No session found - show sign in after delay on public pages only
+      const timer = setTimeout(() => {
+        setShowSignIn(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    };
+
+    checkAndSetSignIn();
   }, [session, isClient]);
 
-  // Debug logging (remove in production)
+  // Debug logging (development only)
   if (process.env.NODE_ENV === 'development') {
-    console.log('Header Debug:', {
+    console.log('HeaderClient Debug:', {
       session: !!session,
       showSignIn,
       isClient,
@@ -333,7 +319,7 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                     Sign Out
                   </button>
                 </div>
-              ) : !isAuthPage && showSignIn ? (
+              ) : showSignIn ? (
                 <a 
                   href="/account/login" 
                   className={`
@@ -441,7 +427,7 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                     <a href="/account" className="text-[#4B2E2E] font-semibold">My Account</a>
                     {session.role === 'admin' && <a href="/admin" className="text-purple-700 font-semibold">Admin</a>}
                   </div>
-                ) : !isAuthPage && showSignIn ? (
+                ) : showSignIn ? (
                   <a
                     href="/account/login"
                     className={`w-full text-center bg-gradient-to-r from-amber-900 to-amber-800 hover:from-amber-800 hover:to-amber-700 text-white py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 ${showSignIn ? 'opacity-100' : 'opacity-0'}`}

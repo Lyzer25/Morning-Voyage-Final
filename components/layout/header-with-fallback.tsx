@@ -15,17 +15,27 @@ export default function HeaderWithFallback({ initialSession }: HeaderWithFallbac
 
     async function checkSession() {
       try {
-        const res = await fetch('/api/debug/header-test', { cache: 'no-store' });
+        const res = await fetch('/api/auth/session-check', { cache: 'no-store' });
         if (!res.ok) {
           // eslint-disable-next-line no-console
-          console.warn('HeaderWithFallback: debug endpoint returned', res.status);
+          console.warn('HeaderWithFallback: session-check endpoint returned', res.status);
+          if (mounted) setSession(null);
           return;
         }
         const data = await res.json();
-        if (mounted && data?.hasSession) {
-          setSession(data.sessionData);
+        if (mounted && data?.session) {
+          // Build minimal session data from the session check response
+          // Note: session-check only returns { session: boolean, role: string }
+          // For full session data, we'd need the server component to provide it
+          const sessionData: SessionData = {
+            userId: 'client-detected', // Placeholder - real data comes from server
+            email: 'client-detected@unknown.com', // Placeholder
+            role: data.role || 'customer',
+            isSubscriber: false
+          };
+          setSession(sessionData);
           // eslint-disable-next-line no-console
-          console.log('HeaderWithFallback: client detected session', data.sessionData);
+          console.log('HeaderWithFallback: client detected session with role', data.role);
         } else {
           // eslint-disable-next-line no-console
           console.log('HeaderWithFallback: no session on client check');

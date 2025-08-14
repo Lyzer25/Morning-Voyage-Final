@@ -764,12 +764,21 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     return changes
   }
 
-  // ENHANCED: Force refresh admin data from blob storage
+  // FIXED: Refresh using the same method as working debug sync
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
   const handleForceRefresh = useCallback(async () => {
+    if (isRefreshing) {
+      console.log('🚫 Refresh already in progress, ignoring duplicate call')
+      return
+    }
+    
+    setIsRefreshing(true)
     console.log('🔄 Force refreshing admin data from blob storage...')
+    
     try {
-      // Force fresh data fetch bypassing any cache
-      const freshProducts = await getProducts({ forceRefresh: true, bypassCache: true })
+      // Use the same direct blob fetch that works in debug tool
+      const freshProducts = await fetchDirectFromBlob()
       
       console.log('✅ Fresh products loaded from blob:', {
         count: freshProducts.length,
@@ -782,16 +791,20 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
       setOriginalProducts([...freshProducts])
       setProducts([...freshProducts])
       setHasUnsavedChanges(false)
+      setDataSource('blob')
+      setLastSyncTime(new Date().toISOString())
       
       console.log('✅ Admin data refreshed successfully')
-      toast.success('Admin data refreshed from production')
+      toast.success(`Refreshed ${freshProducts.length} products from live data`)
       
     } catch (error) {
       console.error('❌ Force refresh failed:', error)
       toast.error('Failed to refresh admin data')
       throw error
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [])
+  }, [isRefreshing])
 
   // ENHANCED: Save to production with automatic admin data refresh
   const saveToProduction = useCallback(async () => {
