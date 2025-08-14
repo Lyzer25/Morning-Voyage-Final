@@ -1,120 +1,66 @@
-import { NextRequest, NextResponse } from "next/server"
-import { revalidatePath, revalidateTag } from "next/cache"
-import { invalidateCache } from "@/lib/product-cache"
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@/lib/auth';
+import { exportProductsToCSV } from '@/lib/csv-helpers';
+import { put } from '@vercel/blob';
 
-export const dynamic = 'force-dynamic'
-
-// POST /api/admin/sync - Manual sync trigger for emergency revalidation
 export async function POST(request: NextRequest) {
   try {
-    console.log("🔄 Manual sync triggered from admin panel...")
-    
-    const body = await request.json().catch(() => ({}))
-    const { force = false, paths = [] } = body
-    
-    // Default paths to revalidate
-    const defaultPaths = [
-      "/",
-      "/coffee", 
-      "/shop",
-      "/admin"
-    ]
-    
-    const pathsToRevalidate = paths.length > 0 ? paths : defaultPaths
-    
-    const results = {
-      timestamp: new Date().toISOString(),
-      revalidatedPaths: [] as string[],
-      cacheCleared: false,
-      errors: [] as string[],
-      vercelEnvironment: !!process.env.VERCEL
+    const session = await getServerSession();
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-    
-    // 1. Clear in-memory cache first
-    try {
-      invalidateCache()
-      results.cacheCleared = true
-      console.log("✅ In-memory cache cleared")
-    } catch (error) {
-      console.error("❌ Failed to clear in-memory cache:", error)
-      results.errors.push(`Cache clearing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+    const { products, forceUpdate } = await request.json();
+
+    if (!products || !Array.isArray(products)) {
+      return NextResponse.json({ error: 'Invalid products data' }, { status: 400 });
     }
-    
-    // 2. Revalidate all specified paths with both page and layout
-    for (const path of pathsToRevalidate) {
+
+    // Generate CSV with timestamp
+    const csvContent = await exportProductsToCSV(products);
+    const timestamp = new Date().toISOString();
+
+    // Upload to blob with cache busting
+    const result = await put('products.csv', csvContent, {
+      access: 'public',
+      contentType: 'text/csv',
+      addRandomSuffix: false
+    });
+
+    // Verify upload immediately
+    const verifyResponse = await fetch(result.url + '?' + Date.now());
+    const uploadedContent = await verifyResponse.text();
+
+    if (uploadedContent !== csvContent) {
+      throw new Error('Blob upload verification failed');
+    }
+
+    // Force cache invalidation on our end
+    if (forceUpdate) {
+      // Clear any local caches
       try {
-        // Revalidate page-level cache
-        revalidatePath(path, "page")
-        console.log(`✅ Revalidated page: ${path}`)
-        
-        // Also revalidate layout-level cache for critical paths
-        if (["/", "/coffee"].includes(path)) {
-          revalidatePath(path, "layout")
-          console.log(`✅ Revalidated layout: ${path}`)
-        }
-        
-        results.revalidatedPaths.push(path)
-      } catch (error) {
-        console.error(`❌ Failed to revalidate path ${path}:`, error)
-        results.errors.push(`Path ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        await fetch('/api/products/clear-cache', { method: 'POST' });
+      } catch (cacheError) {
+        console.warn('Cache clear failed:', cacheError);
       }
     }
-    
-    // 3. Add comprehensive cache tags revalidation for Vercel
-    try {
-      revalidateTag('products')
-      revalidateTag('coffee')
-      revalidateTag('homepage')
-      console.log("✅ Cache tags revalidated")
-    } catch (error) {
-      console.warn("⚠️ Cache tag revalidation failed:", error)
-      // Not critical
-    }
-    
-    // 4. Log success metrics
-    const successMessage = `Manual sync completed: ${results.revalidatedPaths.length} paths revalidated, ${results.errors.length} errors`
-    console.log(`✅ ${successMessage}`)
-    
-    const statusCode = results.errors.length > 0 ? 207 : 200 // 207 = Multi-Status
-    
+
     return NextResponse.json({
       success: true,
-      message: successMessage,
-      results
-    }, { status: statusCode })
-    
+      message: 'Products synced successfully',
+      blobUrl: result.url,
+      timestamp,
+      productCount: products.length,
+      verified: true
+    });
   } catch (error) {
-    console.error("❌ Manual sync failed completely:", error)
-    
-    return NextResponse.json({
-      success: false,
-      error: "Manual sync failed",
-      message: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString()
-    }, { status: 500 })
-  }
-}
-
-// GET /api/admin/sync - Get sync status and last sync info
-export async function GET() {
-  try {
-    return NextResponse.json({
-      available: true,
-      environment: {
-        vercel: !!process.env.VERCEL,
-        nodeEnv: process.env.NODE_ENV,
-        vercelUrl: process.env.VERCEL_URL
-      },
-      instructions: {
-        manual: "POST to this endpoint to trigger manual sync",
-        automatic: "Sync is triggered automatically after CSV uploads and product changes"
-      },
-      timestamp: new Date().toISOString()
-    })
-  } catch (error) {
-    return NextResponse.json({
-      error: "Failed to get sync status",
-      message: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 })
+    console.error('Product sync failed:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to sync products', 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, 
+      { status: 500 }
+    );
   }
 }

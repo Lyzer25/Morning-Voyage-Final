@@ -15,31 +15,83 @@ export default function ClientHeader({ session }: { session?: SessionData | null
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [hasAnimated, setHasAnimated] = useState(false)
 
-  // Prevent sign-in flash: delay showing the Sign In CTA; only show on public pages
+  // ENHANCED: Aggressive sign-in flash prevention with client verification
   const [showSignIn, setShowSignIn] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   // Detect auth/admin pages on the client so we never show Sign In there
   const isAuthPage =
     typeof window !== 'undefined' &&
     (window.location.pathname.startsWith('/admin') ||
-      window.location.pathname.startsWith('/account'));
+      window.location.pathname.startsWith('/account') ||
+      window.location.pathname.startsWith('/api'));
 
   useEffect(() => {
-    // Increase delay to 750ms and only show when not on auth pages
-    const timer = setTimeout(() => {
-      if (!session && !isAuthPage) {
-        setShowSignIn(true);
-      }
-    }, 750); // Increased from 500ms
+    setIsClient(true);
+  }, []);
 
-    // Immediately hide if session exists
+  // Client-side session verification fallback
+  useEffect(() => {
+    // If no session provided from server, check client-side
+    if (!session && isClient && !isAuthPage) {
+      const checkClientSession = async () => {
+        try {
+          const res = await fetch('/api/auth/session-check', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.session) {
+              console.log('HeaderClient: Detected session via client check');
+              return true; // Found session, don't show sign-in
+            }
+          }
+        } catch (err) {
+          console.warn('HeaderClient: Session check failed:', err);
+        }
+        return false; // No session found
+      };
+
+      // Check for session, then set timer if none found
+      checkClientSession().then(hasSession => {
+        if (!hasSession) {
+          const timer = setTimeout(() => {
+            setShowSignIn(true);
+          }, 1000); // Increased to 1 second
+          return () => clearTimeout(timer);
+        }
+      });
+    }
+  }, [session, isClient, isAuthPage]);
+
+  useEffect(() => {
+    // Don't show sign in button at all if we have a session
     if (session) {
       setShowSignIn(false);
-      clearTimeout(timer);
+      return;
     }
 
+    // Only show sign in after delay on public pages
+    const timer = setTimeout(() => {
+      if (!session && isClient) {
+        const path = window.location.pathname;
+        const isAuthPage = path.startsWith('/admin') || path.startsWith('/account') || path.startsWith('/api');
+        if (!isAuthPage) {
+          setShowSignIn(true);
+        }
+      }
+    }, 1000); // Increased to 1 second
+
     return () => clearTimeout(timer);
-  }, [session, isAuthPage]);
+  }, [session, isClient]);
+
+  // Debug logging (remove in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Header Debug:', {
+      session: !!session,
+      showSignIn,
+      isClient,
+      path: typeof window !== 'undefined' ? window.location.pathname : 'SSR'
+    });
+  }
 
 
   useEffect(() => {

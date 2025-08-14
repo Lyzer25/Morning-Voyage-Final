@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
             value: sessionToken,
             httpOnly: true,
             secure,
-            sameSite: 'strict',
+            sameSite: process.env.COOKIE_SAMESITE || 'lax',
+            domain: process.env.COOKIE_DOMAIN || undefined,
             path: '/',
             maxAge: 7 * 24 * 60 * 60
           });
@@ -90,7 +91,8 @@ export async function POST(request: NextRequest) {
             res.cookies.set('mv_session', sessionToken, {
               httpOnly: true,
               secure,
-              sameSite: 'strict',
+              sameSite: process.env.COOKIE_SAMESITE || 'lax',
+              domain: process.env.COOKIE_DOMAIN || undefined,
               path: '/',
               maxAge: 7 * 24 * 60 * 60
             });

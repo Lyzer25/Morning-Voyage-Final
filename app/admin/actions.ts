@@ -5,6 +5,8 @@ import { getProducts, updateProducts, addProduct, updateProduct, deleteProduct, 
 import type { Product } from "@/lib/types"
 import { exportProductsToCSV } from "@/lib/csv-helpers"
 import { forceInvalidateCache } from "@/lib/product-cache"
+import { verifyCustomerFacingData } from "@/lib/verification"
+import { put } from "@vercel/blob"
 
 // ENHANCED: Tag-based cache revalidation with comprehensive coverage
 async function triggerCacheRevalidation() {
@@ -273,7 +275,7 @@ export async function toggleStatusAction(sku: string, status: "active" | "draft"
 }
 
 // ENHANCED: Save all staged changes to production with immediate cache invalidation
-export async function saveToProductionAction(products: Product[]): Promise<FormState & { needsRefresh?: boolean }> {
+export async function saveToProductionAction(products: Product[]): Promise<FormState & { needsRefresh?: boolean; verified?: boolean; verificationDetails?: any }> {
   try {
     console.log(`🚀 PRODUCTION DEPLOY: Starting deployment of ${products.length} products`)
     
@@ -301,6 +303,29 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     const blobTime = Date.now() - startTime
     console.log(`✅ DEPLOY: Blob storage updated and verified (${blobTime}ms)`)
     
+    // NEW: Write a small canonical hash artifact to blob for quick verification
+    try {
+      const minimal = (products || []).map(p => ({ sku: p.sku, price: p.price, productName: p.productName })).sort((a, b) => (a.sku || '').localeCompare(b.sku || ''));
+      const hash = Buffer.from(JSON.stringify(minimal)).toString('base64');
+      const hashPayload = JSON.stringify({
+        hash,
+        count: products.length,
+        timestamp: new Date().toISOString()
+      });
+      try {
+        await put('products-hash.json', hashPayload, {
+          access: 'public',
+          contentType: 'application/json',
+          allowOverwrite: true
+        });
+        console.log('✅ DEPLOY: products-hash.json written to blob');
+      } catch (putErr) {
+        console.warn('⚠️ DEPLOY: Failed to write products-hash.json to blob:', putErr);
+      }
+    } catch (err) {
+      console.warn('⚠️ DEPLOY: Failed to compute/write canonical hash:', err);
+    }
+    
     // Stage 2: IMMEDIATE aggressive cache invalidation
     console.log('🔄 DEPLOY: Starting immediate cache invalidation...')
     const revalidationStart = Date.now()
@@ -322,12 +347,41 @@ export async function saveToProductionAction(products: Product[]): Promise<FormS
     await verifyCacheClearing()
     console.log('✅ DEPLOY: Cache clearing verified')
     
+    // Stage 4: NEW - Verify customer-facing data is live
+    console.log('🔍 DEPLOY: Starting customer-facing verification...')
+    const verificationStart = Date.now()
+    let verified = false
+    let verificationDetails = null
+    
+    try {
+      const verificationResult = await verifyCustomerFacingData(products, { timeout: 120000 }); // 2 minute timeout for production
+      verified = verificationResult.success
+      verificationDetails = verificationResult.diagnostics
+      
+      const verificationTime = Date.now() - verificationStart
+      if (verified) {
+        console.log(`✅ DEPLOY: Customer-facing verification successful (${verificationTime}ms)`)
+      } else {
+        console.warn(`⚠️ DEPLOY: Customer-facing verification timed out (${verificationTime}ms) - changes may still be propagating`)
+      }
+    } catch (verificationError) {
+      console.warn('⚠️ DEPLOY: Customer-facing verification error:', verificationError)
+      verified = false
+    }
+    
     const totalTime = Date.now() - startTime
-    console.log(`🎉 PRODUCTION DEPLOY: Complete with immediate cache clearing! Total time: ${totalTime}ms`)
+    console.log(`🎉 PRODUCTION DEPLOY: Complete! Total time: ${totalTime}ms, Customer verified: ${verified}`)
+    
+    const baseMessage = `🚀 Successfully deployed ${products.length} products`;
+    const successMessage = verified 
+      ? `${baseMessage} and verified live on customer-facing site! (${totalTime}ms)`
+      : `${baseMessage} to blob storage. Customer-facing verification in progress - changes may take up to 5 minutes to appear on site. (${totalTime}ms)`;
     
     return { 
-      success: `🚀 Successfully deployed ${products.length} products with immediate cache clearing! Changes are now visible to customers. (${totalTime}ms)`,
-      needsRefresh: true  // ← Signal for admin refresh
+      success: successMessage,
+      needsRefresh: true,  // ← Signal for admin refresh
+      verified,
+      verificationDetails
     }
   } catch (error) {
     console.error("❌ PRODUCTION DEPLOY: Failed with error:", error)

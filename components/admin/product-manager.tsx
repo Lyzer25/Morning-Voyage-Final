@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useTransition, useActionState, useEffect, useCallback, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -114,7 +113,6 @@ const DebugResultModal = ({ result, isOpen, onClose }: {
 }
 
 export default function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
-  const router = useRouter()
   const [products, setProducts] = useState(initialProducts)
   const [searchTerm, setSearchTerm] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -1183,6 +1181,36 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     console.log(`✅ Product ${productData.sku} updated in staging area`)
     toast.success(`Product '${productData.productName}' updated in staging area`)
     return true
+  }, [])
+
+  // NEW: Client-side deployment verification helper
+  const verifyDeployment = useCallback(async (expectedProducts: Product[]): Promise<boolean> => {
+    try {
+      console.log('🔍 CLIENT VERIFICATION: Starting multi-source verification...')
+      
+      // Check verification endpoint
+      const verifyRes = await fetch(`/api/products/verify?ts=${Date.now()}`, { cache: 'no-store' })
+      if (!verifyRes.ok) return false
+      const verifyData = await verifyRes.json()
+      
+      // Check grouped API
+      const groupedRes = await fetch(`/api/products?grouped=true&ts=${Date.now()}`, { cache: 'no-store' })
+      if (!groupedRes.ok) return false
+      const groupedData = await groupedRes.json()
+      
+      // Simple count comparison for verification
+      const expectedCount = expectedProducts.length
+      const verifyCount = verifyData.products?.length || 0
+      const groupedCount = groupedData.products?.length || 0
+      
+      const verified = Math.abs(verifyCount - expectedCount) <= 1 && Math.abs(groupedCount - expectedCount) <= 5
+      
+      console.log('🔍 CLIENT VERIFICATION:', { expectedCount, verifyCount, groupedCount, verified })
+      return verified
+    } catch (error) {
+      console.warn('🔍 CLIENT VERIFICATION failed:', error)
+      return false
+    }
   }, [])
 
   // ENHANCED: Visual debug handler with modal results

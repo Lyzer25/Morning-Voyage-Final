@@ -67,7 +67,8 @@ export async function setSessionCookie(token: string): Promise<void> {
       value: token,
       httpOnly: true,
       secure,
-      sameSite: 'strict',
+      sameSite: process.env.COOKIE_SAMESITE || 'lax',
+      domain: process.env.COOKIE_DOMAIN || undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
     });
@@ -75,10 +76,12 @@ export async function setSessionCookie(token: string): Promise<void> {
     // Fallback: try alternate signature
     try {
       const cookieStore: any = await (nextHeaders as any).cookies();
+      // Some runtimes accept tuple-style set; try to supply same options
       cookieStore.set('mv_session', token, {
         httpOnly: true,
         secure,
-        sameSite: 'strict',
+        sameSite: process.env.COOKIE_SAMESITE || 'lax',
+        domain: process.env.COOKIE_DOMAIN || undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60,
       });
