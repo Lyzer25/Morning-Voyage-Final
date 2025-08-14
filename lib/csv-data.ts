@@ -273,6 +273,14 @@ export async function getProducts(options?: {
   forceRefresh?: boolean 
   bypassCache?: boolean 
 }): Promise<Product[]> {
+  // Build-time optimization: skip expensive CSV fetching during local/CI production builds
+  // Vercel provides VERCEL_ENV; allow Vercel deployments to continue fetching.
+  if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+    // eslint-disable-next-line no-console
+    console.log('⏭️ Skipping CSV fetch during local production build (no VERCEL_ENV)');
+    return [];
+  }
+
   const source = options?.source || 'cache'
   
   console.log('🔍 getProducts called with:', { source, options })
