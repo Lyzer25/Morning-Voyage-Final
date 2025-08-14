@@ -236,7 +236,7 @@ export async function markPasswordResetTokenUsed(tokenString: string): Promise<v
   }
 }
 
-async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
+export async function getPasswordResetTokens(): Promise<PasswordResetToken[]> {
   try {
     // Use list() to locate the password-reset-tokens blob and fetch via its url
     const blobs = await list({ prefix: PASSWORD_RESET_TOKENS_KEY, limit: 1 });

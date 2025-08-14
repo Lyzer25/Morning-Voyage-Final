@@ -9,20 +9,26 @@ export const fetchCache = 'force-no-store';
 export const runtime = 'nodejs';
  
 export default async function HeaderServer() {
-  // Log render attempts with timestamp for debugging
-  // eslint-disable-next-line no-console
-  console.log('🔄 HeaderServer rendering at:', new Date().toISOString());
+  // Log render attempts with timestamp for debugging (development only)
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log('🔄 HeaderServer rendering at:', new Date().toISOString());
+  }
 
   try {
     // Explicitly check for session cookie presence using runtime-compatible access
     const cookieStore: any = await (nextHeaders as any).cookies();
     const sessionCookie = cookieStore.get ? cookieStore.get('mv_session') : cookieStore.get?.('mv_session');
-    // eslint-disable-next-line no-console
-    console.log('🔍 HeaderServer cookie check:', !!sessionCookie?.value);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('🔍 HeaderServer cookie check:', !!sessionCookie?.value);
+    }
 
     const session = await getServerSession();
-    // eslint-disable-next-line no-console
-    console.log('📡 HeaderServer session result:', session ? `✅ ${session.email}` : '❌ No session');
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('📡 HeaderServer session result:', session ? `✅ ${session.email}` : '❌ No session');
+    }
 
     // Stable key - only changes when session presence changes to avoid hydation churn
     const sessionKey = session ? `logged-in-${session.userId}` : 'logged-out';

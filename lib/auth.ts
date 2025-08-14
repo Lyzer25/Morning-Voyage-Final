@@ -95,16 +95,20 @@ export async function setSessionCookie(token: string): Promise<void> {
 export async function getServerSession(): Promise<SessionData | null> {
   if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
   try {
-    // Log that we're checking cookies (will appear in server logs)
-    // eslint-disable-next-line no-console
-    console.log('getServerSession: checking cookie store for mv_session');
+    // Log that we're checking cookies (development only)
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: checking cookie store for mv_session');
+    }
 
     const cookieStore: any = await (nextHeaders as any).cookies();
     const cookie = cookieStore.get ? cookieStore.get('mv_session') : null;
     const token = cookie?.value;
 
-    // eslint-disable-next-line no-console
-    console.log('getServerSession: cookie present:', !!token);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('getServerSession: cookie present:', !!token);
+    }
 
     if (!token) {
       // eslint-disable-next-line no-console
@@ -113,16 +117,22 @@ export async function getServerSession(): Promise<SessionData | null> {
     }
 
     try {
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: verifying JWT token (redacted)...');
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('getServerSession: verifying JWT token (redacted)...');
+      }
       const decoded = jwt.verify(token, AUTH_SECRET) as any;
 
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: jwt verified, payload keys:', Object.keys(decoded || {}));
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('getServerSession: jwt verified, payload keys:', Object.keys(decoded || {}));
+      }
 
       if (!decoded || !decoded.userId || !decoded.email) {
-        // eslint-disable-next-line no-console
-        console.log('getServerSession: decoded payload missing required fields', decoded);
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.log('getServerSession: decoded payload missing required fields', decoded);
+        }
         return null;
       }
 
@@ -133,17 +143,23 @@ export async function getServerSession(): Promise<SessionData | null> {
         isSubscriber: !!decoded.isSubscriber,
       };
 
-      // eslint-disable-next-line no-console
-      console.log('getServerSession: returning session for', session.email);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('getServerSession: returning session for', session.email);
+      }
       return session;
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('getServerSession: jwt verification failed', (err as any)?.message || err);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.error('getServerSession: jwt verification failed', (err as any)?.message || err);
+      }
       return null;
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('getServerSession: failed to read cookies', (err as any)?.message || err);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('getServerSession: failed to read cookies', (err as any)?.message || err);
+    }
     return null;
   }
 }

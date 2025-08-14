@@ -31,11 +31,6 @@ export default function ClientHeader({ session }: { session?: SessionData | null
     return () => clearTimeout(timer);
   }, [session]);
 
-  // Debug: log session prop every render/change to help troubleshoot hydration/issues
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('🖥️ HeaderClient rendered with session prop:', session ?? null)
-  }, [session])
 
   useEffect(() => {
     const handleScroll = () => {

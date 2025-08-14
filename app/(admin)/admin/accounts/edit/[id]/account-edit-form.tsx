@@ -11,6 +11,52 @@ export default function AccountEditForm({ account }: AccountEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [passwordResetResult, setPasswordResetResult] = useState<{
+    success: boolean;
+    temporaryPassword?: string;
+    message: string;
+  } | null>(null);
+
+  // Admin-initiated password reset handler
+  const handlePasswordReset = async () => {
+    if (!confirm("Are you sure you want to reset this user's password? They will be notified by email.")) {
+      return;
+    }
+
+    setIsResetting(true);
+    setPasswordResetResult(null);
+
+    try {
+      const response = await fetch(`/api/admin/accounts/${account.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sendEmail: true })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPasswordResetResult({
+          success: true,
+          temporaryPassword: data.temporaryPassword,
+          message: 'Password reset successfully. User has been notified by email.'
+        });
+      } else {
+        setPasswordResetResult({
+          success: false,
+          message: data.error || 'Failed to reset password'
+        });
+      }
+    } catch (err) {
+      setPasswordResetResult({
+        success: false,
+        message: 'Failed to reset password'
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     email: account.email,
@@ -194,6 +240,94 @@ export default function AccountEditForm({ account }: AccountEditFormProps) {
                 <span className="font-medium text-gray-700">Account ID:</span>
                 <span className="ml-2 text-gray-600 font-mono text-xs">{account.id}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Password Management */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Password Management</h3>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h4 className="text-sm font-medium text-yellow-800">
+                    Password Reset Warning
+                  </h4>
+                  <p className="mt-1 text-sm text-yellow-700">
+                    Resetting a user's password will generate a new secure password and notify them by email. 
+                    The old password will no longer work.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Last Password Change</p>
+                  <p className="text-sm text-gray-500">
+                    {account.profile.password_changed_at ? new Date(account.profile.password_changed_at).toLocaleString() : '—'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={isResetting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {isResetting ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </div>
+              
+              {passwordResetResult && (
+                <div className={`p-4 rounded-md ${
+                  passwordResetResult.success 
+                    ? 'bg-green-50 border border-green-200' 
+                    : 'bg-red-50 border border-red-200'
+                }`}>
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      {passwordResetResult.success ? (
+                        <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <h4 className={`text-sm font-medium ${
+                        passwordResetResult.success ? 'text-green-800' : 'text-red-800'
+                      }`}>
+                        {passwordResetResult.success ? 'Password Reset Successful' : 'Password Reset Failed'}
+                      </h4>
+                      <p className={`mt-1 text-sm ${
+                        passwordResetResult.success ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {passwordResetResult.message}
+                      </p>
+                      {passwordResetResult.temporaryPassword && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-green-800">Temporary Password:</p>
+                          <code className="bg-green-100 px-2 py-1 rounded text-sm font-mono">
+                            {passwordResetResult.temporaryPassword}
+                          </code>
+                          <p className="text-xs text-green-700 mt-1">
+                            Share this with the user if they need immediate access. They should change it after logging in.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPasswordResetToken, validatePassword, hashPassword } from '@/lib/auth';
 import { getUserByEmail, saveUserAccount, markPasswordResetTokenUsed } from '@/lib/blob-accounts';
+import { sendEmail, generatePasswordChangedEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,23 @@ export async function POST(request: NextRequest) {
 
     await saveUserAccount(user);
     await markPasswordResetTokenUsed(token);
+
+    // Send password-changed notification (best-effort)
+    try {
+      const displayName = user.profile?.display_name || user.email;
+      const emailed = await sendEmail({
+        to: user.email,
+        subject: 'Your Morning Voyage password has been changed',
+        html: generatePasswordChangedEmail(displayName)
+      });
+      if (!emailed) {
+        // eslint-disable-next-line no-console
+        console.warn('Password change email failed to send to', user.email);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send password changed email', err);
+    }
 
     return NextResponse.json({
       success: true,

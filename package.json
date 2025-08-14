@@ -75,7 +75,8 @@
     "vaul": "latest",
     "vue": "latest",
     "vue-router": "latest",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "resend": "^3.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.2",
