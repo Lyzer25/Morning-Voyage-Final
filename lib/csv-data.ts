@@ -206,7 +206,7 @@ async function fetchAndParseCsvInternal(bypassCache = false): Promise<Product[]>
     const csvText = await response.text();
     
     if (!csvText || csvText.trim().length === 0) {
-      console.log('📊 Empty CSV file - returning empty array');
+      devLog('📊 Empty CSV file - returning empty array');
       return [];
     }
 

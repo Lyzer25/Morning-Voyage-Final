@@ -1,5 +1,6 @@
 // Enhanced product variant management system
 import type { Product } from "./types"
+import { devLog, buildLog } from "@/lib/logger"
 
 export interface ProductVariant {
   sku: string
@@ -57,17 +58,20 @@ export function getBaseProductName(name: string): string {
 
 // Group products by base name and format variants
 export function groupProductVariants(products: Product[]): GroupedProduct[] {
-  console.log(`🔄 Grouping ${products.length} raw products into variants...`)
+  // Summary-level log only; detailed per-item logs are gated behind DEBUG_CSV.
+  buildLog('🔄 Grouping products', { count: products.length })
 
-  // First, let's see what we're working with
-  products.forEach((product, index) => {
-    console.log(`Raw product ${index + 1}:`, {
-      sku: product.sku,
-      name: product.productName,
-      format: product.format,
-      price: product.price,
+  // First, let's see what we're working with (development-only verbose output)
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    products.forEach((product, index) => {
+      devLog(`Raw product ${index + 1}:`, {
+        sku: product.sku,
+        name: product.productName,
+        format: product.format,
+        price: product.price,
+      })
     })
-  })
+  }
 
   const grouped = new Map<string, GroupedProduct>()
 
@@ -76,7 +80,9 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
     const baseName = getBaseProductName(product.productName)
     const baseKey = `${baseName}-${product.category}-${product.subcategory || 'default'}`.toLowerCase().replace(/\s+/g, "-")
 
-    console.log(`Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`)
+    if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+      devLog(`Processing product ${index + 1}: "${product.productName}" -> base: "${baseName}" -> key: "${baseKey}"`)
+    }
 
     const variant: ProductVariant = {
       sku: product.sku,
@@ -96,10 +102,12 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
 
       // Check if this format already exists
       const existingVariant = existingProduct.variants.find((v) => v.format === variant.format)
-      if (existingVariant) {
-        console.log(`  ⚠️ Duplicate format ${variant.format} for ${baseName}, skipping...`)
-        return
-      }
+        if (existingVariant) {
+          if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+            devLog(`⚠️ Duplicate format ${variant.format} for ${baseName}, skipping...`)
+          }
+          return
+        }
 
       existingProduct.variants.push(variant)
 
@@ -118,7 +126,9 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
         existingProduct.featured = product.featured || false
       }
 
-      console.log(`  ✅ Added variant ${variant.format} to existing product: ${baseName}`)
+      if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+        devLog(`✅ Added variant ${variant.format} to existing product: ${baseName}`)
+      }
     } else {
       // Create new grouped product
       const groupedProduct: GroupedProduct = {
@@ -146,7 +156,9 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
       }
 
       grouped.set(baseKey, groupedProduct)
-      console.log(`  ✅ Created new grouped product: ${baseName} (${baseKey})`)
+      if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+        devLog(`✅ Created new grouped product: ${baseName} (${baseKey})`)
+      }
     }
   })
 
@@ -154,15 +166,20 @@ export function groupProductVariants(products: Product[]): GroupedProduct[] {
     (product) => product.status === "active" && product.variants.some((v) => v.inStock),
   )
 
-  console.log(`✅ Final grouping result:`)
-  console.log(`   - Input: ${products.length} raw products`)
-  console.log(`   - Output: ${result.length} grouped products`)
-
-  result.forEach((product, index) => {
-    console.log(
-      `   ${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats ? product.availableFormats.join(", ") : "N/A"})`,
-    )
+  // Summary for build logs
+  buildLog('✅ Final grouping result', {
+    input: products.length,
+    output: result.length
   })
+ 
+  // Detailed list only when debugging CSV processing
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    result.forEach((product, index) => {
+      devLog(
+        `${index + 1}. ${product.productName} (${product.variants.length} variants: ${product.availableFormats ? product.availableFormats.join(", ") : "N/A"})`
+      )
+    })
+  }
 
   return result
 }

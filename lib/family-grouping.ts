@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/types"
+import { devLog, buildLog } from "@/lib/logger"
 
 export interface ProductVariant extends Product {
   formatCode: string
@@ -43,7 +44,8 @@ export function getFamilyKeyFromSku(sku: string): string {
 
 // ✅ ENHANCED: Group products into families using NAME-BASED grouping
 export function groupProductFamilies(products: Product[]): ProductFamily[] {
-  console.log(`🔄 Grouping ${products.length} products into families (NAME-BASED grouping)...`)
+  // Summary-level log for builds; detailed output goes to DEBUG_CSV.
+  buildLog('🔄 Grouping products into families', { count: products.length });
   
   // Group by core product name, not SKU patterns
   const grouped = products.reduce((acc, product) => {
@@ -56,15 +58,20 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
     return acc
   }, {} as Record<string, Product[]>)
 
-  console.log('🔍 Name-based grouping results:', {
+  // Build-time brief summary; include full nameGroups only when debugging.
+  buildLog('🔍 Name-based grouping results', {
     totalProducts: products.length,
-    uniqueNames: Object.keys(grouped).length,
-    nameGroups: Object.entries(grouped).map(([name, prods]) => ({
-      name,
-      count: prods.length,
-      skus: prods.map(p => p.sku)
-    }))
+    uniqueNames: Object.keys(grouped).length
   })
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    devLog('🔍 Name-based grouping details:', {
+      nameGroups: Object.entries(grouped).map(([name, prods]) => ({
+        name,
+        count: prods.length,
+        skus: prods.map(p => p.sku)
+      }))
+    })
+  }
 
   const families: ProductFamily[] = []
   
@@ -72,7 +79,9 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
   for (const [coreProductName, variants] of Object.entries(grouped)) {
     // ✅ CRITICAL FIX: Only create families with 2+ variants
     if (variants.length < 2) {
-      console.log(`⚠️ Skipping single variant: ${coreProductName} → ${variants[0].sku} (will remain individual product)`)
+      if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+        devLog(`⚠️ Skipping single variant: ${coreProductName} → ${variants[0].sku} (will remain individual product)`)
+      }
       continue
     }
     
@@ -96,13 +105,23 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
       variants: productVariants 
     })
     
-    console.log(`✅ Family: "${coreProductName}" → ${variants.length} variants (${productVariants.map(v => `${v.formatCode}:${v.roastLevel || 'N/A'}:${v.origin || 'N/A'}`).join(', ')}) → base: ${familyBase.formatCode} → category: coffee-family`)
+    if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+      devLog(`✅ Family: "${coreProductName}" → ${variants.length} variants (${productVariants.map(v => `${v.formatCode}:${v.roastLevel || 'N/A'}:${v.origin || 'N/A'}`).join(', ')}) → base: ${familyBase.formatCode} → category: coffee-family`)
+    }
   }
   
-  console.log(`🎯 Final result: ${products.length} products → ${families.length} families`)
-  families.forEach((f, i) => {
-    console.log(`   ${i + 1}. ${f.base.productName} (${f.variants.length} variants: ${f.variants.map(v => v.formatCode).join(', ')})`)
+  // Summary for build logs
+  buildLog('🎯 Family grouping result', {
+    inputProducts: products.length,
+    families: families.length
   })
+  
+  // Detailed list only when debugging CSV processing
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    families.forEach((f, i) => {
+      devLog(`   ${i + 1}. ${f.base.productName} (${f.variants.length} variants: ${f.variants.map(v => v.formatCode).join(', ')})`)
+    })
+  }
   
   return families
 }

@@ -1,5 +1,6 @@
 import type { Product } from "@/lib/types"
 import Papa from "papaparse"
+import { devLog, buildLog, prodError } from "@/lib/logger"
 
 // COMPREHENSIVE CSV NORMALIZATION SYSTEM
 // Normalize headers: case/space/paren tolerant, trimmed
@@ -156,31 +157,38 @@ export function normalizeWeight(v?: string): string {
 }
 
 export function normalizeBool(v: any): boolean {
-  console.log('🔧 FEATURED DEBUG: normalizeBool input:', {
-    value: v,
-    type: typeof v,
-    stringValue: v?.toString(),
-    originalInput: v
-  })
+  // Detailed debug logs are gated behind DEBUG_CSV to avoid noisy build output.
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    devLog('🔧 FEATURED DEBUG: normalizeBool input:', {
+      value: v,
+      type: typeof v,
+      stringValue: v?.toString(),
+      originalInput: v
+    })
+  }
   
   if (typeof v === 'boolean') {
-    console.log('✅ FEATURED DEBUG: Already boolean:', v)
+    if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+      devLog('✅ FEATURED DEBUG: Already boolean:', v)
+    }
     return v
   }
   
   const s = v?.toString().toLowerCase().trim()
   const result = s === "true" || s === "yes" || s === "1" || s === "on"
   
-  console.log('🔧 FEATURED DEBUG: normalizeBool result:', {
-    normalizedString: s,
-    finalResult: result,
-    matchedValues: {
-      isTrue: s === "true",
-      isYes: s === "yes", 
-      isOne: s === "1",
-      isOn: s === "on"
-    }
-  })
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    devLog('🔧 FEATURED DEBUG: normalizeBool result:', {
+      normalizedString: s,
+      finalResult: result,
+      matchedValues: {
+        isTrue: s === "true",
+        isYes: s === "yes", 
+        isOne: s === "1",
+        isOn: s === "on"
+      }
+    })
+  }
   
   return result
 }
@@ -270,7 +278,9 @@ export function parseBundleContents(value: string): any[] {
       };
     }).filter(Boolean); // Remove null entries
   } catch (error) {
-    console.warn('Failed to parse bundle contents:', value, error);
+    if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+      devLog('Failed to parse bundle contents:', { value, error });
+    }
     return [];
   }
 }
@@ -280,7 +290,9 @@ export const transformHeader = (header: string): string => {
   const normalized = norm(header)
   const result = HEADER_ALIASES[normalized] || header.trim().toUpperCase()
   
-  console.log('🔧 Header transformation:', `"${header}" → norm:"${normalized}" → canonical:"${result}"`)
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_CSV) {
+    devLog('🔧 Header transformation:', `"${header}" → norm:"${normalized}" → canonical:"${result}"`)
+  }
   
   return result
 }
@@ -344,7 +356,8 @@ export function processCSVData(data: any[]): Product[] {
 
 // ENHANCED: Complete CSV export with ALL business fields
 export function exportProductsToCSV(products: Product[]): string {
-  console.log('🔍 CSV GENERATION: Processing', products.length, 'products')
+  // Use buildLog for brief generation summaries; avoid per-product logs here.
+  buildLog('🔍 CSV GENERATION: Processing products', { count: products.length })
   
   const csvData = products.map(product => ({
     // Core required fields
@@ -397,7 +410,7 @@ export function exportProductsToCSV(products: Product[]): string {
     skipEmptyLines: false 
   })
   
-  console.log('✅ CSV GENERATION: Complete', {
+  buildLog('✅ CSV GENERATION: Complete', {
     outputLength: csv.length,
     headerLine: csv.split('\n')[0],
     totalLines: csv.split('\n').length,
