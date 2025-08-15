@@ -90,6 +90,7 @@ export function fromCsvRow(row: Record<string, any>): Product {
     // Preserve explicit in-stock if provided, otherwise default to true
     status: row["STATUS"]?.toString().toLowerCase() || "active",
     inStock: row["IN STOCK"] !== undefined ? normalizeBool(row["IN STOCK"]) : true,
+    
     images: [],
     createdAt: new Date(),
     updatedAt: new Date(),

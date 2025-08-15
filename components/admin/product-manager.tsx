@@ -521,8 +521,8 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
   // PARSING GUARD: Prevent duplicate CSV processing
   const [isParsingCsv, setIsParsingCsv] = useState(false)
 
-  // NEW: Client-side CSV upload handler with staging integration
-  const handleCsvUpload = useCallback(async (file: File) => {
+  // ENHANCED: CSV upload handler with dual mode support (client-side + server API)
+  const handleCsvUpload = useCallback(async (file: File, useServerApi = false) => {
     // GUARD: Prevent duplicate runs
     if (isParsingCsv) {
       console.log('🚫 CSV parsing already in progress, ignoring duplicate call')
@@ -532,10 +532,11 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
     setIsParsingCsv(true)
     
     try {
-      console.log('📂 CSV Upload: Processing file locally...', {
+      console.log('📂 CSV Upload: Processing file...', {
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        useServerApi
       })
 
       if (!file || file.size === 0) {
@@ -548,81 +549,122 @@ export default function ProductManager({ initialProducts }: { initialProducts: P
         return
       }
 
-      // Read file content
-      const csvText = await file.text()
-      console.log('📂 CSV content received:', {
-        length: csvText.length,
-        firstLine: csvText.split('\n')[0] || 'EMPTY',
-        preview: csvText.substring(0, 300)
-      })
-
-      // Parse CSV with proper header transformation
-      const parsed = Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: false, // Keep as strings for proper processing
-        transformHeader: transformHeader,
-      })
-
-      console.log('📂 CSV parsed:', {
-        dataRows: parsed.data?.length || 0,
-        errors: parsed.errors?.length || 0,
-        headers: parsed.meta?.fields || []
-      })
-
-      if (parsed.errors.length > 0) {
-        console.warn('⚠️ CSV parsing errors:', parsed.errors)
-        // Don't abort on parsing warnings, just show them
-        parsed.errors.forEach(error => {
-          console.warn(`CSV Warning: ${error.message} at row ${error.row}`)
+      if (useServerApi) {
+        // SERVER API MODE: Use the new upload endpoint
+        console.log('🌐 Using server API for CSV processing...')
+        
+        const formData = new FormData()
+        formData.append('file', file)
+        
+        const response = await fetch('/api/admin/products/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
         })
-      }
-
-      // CRITICAL: Only require essential fields (SKU, PRODUCTNAME, CATEGORY, PRICE)
-      const requiredFields = ["SKU", "PRODUCTNAME", "CATEGORY", "PRICE"]
-      const missingRequired = requiredFields.filter(field => !parsed.meta?.fields?.includes(field))
-      
-      if (missingRequired.length > 0) {
-        toast.error(`CSV must contain required columns: ${missingRequired.join(', ')}`)
-        return
-      }
-
-      console.log('✅ CSV has all required fields:', requiredFields)
-
-      // Process each row using the robust fromCsvRow function directly
-      const processedProducts: Product[] = []
-      
-      for (let i = 0; i < parsed.data.length; i++) {
-        try {
-          // FIXED: Use the robust fromCsvRow function that expects uppercase keys
-          const product = fromCsvRow(parsed.data[i] as Record<string, any>)
-          processedProducts.push(product)
-        } catch (rowError) {
-          console.error(`❌ Failed to process row ${i + 1}:`, rowError)
-          toast.error(`Row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Processing failed'}`)
-          // Continue processing other rows instead of aborting
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `Upload failed: ${response.status}`)
         }
+        
+        const result = await response.json()
+        
+        console.log('🌐 Server API upload successful:', result)
+        
+        // Fetch the processed products from blob storage
+        const freshProducts = await fetchDirectFromBlob()
+        
+        // Update staging with server-processed data
+        setStagedProducts(freshProducts)
+        setHasUnsavedChanges(true)
+        
+        toast.success(`🌐 Server processed: ${result.productCount} products`)
+        
+        if (result.processingErrors && result.processingErrors.length > 0) {
+          console.warn('⚠️ Processing warnings:', result.processingErrors)
+          toast.warning(`${result.processingErrors.length} rows had warnings - check console for details`)
+        }
+        
+      } else {
+        // CLIENT-SIDE MODE: Original processing logic
+        console.log('💻 Using client-side CSV processing...')
+        
+        // Read file content
+        const csvText = await file.text()
+        console.log('📂 CSV content received:', {
+          length: csvText.length,
+          firstLine: csvText.split('\n')[0] || 'EMPTY',
+          preview: csvText.substring(0, 300)
+        })
+
+        // Parse CSV with proper header transformation
+        const parsed = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: false, // Keep as strings for proper processing
+          transformHeader: transformHeader,
+        })
+
+        console.log('📂 CSV parsed:', {
+          dataRows: parsed.data?.length || 0,
+          errors: parsed.errors?.length || 0,
+          headers: parsed.meta?.fields || []
+        })
+
+        if (parsed.errors.length > 0) {
+          console.warn('⚠️ CSV parsing errors:', parsed.errors)
+          // Don't abort on parsing warnings, just show them
+          parsed.errors.forEach(error => {
+            console.warn(`CSV Warning: ${error.message} at row ${error.row}`)
+          })
+        }
+
+        // CRITICAL: Only require essential fields (SKU, PRODUCTNAME, CATEGORY, PRICE)
+        const requiredFields = ["SKU", "PRODUCTNAME", "CATEGORY", "PRICE"]
+        const missingRequired = requiredFields.filter(field => !parsed.meta?.fields?.includes(field))
+        
+        if (missingRequired.length > 0) {
+          toast.error(`CSV must contain required columns: ${missingRequired.join(', ')}`)
+          return
+        }
+
+        console.log('✅ CSV has all required fields:', requiredFields)
+
+        // Process each row using the robust fromCsvRow function directly
+        const processedProducts: Product[] = []
+        
+        for (let i = 0; i < parsed.data.length; i++) {
+          try {
+            // FIXED: Use the robust fromCsvRow function that expects uppercase keys
+            const product = fromCsvRow(parsed.data[i] as Record<string, any>)
+            processedProducts.push(product)
+          } catch (rowError) {
+            console.error(`❌ Failed to process row ${i + 1}:`, rowError)
+            toast.error(`Row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Processing failed'}`)
+            // Continue processing other rows instead of aborting
+          }
+        }
+
+        console.log('📂 CSV processed:', {
+          totalRows: parsed.data.length,
+          successfullyProcessed: processedProducts.length,
+          categories: [...new Set(processedProducts.map(p => p.category).filter(Boolean))],
+          roastifySkuCount: processedProducts.filter(p => p.roastify_sku).length
+        })
+
+        if (processedProducts.length === 0) {
+          toast.error('No valid products could be processed from CSV')
+          return
+        }
+
+        // CRITICAL: Always set staging products and mark as unsaved
+        console.log('🎭 Staging replace: Updating staging area with CSV data')
+        setStagedProducts(processedProducts)
+        setHasUnsavedChanges(true)
+
+        const roastifyCount = processedProducts.filter(p => p.roastify_sku).length
+        toast.success(`💻 Client processed: ${processedProducts.length} products${roastifyCount > 0 ? ` (${roastifyCount} with Roastify SKUs)` : ''}`)
       }
-
-      console.log('📂 CSV processed:', {
-        totalRows: parsed.data.length,
-        successfullyProcessed: processedProducts.length,
-        categories: [...new Set(processedProducts.map(p => p.category).filter(Boolean))],
-        sampleProduct: processedProducts[0]
-      })
-
-      if (processedProducts.length === 0) {
-        toast.error('No valid products could be processed from CSV')
-        return
-      }
-
-      // CRITICAL: Always set staging products and mark as unsaved
-      console.log('🎭 Staging replace: Updating staging area with CSV data')
-      setStagedProducts(processedProducts)
-      setHasUnsavedChanges(true)
-
-      console.log(`🎭 Staging replace: ${processedProducts.length} products loaded into staging`)
-      toast.success(`📂 CSV processed: ${processedProducts.length} products loaded into staging area`)
 
     } catch (error) {
       console.error('❌ CSV Upload Error:', error)
