@@ -20,11 +20,28 @@ export async function getCart(cartId: string, isUser: boolean = false): Promise<
     console.log('📦 [GET CART] Attempting to get cart with key:', key);
     console.log('📦 [GET CART] Cart params:', { cartId, isUser });
     
-    const rawDownloadUrl = await vercelBlob.getDownloadUrl(key);
-    console.log('📦 [GET CART] Raw download URL:', rawDownloadUrl || 'null');
+    let rawDownloadUrl: string | null = null;
+    
+    // Attempt 1: Standard getDownloadUrl
+    try {
+      rawDownloadUrl = await vercelBlob.getDownloadUrl(key);
+      console.log('📦 [GET CART] Method 1 - Raw download URL:', rawDownloadUrl || 'null');
+    } catch (err) {
+      console.log('📦 [GET CART] Method 1 failed:', (err as any)?.message || err);
+      
+      // Attempt 2: Try with encoded key
+      try {
+        const encodedKey = encodeURIComponent(key);
+        console.log('📦 [GET CART] Method 2 - Trying encoded key:', encodedKey);
+        rawDownloadUrl = await vercelBlob.getDownloadUrl(encodedKey);
+        console.log('📦 [GET CART] Method 2 - Encoded URL success:', rawDownloadUrl || 'null');
+      } catch (err2) {
+        console.log('📦 [GET CART] Method 2 failed:', (err2 as any)?.message || err2);
+      }
+    }
     
     if (!rawDownloadUrl) {
-      console.log('📦 [GET CART] No download URL found, cart does not exist');
+      console.log('📦 [GET CART] All methods failed - no download URL found, cart does not exist');
       return null;
     }
 
