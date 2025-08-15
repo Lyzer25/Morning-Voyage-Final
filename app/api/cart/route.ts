@@ -4,23 +4,32 @@ import { getCart, saveCart } from '@/lib/cart';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('📋 [CART GET] GET /api/cart - Request received');
+    
     const session = await getServerSession();
     const guestCookie = request.cookies.get('mv_guest_session')?.value;
+    
+    console.log('📋 [CART GET] Session:', session ? { userId: session.userId, email: session.email, role: session.role } : 'null');
+    console.log('📋 [CART GET] Guest cookie:', guestCookie ? 'present' : 'null');
 
     if (session) {
+      console.log('📋 [CART GET] Fetching user cart for:', session.userId);
       const cart = await getCart(session.userId, true);
+      console.log('📋 [CART GET] User cart result:', cart ? { items: cart.items.length, total: cart.totals.total } : 'null');
       return NextResponse.json({ success: true, cart: cart ?? null });
     }
 
     if (guestCookie) {
+      console.log('📋 [CART GET] Fetching guest cart for:', guestCookie);
       const cart = await getCart(guestCookie, false);
+      console.log('📋 [CART GET] Guest cart result:', cart ? { items: cart.items.length, total: cart.totals.total } : 'null');
       return NextResponse.json({ success: true, cart: cart ?? null });
     }
 
+    console.log('📋 [CART GET] No session or guest cookie found, returning null cart');
     return NextResponse.json({ success: true, cart: null });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to fetch cart', err);
+    console.error('❌ [CART GET] Failed to fetch cart:', err);
     return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
   }
 }

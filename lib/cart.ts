@@ -17,19 +17,38 @@ function cartKey(cartId: string, isUser = false) {
 export async function getCart(cartId: string, isUser: boolean = false): Promise<ShoppingCart | null> {
   try {
     const key = cartKey(cartId, isUser);
+    console.log('📦 [GET CART] Attempting to get cart with key:', key);
+    console.log('📦 [GET CART] Cart params:', { cartId, isUser });
+    
     const downloadUrl = await vercelBlob.getDownloadUrl(key);
-    if (!downloadUrl) return null;
+    console.log('📦 [GET CART] Download URL:', downloadUrl ? 'found' : 'null');
+    
+    if (!downloadUrl) {
+      console.log('📦 [GET CART] No download URL found, cart does not exist');
+      return null;
+    }
 
     const res = await fetch(downloadUrl);
-    if (!res.ok) return null;
+    console.log('📦 [GET CART] Fetch response status:', res.status);
+    
+    if (!res.ok) {
+      console.log('📦 [GET CART] Fetch failed with status:', res.status);
+      return null;
+    }
+    
     const cart: ShoppingCart = await res.json();
+    console.log('📦 [GET CART] Cart retrieved successfully:', { id: cart.id, items: cart.items.length, expires_at: cart.expires_at });
 
     // Expiration check
-    if (new Date(cart.expires_at) < new Date()) return null;
+    if (new Date(cart.expires_at) < new Date()) {
+      console.log('📦 [GET CART] Cart expired, returning null');
+      return null;
+    }
+    
+    console.log('📦 [GET CART] Returning valid cart with', cart.items.length, 'items');
     return cart;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to get cart', { cartId, isUser, error: (err as any)?.message || err });
+    console.error('❌ [GET CART] Failed to get cart:', { cartId, isUser, key: cartKey(cartId, isUser), error: (err as any)?.message || err });
     return null;
   }
 }
@@ -41,17 +60,30 @@ export async function getCart(cartId: string, isUser: boolean = false): Promise<
 export async function saveCart(cart: ShoppingCart, isUser: boolean = false): Promise<void> {
   try {
     const key = cartKey(isUser ? (cart.user_id || cart.session_id) : cart.session_id, isUser);
+    console.log('💾 [SAVE CART] Saving cart with key:', key);
+    console.log('💾 [SAVE CART] Cart details:', { 
+      id: cart.id, 
+      user_id: cart.user_id, 
+      session_id: cart.session_id, 
+      items: cart.items.length,
+      isUser 
+    });
+    
     cart.totals.subtotal = cart.items.reduce((sum, item) => sum + (item.line_total || item.quantity * item.base_price), 0);
     cart.totals.total = cart.totals.subtotal;
+
+    console.log('💾 [SAVE CART] Calculated totals:', cart.totals);
 
     await vercelBlob.put(key, JSON.stringify(cart, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
     });
+    
+    console.log('✅ [SAVE CART] Cart saved successfully to blob storage');
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to save cart', { cartId: cart.id, isUser, error: (err as any)?.message || err });
+    const errorKey = cartKey(isUser ? (cart.user_id || cart.session_id) : cart.session_id, isUser);
+    console.error('❌ [SAVE CART] Failed to save cart:', { cartId: cart.id, key: errorKey, isUser, error: (err as any)?.message || err });
     throw err;
   }
 }
@@ -69,9 +101,14 @@ export async function addToCart(
   isUser: boolean = false
 ): Promise<ShoppingCart> {
   try {
+    console.log('🛒 [ADD TO CART] Starting addToCart with params:', { cartId, productId, productName, basePrice, quantity, isUser });
+    
     let cart = await getCart(cartId, isUser);
+    
+    console.log('🛒 [ADD TO CART] Existing cart found:', cart ? { id: cart.id, items: cart.items.length, total: cart.totals.total } : 'null');
 
     if (!cart) {
+      console.log('🛒 [ADD TO CART] No existing cart found, creating new cart');
       const now = new Date();
       const expires = new Date(Date.now() + (isUser ? 30 : 7) * 24 * 60 * 60 * 1000);
       cart = {
@@ -84,6 +121,9 @@ export async function addToCart(
         updated_at: now.toISOString(),
         expires_at: expires.toISOString(),
       };
+      console.log('🛒 [ADD TO CART] Created new cart:', { id: cart.id, user_id: cart.user_id, session_id: cart.session_id });
+    } else {
+      console.log('🛒 [ADD TO CART] Using existing cart with', cart.items.length, 'items');
     }
 
     const existingIndex = cart.items.findIndex(i => i.product_id === productId);

@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     let cartId: string;
     let isUser: boolean;
     let guestSessionId: string | null = null;
+    let shouldSetCookie = false;
     
     if (session?.userId) {
       cartId = session.userId;
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       if (!guestSessionId) {
         // Create new guest session
         guestSessionId = crypto.randomUUID();
+        shouldSetCookie = true;
         console.log('🛒 [CART API] Created new guest session:', guestSessionId);
       } else {
         console.log('🛒 [CART API] Using existing guest session:', guestSessionId);
@@ -109,8 +111,8 @@ export async function POST(request: NextRequest) {
       message: 'Item added to cart successfully'
     });
     
-    // Set guest session cookie if needed
-    if (!isUser && !guestCookie && guestSessionId) {
+    // Set guest session cookie if needed (always set for guest users to ensure persistence)
+    if (!isUser && guestSessionId) {
       console.log('🍪 [CART API] Setting guest session cookie:', guestSessionId);
       response.cookies.set('mv_guest_session', guestSessionId, {
         httpOnly: true,
