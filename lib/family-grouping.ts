@@ -11,7 +11,33 @@ export interface ProductFamily {
   variants: ProductVariant[]
 }
 
-// Extract format code from SKU suffix (-WB, -GR, -PODS, -INSTANT)
+// Map product format field to format codes for UI display
+export function getFormatCodeFromProduct(product: Product): string {
+  const format = product.format?.toLowerCase() || 'whole-bean'
+  
+  // Map CSV format values to display codes
+  switch (format) {
+    case 'whole-bean':
+    case 'whole bean':
+    case 'wholebBean':
+      return 'WB'
+    case 'ground':
+    case 'pre-ground':
+    case 'preground':
+      return 'GR'
+    case 'pods':
+    case 'coffee-pods':
+    case 'k-cups':
+    case 'kcups':
+      return 'PODS'
+    case 'instant':
+      return 'INSTANT'
+    default:
+      return format.toUpperCase()
+  }
+}
+
+// LEGACY: Extract format code from SKU suffix (kept for backward compatibility)
 export function getFormatCodeFromSku(sku: string): string {
   return sku?.split("-").pop()?.toUpperCase() ?? ""
 }
@@ -85,10 +111,10 @@ export function groupProductFamilies(products: Product[]): ProductFamily[] {
       continue
     }
     
-    // Convert to ProductVariants with format codes
+    // Convert to ProductVariants with format codes based on CSV FORMAT field
     const productVariants: ProductVariant[] = variants.map(p => ({
       ...p,
-      formatCode: getFormatCodeFromSku(p.sku)
+      formatCode: getFormatCodeFromProduct(p) // Use FORMAT field instead of SKU parsing
     }))
 
     // Prefer WB as base, else GR, else first variant
