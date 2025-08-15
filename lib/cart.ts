@@ -20,13 +20,24 @@ export async function getCart(cartId: string, isUser: boolean = false): Promise<
     console.log('📦 [GET CART] Attempting to get cart with key:', key);
     console.log('📦 [GET CART] Cart params:', { cartId, isUser });
     
-    const downloadUrl = await vercelBlob.getDownloadUrl(key);
-    console.log('📦 [GET CART] Download URL:', downloadUrl ? 'found' : 'null');
+    const rawDownloadUrl = await vercelBlob.getDownloadUrl(key);
+    console.log('📦 [GET CART] Raw download URL:', rawDownloadUrl || 'null');
     
-    if (!downloadUrl) {
+    if (!rawDownloadUrl) {
       console.log('📦 [GET CART] No download URL found, cart does not exist');
       return null;
     }
+
+    // Normalize URL to ensure it's absolute for fetch()
+    let downloadUrl = rawDownloadUrl;
+    if (!downloadUrl.startsWith('http')) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                      'https://morningvoyage.co';
+      downloadUrl = `${baseUrl}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+    }
+    
+    console.log('📦 [GET CART] Normalized download URL:', downloadUrl);
 
     const res = await fetch(downloadUrl);
     console.log('📦 [GET CART] Fetch response status:', res.status);
