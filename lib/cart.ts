@@ -1,4 +1,4 @@
-import * as vercelBlob from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 import type { ShoppingCart } from './types';
 
 /**
@@ -20,43 +20,20 @@ export async function getCart(cartId: string, isUser: boolean = false): Promise<
     console.log('📦 [GET CART] Attempting to get cart with key:', key);
     console.log('📦 [GET CART] Cart params:', { cartId, isUser });
     
-    let rawDownloadUrl: string | null = null;
+    // Use list() to locate the cart blob (proven approach from lib/blob-accounts.ts)
+    const blobs = await list({ prefix: key, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
     
-    // Attempt 1: Standard getDownloadUrl
-    try {
-      rawDownloadUrl = await vercelBlob.getDownloadUrl(key);
-      console.log('📦 [GET CART] Method 1 - Raw download URL:', rawDownloadUrl || 'null');
-    } catch (err) {
-      console.log('📦 [GET CART] Method 1 failed:', (err as any)?.message || err);
-      
-      // Attempt 2: Try with encoded key
-      try {
-        const encodedKey = encodeURIComponent(key);
-        console.log('📦 [GET CART] Method 2 - Trying encoded key:', encodedKey);
-        rawDownloadUrl = await vercelBlob.getDownloadUrl(encodedKey);
-        console.log('📦 [GET CART] Method 2 - Encoded URL success:', rawDownloadUrl || 'null');
-      } catch (err2) {
-        console.log('📦 [GET CART] Method 2 failed:', (err2 as any)?.message || err2);
-      }
-    }
+    console.log('📦 [GET CART] List method - blob found:', blobItem ? 'yes' : 'no');
+    console.log('📦 [GET CART] Download URL:', downloadUrl ? 'found' : 'null');
     
-    if (!rawDownloadUrl) {
-      console.log('📦 [GET CART] All methods failed - no download URL found, cart does not exist');
+    if (!downloadUrl) {
+      console.log('📦 [GET CART] No blob found for key, cart does not exist');
       return null;
     }
 
-    // Normalize URL to ensure it's absolute for fetch()
-    let downloadUrl = rawDownloadUrl;
-    if (!downloadUrl.startsWith('http')) {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                      'https://morningvoyage.co';
-      downloadUrl = `${baseUrl}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
-    }
-    
-    console.log('📦 [GET CART] Normalized download URL:', downloadUrl);
-
-    const res = await fetch(downloadUrl);
+    const res = await fetch(downloadUrl, { cache: 'no-store' });
     console.log('📦 [GET CART] Fetch response status:', res.status);
     
     if (!res.ok) {
@@ -102,7 +79,7 @@ export async function saveCart(cart: ShoppingCart, isUser: boolean = false): Pro
 
     console.log('💾 [SAVE CART] Calculated totals:', cart.totals);
 
-    await vercelBlob.put(key, JSON.stringify(cart, null, 2), {
+    await put(key, JSON.stringify(cart, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
