@@ -116,13 +116,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ [CART CLIENT] Add to cart response:', { 
+          status: response.status, 
+          success: data.success, 
+          hasCart: !!data.cart,
+          itemCount: data.cart?.items?.length || 0
+        });
         // Handle both response formats: { cart: ... } or { success: true, cart: ... }
         const cart = data.cart || (data.success ? data.cart : null);
         dispatch({ type: 'SET_CART', payload: cart });
         dispatch({ type: 'SET_OPEN', payload: true }); // Show mini-cart after adding
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add to cart');
+        console.error('❌ [CART CLIENT] Add to cart failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('❌ [CART CLIENT] Error response body:', errorData);
+        } catch (parseError) {
+          console.error('❌ [CART CLIENT] Could not parse error response:', parseError);
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        
+        throw new Error(errorData.error || `Failed to add to cart (${response.status})`);
       }
     } catch (error) {
       console.error('Add to cart error:', error);
