@@ -108,7 +108,8 @@ async function fetchProductData(productId: string) {
       throw new Error('Products API failed');
     }
     
-    const products = await response.json();
+    const data = await response.json();
+    const products = data.products || data; // Handle both {products: [...]} and [...] formats
     return products.find((p: any) => p.id === productId || p.sku === productId);
     
   } catch (error) {

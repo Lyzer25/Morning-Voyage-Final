@@ -95,7 +95,14 @@ export async function setSessionCookie(token: string): Promise<void> {
  * Get server session data from cookie, or null if not present or invalid.
  */
 export async function getServerSession(): Promise<SessionData | null> {
-  if (!AUTH_SECRET) throw new Error('Missing AUTH_SECRET');
+  // In development, if AUTH_SECRET is missing, return null (no session) instead of throwing
+  if (!AUTH_SECRET) {
+    if (process.env.NODE_ENV === 'development') {
+      devLog('getServerSession: AUTH_SECRET missing in development, returning null session');
+      return null;
+    }
+    throw new Error('Missing AUTH_SECRET');
+  }
   try {
     // Log that we're checking cookies (development only)
     devLog('getServerSession: checking cookie store for mv_session');
