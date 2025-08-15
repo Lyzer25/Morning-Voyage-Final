@@ -11,49 +11,67 @@ function cartKey(cartId: string, isUser = false) {
 }
 
 /**
+ * Structured logging for cart operations
+ */
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isDebugMode = process.env.CART_DEBUG === 'true';
+
+function logCartOperation(operation: string, data: any) {
+  if (isDevelopment || isDebugMode) {
+    console.log(`[Cart ${operation}]:`, data);
+  }
+}
+
+function logCartError(operation: string, error: any, context?: any) {
+  console.error(`[Cart ${operation} Error]:`, error, context || '');
+}
+
+/**
  * Get cart by id (user or session).
  * Returns null if not found or expired.
  */
 export async function getCart(cartId: string, isUser: boolean = false): Promise<ShoppingCart | null> {
   try {
     const key = cartKey(cartId, isUser);
-    console.log('📦 [GET CART] Attempting to get cart with key:', key);
-    console.log('📦 [GET CART] Cart params:', { cartId, isUser });
+    logCartOperation('get_start', { cartId, isUser, key });
     
     // Use list() to locate the cart blob (proven approach from lib/blob-accounts.ts)
     const blobs = await list({ prefix: key, limit: 1 });
     const blobItem = blobs?.blobs?.[0];
     const downloadUrl = blobItem?.url;
     
-    console.log('📦 [GET CART] List method - blob found:', blobItem ? 'yes' : 'no');
-    console.log('📦 [GET CART] Download URL:', downloadUrl ? 'found' : 'null');
+    logCartOperation('blob_lookup', { found: !!blobItem, hasUrl: !!downloadUrl });
     
     if (!downloadUrl) {
-      console.log('📦 [GET CART] No blob found for key, cart does not exist');
+      logCartOperation('get_not_found', { cartId });
       return null;
     }
 
     const res = await fetch(downloadUrl, { cache: 'no-store' });
-    console.log('📦 [GET CART] Fetch response status:', res.status);
+    logCartOperation('blob_fetch', { status: res.status });
     
     if (!res.ok) {
-      console.log('📦 [GET CART] Fetch failed with status:', res.status);
+      logCartError('fetch_failed', `HTTP ${res.status}`, { cartId, downloadUrl });
       return null;
     }
     
     const cart: ShoppingCart = await res.json();
-    console.log('📦 [GET CART] Cart retrieved successfully:', { id: cart.id, items: cart.items.length, expires_at: cart.expires_at });
+    logCartOperation('get_success', { 
+      cartId: cart.id, 
+      items: cart.items.length, 
+      total: cart.totals.total,
+      expires_at: cart.expires_at 
+    });
 
     // Expiration check
     if (new Date(cart.expires_at) < new Date()) {
-      console.log('📦 [GET CART] Cart expired, returning null');
+      logCartOperation('cart_expired', { cartId, expires_at: cart.expires_at });
       return null;
     }
     
-    console.log('📦 [GET CART] Returning valid cart with', cart.items.length, 'items');
     return cart;
   } catch (err) {
-    console.error('❌ [GET CART] Failed to get cart:', { cartId, isUser, key: cartKey(cartId, isUser), error: (err as any)?.message || err });
+    logCartError('get_failed', err, { cartId, isUser, key: cartKey(cartId, isUser) });
     return null;
   }
 }
@@ -157,6 +175,7 @@ export async function addToCart(
 
 /**
  * Remove an item from cart. If item doesn't exist, returns the current cart or null.
+ * If removing the last item, deletes the cart blob and returns null.
  */
 export async function removeFromCart(cartId: string, productId: string, isUser: boolean = false): Promise<ShoppingCart | null> {
   try {
@@ -167,6 +186,15 @@ export async function removeFromCart(cartId: string, productId: string, isUser: 
     if (idx >= 0) {
       cart.items.splice(idx, 1);
       cart.updated_at = new Date().toISOString();
+      
+      // If cart is now empty, delete it entirely
+      if (cart.items.length === 0) {
+        console.log('🗑️ [REMOVE CART] Cart is empty after removal, deleting cart:', cartId);
+        await deleteCart(cartId, isUser);
+        return null; // Return null to indicate no cart exists
+      }
+      
+      // Save cart with remaining items
       await saveCart(cart, isUser);
     }
     return cart;
@@ -174,5 +202,21 @@ export async function removeFromCart(cartId: string, productId: string, isUser: 
     // eslint-disable-next-line no-console
     console.error('Failed to remove from cart', { cartId, productId, error: (err as any)?.message || err });
     return null;
+  }
+}
+
+/**
+ * Delete cart blob from storage
+ */
+export async function deleteCart(cartId: string, isUser: boolean = false): Promise<void> {
+  try {
+    const { del } = await import('@vercel/blob');
+    const key = cartKey(cartId, isUser);
+    console.log('🗑️ [DELETE CART] Deleting cart blob:', key);
+    await del(key);
+    console.log('✅ [DELETE CART] Cart blob deleted successfully');
+  } catch (error) {
+    console.error('❌ [DELETE CART] Failed to delete cart blob:', error);
+    // Don't throw - deletion failure shouldn't break the remove operation
   }
 }

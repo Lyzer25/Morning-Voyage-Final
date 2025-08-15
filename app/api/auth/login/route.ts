@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createSessionToken, setSessionCookie } from '@/lib/auth';
 import { getUserByEmail, saveUserAccount } from '@/lib/blob-accounts';
+import { mergeGuestCartOnLogin } from '@/lib/cart-merge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest) {
     const sessionToken = await createSessionToken(sessionData);
     console.log('Login: session token created:', !!sessionToken);
 
+    // Check for guest cart to merge before setting session cookie
+    const guestSessionId = request.cookies.get('mv_guest_session')?.value;
+    console.log('Login: guest session found for merge:', !!guestSessionId);
+
     // Attempt to set cookie via the helper (server cookie store)
     try {
       console.log('Login: calling setSessionCookie');
@@ -49,6 +54,18 @@ export async function POST(request: NextRequest) {
       console.log('Login: setSessionCookie call completed');
     } catch (err) {
       console.warn('Login: setSessionCookie failed:', (err as any)?.message || err);
+    }
+
+    // Merge guest cart into user cart after authentication
+    if (guestSessionId) {
+      try {
+        console.log('Login: attempting cart merge for user:', user.id);
+        await mergeGuestCartOnLogin(user.id, guestSessionId);
+        console.log('Login: cart merge completed successfully');
+      } catch (error) {
+        console.error('Login: cart merge failed:', error);
+        // Don't fail login on cart merge error
+      }
     }
 
     // Build response and also set cookie on the NextResponse to ensure compatibility

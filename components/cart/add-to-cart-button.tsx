@@ -78,6 +78,7 @@ export function AddToCartButton({
       disabled={isDisabled}
       className={classes}
       aria-label={`Add ${productId} to cart`}
+      data-testid="add-to-cart-button"
     >
       {isLoading ? (
         <Loader2 className="h-4 w-4 mr-2 animate-spin" />

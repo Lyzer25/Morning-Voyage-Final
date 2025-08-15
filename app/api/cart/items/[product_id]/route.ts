@@ -41,17 +41,17 @@ export async function DELETE(
     // Remove item from cart
     const cart = await removeFromCart(cartId, product_id, isUser);
     
-    if (cart === null) {
-      return NextResponse.json(
-        { error: 'Cart not found' },
-        { status: 404 }
-      );
-    }
+    // cart can be null in two cases:
+    // 1. Cart didn't exist (legitimate case - already removed)
+    // 2. Cart became empty after removal (legitimate case - cart deleted)
+    // Both are success cases, not errors
     
     return NextResponse.json({
       success: true,
-      cart,
-      message: 'Item removed from cart successfully'
+      cart: cart, // Will be null if cart was empty/deleted, or cart object if items remain
+      message: cart === null 
+        ? 'Item removed and cart is now empty' 
+        : 'Item removed from cart successfully'
     });
     
   } catch (error) {

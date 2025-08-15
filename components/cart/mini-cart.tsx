@@ -83,6 +83,7 @@ export function MiniCart() {
         aria-labelledby="cart-title"
         tabIndex={-1}
         onKeyDown={handleKeyDown}
+        data-testid="mini-cart"
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -100,7 +101,7 @@ export function MiniCart() {
           {/* Cart Content */}
           <div className="flex-1 overflow-y-auto">
             {!cart || cart.items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center" data-testid="empty-cart-message">
                 <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
                 <p className="text-gray-500 mb-6">Add some coffee to get started!</p>
@@ -115,7 +116,7 @@ export function MiniCart() {
             ) : (
               <div className="p-4 space-y-4">
                 {cart.items.map((item) => (
-                  <div key={item.product_id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={item.product_id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg" data-testid="cart-item">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-gray-900 truncate">{item.product_name}</h4>
                       <p className="text-sm text-gray-500">SKU: {item.product_id}</p>
@@ -152,6 +153,7 @@ export function MiniCart() {
                         disabled={isLoading}
                         className="p-1 hover:bg-red-100 text-red-600 rounded-full disabled:opacity-50 ml-2 transition-colors focus:outline-none focus:ring-1 focus:ring-red-500"
                         aria-label={`Remove ${item.product_name} from cart`}
+                        data-testid="remove-item-button"
                       >
                         <X className="h-4 w-4" />
                       </button>
