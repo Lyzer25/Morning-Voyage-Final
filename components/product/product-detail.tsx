@@ -19,9 +19,10 @@ import {
   Plus,
   Minus,
   Check,
+  Loader2,
 } from "lucide-react"
 import { formatPrice } from "@/lib/utils"
-import { useRouter } from "next/navigation"
+import { useCart } from "@/context/cart-context"
 import type { GroupedProduct } from "@/lib/product-variants"
 import {
   getVariantByFormat,
@@ -35,7 +36,7 @@ interface ProductDetailProps {
 }
 
 export default function ProductDetail({ product }: ProductDetailProps) {
-  const router = useRouter()
+  const { addToCart, isLoading } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [selectedFormat, setSelectedFormat] = useState(product.defaultVariant.format)
   const [isFavorite, setIsFavorite] = useState(false)
@@ -47,20 +48,27 @@ export default function ProductDetail({ product }: ProductDetailProps) {
     setQuantity(Math.max(1, quantity + change))
   }
 
-  const handleAddToCart = () => {
-    // Add to cart logic here
-    console.log("Added to cart:", {
-      baseSku: product.baseSku,
-      variantSku: currentVariant.sku,
-      productName: product.productName,
-      format: selectedFormat,
-      quantity,
-      price: currentVariant.price,
-      totalPrice: currentVariant.price * quantity,
-    })
+  const handleAddToCart = async () => {
+    try {
+      console.log("🛒 Adding to cart:", {
+        baseSku: product.baseSku,
+        variantSku: currentVariant.sku,
+        productName: product.productName,
+        format: selectedFormat,
+        quantity,
+        price: currentVariant.price,
+        totalPrice: currentVariant.price * quantity,
+      })
 
-    // You can integrate with your cart system here
-    alert(`Added ${quantity}x ${product.productName} (${getFormatDisplayName(selectedFormat)}) to cart!`)
+      await addToCart({
+        product_id: currentVariant.sku, // Use the specific variant SKU as the product ID
+        quantity: quantity
+      })
+
+      console.log("✅ Successfully added to cart")
+    } catch (error) {
+      console.error("❌ Failed to add to cart:", error)
+    }
   }
 
   const roastColors = {
@@ -78,7 +86,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         {/* Back Button */}
         <Button
           variant="ghost"
-          onClick={() => router.back()}
+          onClick={() => window.history.back()}
           className="mb-8 text-[#6E6658] hover:text-[#4B2E2E] hover:bg-white/60 rounded-xl transition-all duration-300"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />

@@ -38,12 +38,12 @@ export async function DELETE(
       );
     }
     
-    // Remove item from cart using existing helper
+    // Remove item from cart
     const cart = await removeFromCart(cartId, product_id, isUser);
     
-    if (!cart) {
+    if (cart === null) {
       return NextResponse.json(
-        { error: 'Cart not found or item not present' },
+        { error: 'Cart not found' },
         { status: 404 }
       );
     }

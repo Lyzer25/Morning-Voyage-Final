@@ -64,7 +64,7 @@ export function CartPageContent() {
                 {/* Product Details */}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-gray-900 truncate">{item.product_name}</h3>
-                  <p className="text-gray-600">ID: {item.product_id}</p>
+                  <p className="text-gray-600">SKU: {item.product_id}</p>
                   <p className="text-lg font-medium text-coffee-primary mt-1">
                     ${item.base_price.toFixed(2)} each
                   </p>
@@ -77,7 +77,7 @@ export function CartPageContent() {
                       onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
                       disabled={isLoading}
                       className="p-2 hover:bg-gray-200 rounded-md disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-coffee-primary focus:ring-offset-1"
-                      aria-label={`Decrease quantity of ${item.product_name}`}
+                    aria-label={`Decrease quantity of ${item.product_name}`}
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -90,7 +90,7 @@ export function CartPageContent() {
                       onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                       disabled={isLoading}
                       className="p-2 hover:bg-gray-200 rounded-md disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-coffee-primary focus:ring-offset-1"
-                      aria-label={`Increase quantity of ${item.product_name}`}
+                    aria-label={`Increase quantity of ${item.product_name}`}
                     >
                       <Plus className="h-4 w-4" />
                     </button>

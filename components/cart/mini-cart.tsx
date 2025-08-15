@@ -118,7 +118,7 @@ export function MiniCart() {
                   <div key={item.product_id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-gray-900 truncate">{item.product_name}</h4>
-                      <p className="text-sm text-gray-500">ID: {item.product_id}</p>
+                      <p className="text-sm text-gray-500">SKU: {item.product_id}</p>
                       <p className="text-sm font-medium text-coffee-primary">
                         ${item.base_price.toFixed(2)} each
                       </p>

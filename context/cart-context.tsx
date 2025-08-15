@@ -90,7 +90,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const data = await response.json();
-        dispatch({ type: 'SET_CART', payload: data.cart });
+        // Handle both response formats: { cart: ... } or { success: true, cart: ... }
+        const cart = data.cart || (data.success ? data.cart : null);
+        dispatch({ type: 'SET_CART', payload: cart });
       } else {
         throw new Error('Failed to fetch cart');
       }
@@ -114,7 +116,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        dispatch({ type: 'SET_CART', payload: data.cart });
+        // Handle both response formats: { cart: ... } or { success: true, cart: ... }
+        const cart = data.cart || (data.success ? data.cart : null);
+        dispatch({ type: 'SET_CART', payload: cart });
         dispatch({ type: 'SET_OPEN', payload: true }); // Show mini-cart after adding
       } else {
         const errorData = await response.json();
@@ -136,7 +140,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        dispatch({ type: 'SET_CART', payload: data.cart });
+        // Handle both response formats: { cart: ... } or { success: true, cart: ... }
+        const cart = data.cart || (data.success ? data.cart : null);
+        dispatch({ type: 'SET_CART', payload: cart });
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to remove from cart');
@@ -168,7 +174,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        dispatch({ type: 'SET_CART', payload: data.cart });
+        // Handle both response formats: { cart: ... } or { success: true, cart: ... }
+        const cart = data.cart || (data.success ? data.cart : null);
+        dispatch({ type: 'SET_CART', payload: cart });
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update quantity');
