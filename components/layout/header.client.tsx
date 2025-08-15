@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import type { SessionData } from "@/lib/types"
+import { CartIcon } from "@/components/cart/cart-icon"
 
 export default function ClientHeader({ session }: { session?: SessionData | null }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -345,15 +346,7 @@ export default function ClientHeader({ session }: { session?: SessionData | null
             </Button>
 
             {/* Cart */}
-            <Button
-              size="icon"
-              className="w-10 h-10 bg-white/80 backdrop-blur-sm text-[#4B2E2E] hover:bg-white hover:scale-110 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 relative"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-r from-[#9E7C83] to-[#6E6658] text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
-                3
-              </div>
-            </Button>
+            <CartIcon />
           </div>
 
           {/* Mobile Menu Button */}
@@ -440,15 +433,7 @@ export default function ClientHeader({ session }: { session?: SessionData | null
                   </a>
                 ) : null}
 
-                <Button
-                  size="icon"
-                  className="w-12 h-12 bg-white/80 backdrop-blur-sm text-[#4B2E2E] hover:bg-white rounded-xl shadow-lg relative"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-[#9E7C83] to-[#6E6658] text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    3
-                  </div>
-                </Button>
+                <CartIcon />
               </div>
 
               <Button className="w-full bg-gradient-to-r from-[#4B2E2E] via-[#6E6658] to-[#9E7C83] text-white py-3 rounded-xl font-bold shadow-xl">

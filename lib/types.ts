@@ -149,3 +149,11 @@ export interface ShoppingCart {
   updated_at: string;
   expires_at: string;
 }
+
+// Cart API Request Types
+export interface AddToCartRequest {
+  product_id: string;
+  quantity: number;
+  is_subscription?: boolean;
+  subscription_interval?: string;
+}

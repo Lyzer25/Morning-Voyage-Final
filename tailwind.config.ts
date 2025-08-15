@@ -62,6 +62,21 @@ const config: Config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			'coffee': {
+  				50: '#F6F1EB',
+  				100: '#E7CFC7',
+  				200: '#D5BFA3',
+  				300: '#C4A47C',
+  				400: '#B08956',
+  				500: '#9E7C83',
+  				600: '#8B4513',
+  				700: '#A0522D',
+  				800: '#4B2E2E',
+  				900: '#6E6658',
+  				'primary': '#8B4513',
+  				'secondary': '#A0522D',
+  				'light': '#DEB887'
   			}
   		},
   		borderRadius: {

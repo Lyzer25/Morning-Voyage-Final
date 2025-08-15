@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Suspense } from "react"
 import HeaderServer from "@/components/layout/header.server"
+import { CartRootClient } from "@/components/cart/cart-root-client"
 
 export const metadata: Metadata = {
   title: "Morning Voyage",
@@ -31,10 +32,12 @@ html {
        `}</style>
       </head>
       <body>
-        <HeaderServer />
-        <Suspense fallback={null}>{children}</Suspense>
-        <Analytics />
-        <SpeedInsights />
+        <CartRootClient>
+          <HeaderServer />
+          <Suspense fallback={null}>{children}</Suspense>
+          <Analytics />
+          <SpeedInsights />
+        </CartRootClient>
       </body>
     </html>
   )
