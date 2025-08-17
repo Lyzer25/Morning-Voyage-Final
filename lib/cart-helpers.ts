@@ -1,26 +1,22 @@
-import type { ShoppingCart, CartItem } from './types';
-
-/**
- * Helper functions for cart operations
- */
+import type { Cart, CartItem, CartTotals } from '@/types/cart';
 
 export function generateCartId(userId?: string, guestSessionId?: string): string {
   if (userId) {
-    return userId; // For user carts, cartId is userId
+    return `cart_user_${userId}`;
   }
   if (guestSessionId) {
-    return guestSessionId; // For guest carts, cartId is sessionId
+    return `cart_guest_${guestSessionId}`;
   }
   throw new Error('Either userId or guestSessionId required');
 }
 
-export function isCartExpired(cart: ShoppingCart): boolean {
+export function isCartExpired(cart: Cart): boolean {
   const now = new Date();
   const expiresAt = new Date(cart.expires_at);
   return now > expiresAt;
 }
 
-export function calculateCartTotals(items: CartItem[]) {
+export function calculateCartTotals(items: CartItem[]): CartTotals {
   const subtotal = items.reduce((sum, item) => {
     return sum + (item.quantity * item.base_price);
   }, 0);
@@ -55,21 +51,25 @@ export function validateCartItem(item: Partial<CartItem>): string[] {
 export function createEmptyCart(
   userId?: string, 
   guestSessionId?: string
-): ShoppingCart {
+): Cart {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + (userId ? 30 : 7) * 24 * 60 * 60 * 1000); // 30 days for users, 7 for guests
+  const expiresAt = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
   
   return {
-    id: crypto.randomUUID(),
+    id: generateCartId(userId, guestSessionId),
     user_id: userId,
-    session_id: guestSessionId || crypto.randomUUID(),
+    guest_session_id: guestSessionId,
     items: [],
     totals: {
       subtotal: 0,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
       total: 0
     },
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
-    expires_at: expiresAt.toISOString()
+    expires_at: expiresAt.toISOString(),
+    metadata: {}
   };
 }

@@ -1,136 +1,157 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { put, list } from '@vercel/blob';
 import { getServerSession } from '@/lib/auth';
-import { addToCart } from '@/lib/cart';
-
-interface AddItemRequest {
-  product_id: string;
-  quantity: number;
-  is_subscription?: boolean;
-  subscription_interval?: string;
-}
+import { cookies } from 'next/headers';
+import type { AddToCartRequest } from '@/types/cart';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🛒 [CART API] POST /api/cart/items - Request received');
-    console.log('🛒 [CART API] Request method:', request.method);
-    console.log('🛒 [CART API] Request URL:', request.url);
-    
-    const body: AddItemRequest = await request.json();
+    const body: AddToCartRequest = await request.json();
     const { product_id, quantity, is_subscription, subscription_interval } = body;
-    
-    console.log('🛒 [CART API] Request body:', { product_id, quantity, is_subscription, subscription_interval });
     
     // Validate input
     if (!product_id || !quantity || quantity < 1) {
-      console.log('❌ [CART API] Invalid input - product_id:', product_id, 'quantity:', quantity);
       return NextResponse.json(
         { error: 'Invalid product_id or quantity' },
         { status: 400 }
       );
     }
     
-    console.log('🛒 [CART API] Getting session...');
     const session = await getServerSession();
-    const guestCookie = request.cookies.get('mv_guest_session')?.value;
-    
-    console.log('🛒 [CART API] Session:', session ? { userId: session.userId, email: session.email, role: session.role } : 'null');
-    console.log('🛒 [CART API] Guest cookie:', guestCookie ? 'present' : 'null');
+    const cookieStore = await cookies();
     
     // Get or create cart ID and guest session
     let cartId: string;
-    let isUser: boolean;
     let guestSessionId: string | null = null;
-    let shouldSetCookie = false;
     
     if (session?.userId) {
-      cartId = session.userId;
-      isUser = true;
-      console.log('🛒 [CART API] Using user cart:', cartId);
+      cartId = `cart_user_${session.userId}`;
     } else {
-      guestSessionId = guestCookie || null;
+      guestSessionId = cookieStore.get('mv_guest_session')?.value || null;
       
       if (!guestSessionId) {
         // Create new guest session
         guestSessionId = crypto.randomUUID();
-        shouldSetCookie = true;
-        console.log('🛒 [CART API] Created new guest session:', guestSessionId);
-      } else {
-        console.log('🛒 [CART API] Using existing guest session:', guestSessionId);
       }
       
-      cartId = guestSessionId;
-      isUser = false;
+      cartId = `cart_guest_${guestSessionId}`;
     }
     
-    console.log('🛒 [CART API] Final cart config - cartId:', cartId, 'isUser:', isUser);
-    
-    // Fetch product data to get details
-    console.log('🛒 [CART API] Fetching product data for:', product_id);
+    // Fetch product data to validate and get details
     const productData = await fetchProductData(product_id);
-    
-    console.log('🛒 [CART API] Product fetch result:', productData ? {
-      id: productData.id,
-      sku: productData.sku,
-      productName: productData.productName,
-      price: productData.price
-    } : 'null');
-    
     if (!productData) {
-      console.log('❌ [CART API] Product not found, returning 404');
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
     
-    console.log('🛒 [CART API] Adding to cart with params:', {
-      cartId,
-      product_id,
-      productName: productData.productName,
-      price: productData.price,
-      quantity,
-      isUser
-    });
+    // Get existing cart or create new one
+    let cart;
+    try {
+      const blobs = await list({ prefix: `${cartId}.json`, limit: 1 });
+      const blobItem = blobs?.blobs?.[0];
+      if (blobItem?.url) {
+        const res = await fetch(blobItem.url, { cache: 'no-store' });
+        if (res.ok) {
+          cart = await res.json();
+          
+          // Check if cart expired
+          const now = new Date();
+          const expiresAt = new Date(cart.expires_at);
+          if (now > expiresAt) {
+            throw new Error('Cart expired');
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Creating new cart:', (error as any).message);
+      cart = null;
+    }
     
-    // Add to cart using existing helper
-    const cart = await addToCart(
-      cartId, 
-      product_id, 
-      productData.productName, 
-      parseFloat(productData.price), 
-      quantity, 
-      isUser
+    if (!cart) {
+      // Create new cart
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
+      
+      cart = {
+        id: cartId,
+        user_id: session?.userId || undefined,
+        guest_session_id: guestSessionId || undefined,
+        items: [],
+        totals: {
+          subtotal: 0,
+          tax: 0,
+          shipping: 0,
+          discount: 0,
+          total: 0
+        },
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        metadata: {}
+      };
+    }
+    
+    // Add or update item in cart
+    const existingItemIndex = cart.items.findIndex(
+      (item: any) => item.product_id === product_id
     );
     
-    console.log('✅ [CART API] Cart operation successful. Cart items:', cart.items.length);
-    console.log('✅ [CART API] Cart total:', cart.totals.total);
+    const cartItem = {
+      product_id,
+      sku: productData.sku,
+      name: productData.productName,
+      quantity,
+      base_price: parseFloat(productData.price),
+      line_total: quantity * parseFloat(productData.price),
+      is_subscription: is_subscription || false,
+      subscription_interval: subscription_interval || undefined,
+      metadata: {
+        variant: productData.variant || undefined
+      }
+    };
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      cart.items[existingItemIndex] = cartItem;
+    } else {
+      // Add new item
+      cart.items.push(cartItem);
+    }
+    
+    // Recalculate totals
+    cart = recalculateCartTotals(cart);
+    
+    // Save cart to blob storage
+    await put(`${cartId}.json`, JSON.stringify(cart, null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      allowOverwrite: true
+    });
     
     const response = NextResponse.json({
-      success: true,
       cart,
       message: 'Item added to cart successfully'
     });
     
-    // Set guest session cookie if needed (always set for guest users to ensure persistence)
-    if (!isUser && guestSessionId) {
-      console.log('🍪 [CART API] Setting guest session cookie:', guestSessionId);
+    // Set guest session cookie if needed
+    if (guestSessionId && !session?.userId) {
       response.cookies.set('mv_guest_session', guestSessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 7 * 24 * 60 * 60 // 7 days
+        maxAge: 60 * 60 * 24 * 7 // 7 days
       });
     }
     
-    console.log('✅ [CART API] Returning successful response');
     return response;
     
   } catch (error) {
-    console.error('❌ [CART API] Cart operation failed:', error);
-    console.error('❌ [CART API] Error stack:', (error as any)?.stack);
+    console.error('Add to cart error:', error);
     return NextResponse.json(
-      { error: 'Failed to add item to cart', details: (error as any)?.message || 'Unknown error' },
+      { error: 'Failed to add item to cart', details: (error as any)?.message },
       { status: 500 }
     );
   }
@@ -139,9 +160,7 @@ export async function POST(request: NextRequest) {
 // Helper function to fetch product data
 async function fetchProductData(productId: string) {
   try {
-    console.log('🔍 [PRODUCT FETCH] Starting product lookup for:', productId);
-    
-    // Construct absolute URL for server-side fetch
+    // Use existing product API
     let baseUrl: string;
     
     if (process.env.NEXT_PUBLIC_BASE_URL) {
@@ -149,42 +168,43 @@ async function fetchProductData(productId: string) {
     } else if (process.env.VERCEL_URL) {
       baseUrl = `https://${process.env.VERCEL_URL}`;
     } else {
-      // For production deployment, default to morningvoyage.co
       baseUrl = process.env.NODE_ENV === 'production' ? 'https://morningvoyage.co' : 'http://localhost:3000';
     }
-    
-    console.log('🔍 [PRODUCT FETCH] Base URL:', baseUrl);
-    console.log('🔍 [PRODUCT FETCH] Full URL:', `${baseUrl}/api/products/fresh`);
     
     const response = await fetch(`${baseUrl}/api/products/fresh`, {
       cache: 'no-store'
     });
     
-    console.log('🔍 [PRODUCT FETCH] Response status:', response.status, response.statusText);
-    
     if (!response.ok) {
-      console.log('❌ [PRODUCT FETCH] Products API failed with status:', response.status);
-      throw new Error(`Products API failed: ${response.status} ${response.statusText}`);
+      throw new Error('Products API failed');
     }
     
     const data = await response.json();
-    console.log('🔍 [PRODUCT FETCH] Raw response keys:', Object.keys(data));
-    console.log('🔍 [PRODUCT FETCH] Products array length:', (data.products || data).length);
-    
-    const products = data.products || data; // Handle both {products: [...]} and [...] formats
-    const foundProduct = products.find((p: any) => p.id === productId || p.sku === productId);
-    
-    console.log('🔍 [PRODUCT FETCH] Searching for product with id/sku:', productId);
-    console.log('🔍 [PRODUCT FETCH] Found product:', foundProduct ? 'YES' : 'NO');
-    
-    if (!foundProduct) {
-      console.log('🔍 [PRODUCT FETCH] Available product IDs:', products.slice(0, 5).map((p: any) => ({ id: p.id, sku: p.sku })));
-    }
-    
-    return foundProduct;
+    const products = data.products || data;
+    return products.find((p: any) => p.id === productId || p.sku === productId);
     
   } catch (error) {
-    console.error('❌ [PRODUCT FETCH] Error:', error);
+    console.error('Product fetch error:', error);
     return null;
   }
+}
+
+// Helper function to recalculate cart totals
+function recalculateCartTotals(cart: any) {
+  const subtotal = cart.items.reduce((sum: number, item: any) => {
+    item.line_total = item.quantity * item.base_price;
+    return sum + item.line_total;
+  }, 0);
+  
+  cart.totals = {
+    subtotal,
+    tax: 0,
+    shipping: 0,
+    discount: 0,
+    total: subtotal
+  };
+  
+  cart.updated_at = new Date().toISOString();
+  
+  return cart;
 }

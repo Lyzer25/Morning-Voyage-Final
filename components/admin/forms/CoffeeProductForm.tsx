@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product, ProductImage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -196,6 +196,40 @@ export const CoffeeProductForm: React.FC<CoffeeProductFormProps> = ({
     shippingFirst: product?.shippingFirst || undefined,
     shippingAdditional: product?.shippingAdditional || undefined
   });
+
+  // Keep form data in sync when the product prop changes (fixes stale data when editing multiple products)
+  useEffect(() => {
+    setFormData({
+      sku: product?.sku || '',
+      productName: product?.productName || '',
+      description: product?.description || '',
+      price: product?.price || 0,
+      originalPrice: product?.originalPrice || undefined,
+      category: 'coffee',
+      
+      // Coffee-specific fields
+      roastLevel: product?.roastLevel || 'medium',
+      origin: product?.origin || '',
+      format: product?.format || 'whole-bean',
+      weight: product?.weight || '12oz',
+      tastingNotes: Array.isArray(product?.tastingNotes) 
+        ? product.tastingNotes.join(', ') 
+        : product?.tastingNotes || '',
+      blendComposition: product?.blendComposition || '',
+      
+      // Status fields
+      featured: product?.featured || false,
+      status: product?.status || 'active',
+      inStock: product?.inStock !== false, // Default to true
+      
+      // Shipping fields  
+      shippingFirst: product?.shippingFirst || undefined,
+      shippingAdditional: product?.shippingAdditional || undefined
+    });
+
+    // Also reset images when product changes
+    setImages(product?.images || []);
+  }, [product]);
 
   // Image management state
   const [images, setImages] = useState<ProductImage[]>(product?.images || []);

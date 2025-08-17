@@ -114,15 +114,21 @@ export function OrderManagerContent() {
         <div className="flex space-x-3">
           <button 
             onClick={fetchOrders}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 relative z-[10]"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-coffee-primary hover:bg-coffee-secondary">
-            <Download className="h-4 w-4 mr-2" />
-            Export Orders
-          </button>
+          {/* Export CSV Button with proper z-index to appear above header */}
+          <div className="export-button-container relative z-[60]">
+            <button 
+              className="export-button inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-coffee-primary hover:bg-coffee-secondary relative z-[61] min-h-[40px] transition-all duration-200 shadow-sm hover:shadow-md"
+              aria-label={`Export ${filteredOrders.length} orders to CSV`}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export Orders
+            </button>
+          </div>
         </div>
       </div>
 

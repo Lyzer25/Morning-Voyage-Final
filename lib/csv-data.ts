@@ -345,7 +345,11 @@ export async function getProducts(options?: {
 export async function getGroupedProducts(): Promise<any[]> {
   devLog('🔄 Direct grouped products fetch - bypassing unstable_cache');
   const baseProducts = await fetchAndParseCsvInternal(false);
-  const coffeeProducts = baseProducts.filter(p => p.category?.toLowerCase() === 'coffee');
+  // Include both regular coffee and mushroom coffee products
+  const coffeeProducts = baseProducts.filter(p => 
+    p.category?.toLowerCase() === 'coffee' || 
+    p.category?.toLowerCase() === 'mushroom-coffee'
+  );
   const productFamilies = groupProductFamilies(coffeeProducts);
   return convertFamiliesToGroupedProducts(productFamilies);
 }

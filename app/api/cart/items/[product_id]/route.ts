@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { put, list } from '@vercel/blob';
 import { getServerSession } from '@/lib/auth';
-import { removeFromCart } from '@/lib/cart';
+import { cookies } from 'next/headers';
 
 export async function DELETE(
   request: NextRequest,
@@ -17,18 +18,18 @@ export async function DELETE(
     }
     
     const session = await getServerSession();
-    const guestCookie = request.cookies.get('mv_guest_session')?.value;
+    const cookieStore = await cookies();
     
     // Determine cart ID
     let cartId: string | null = null;
-    let isUser: boolean = false;
     
     if (session?.userId) {
-      cartId = session.userId;
-      isUser = true;
-    } else if (guestCookie) {
-      cartId = guestCookie;
-      isUser = false;
+      cartId = `cart_user_${session.userId}`;
+    } else {
+      const guestSessionId = cookieStore.get('mv_guest_session')?.value;
+      if (guestSessionId) {
+        cartId = `cart_guest_${guestSessionId}`;
+      }
     }
     
     if (!cartId) {
@@ -38,27 +39,79 @@ export async function DELETE(
       );
     }
     
-    // Remove item from cart
-    const cart = await removeFromCart(cartId, product_id, isUser);
+    // Fetch existing cart
+    const blobs = await list({ prefix: `${cartId}.json`, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
     
-    // cart can be null in two cases:
-    // 1. Cart didn't exist (legitimate case - already removed)
-    // 2. Cart became empty after removal (legitimate case - cart deleted)
-    // Both are success cases, not errors
+    if (!downloadUrl) {
+      return NextResponse.json(
+        { error: 'Cart not found' },
+        { status: 404 }
+      );
+    }
+    
+    const res = await fetch(downloadUrl, { cache: 'no-store' });
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: 'Cart not found' },
+        { status: 404 }
+      );
+    }
+    
+    const cart = await res.json();
+    
+    // Remove item from cart
+    const initialItemCount = cart.items.length;
+    cart.items = cart.items.filter((item: any) => item.product_id !== product_id);
+    
+    if (cart.items.length === initialItemCount) {
+      return NextResponse.json(
+        { error: 'Item not found in cart' },
+        { status: 404 }
+      );
+    }
+    
+    // Recalculate totals
+    const updatedCart = recalculateCartTotals(cart);
+    
+    // Save updated cart
+    await put(`${cartId}.json`, JSON.stringify(updatedCart, null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      allowOverwrite: true
+    });
     
     return NextResponse.json({
-      success: true,
-      cart: cart, // Will be null if cart was empty/deleted, or cart object if items remain
-      message: cart === null 
-        ? 'Item removed and cart is now empty' 
-        : 'Item removed from cart successfully'
+      cart: updatedCart,
+      message: 'Item removed from cart successfully'
     });
     
   } catch (error) {
     console.error('Remove from cart error:', error);
     return NextResponse.json(
-      { error: 'Failed to remove item from cart', details: (error as any)?.message || 'Unknown error' },
+      { error: 'Failed to remove item from cart', details: (error as any).message },
       { status: 500 }
     );
   }
+}
+
+// Helper function to recalculate cart totals
+function recalculateCartTotals(cart: any) {
+  const subtotal = cart.items.reduce((sum: number, item: any) => {
+    item.line_total = item.quantity * item.base_price;
+    return sum + item.line_total;
+  }, 0);
+  
+  cart.totals = {
+    subtotal,
+    tax: 0,
+    shipping: 0,
+    discount: 0,
+    total: subtotal
+  };
+  
+  cart.updated_at = new Date().toISOString();
+  
+  return cart;
 }

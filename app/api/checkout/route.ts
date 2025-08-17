@@ -4,93 +4,219 @@ import { submitOrderToRoastify } from '@/lib/roastify-integration';
 import { getServerSession } from '@/lib/auth';
 import { OrderStatus } from '@/types/orders';
 import type { CheckoutRequest } from '@/types/orders';
+import { validateProductsData, validateProductsForCheckout } from '@/lib/validation';
+import { fetchDirectFromBlob } from '@/lib/csv-data';
+import { generateCorrelationId, logCheckoutEvent, createCheckoutTimer, sanitizeForLog } from '@/lib/checkout-logging';
 
 export async function POST(request: NextRequest) {
+  const correlationId = generateCorrelationId();
+  const checkoutTimer = createCheckoutTimer(correlationId, 'full_checkout');
+  
   try {
+    logCheckoutEvent('started', correlationId, { 
+      url: request.url,
+      method: request.method 
+    });
+    
     const body: CheckoutRequest = await request.json();
     const { customer, shipping, cart } = body;
     
-    console.log('Checkout request received:', {
+    logCheckoutEvent('request_parsed', correlationId, sanitizeForLog({
       customerEmail: customer.email,
       itemCount: cart?.items?.length || 0,
-      total: cart?.totals?.total || 0
-    });
+      total: cart?.totals?.total || 0,
+      hasShipping: !!shipping.address1
+    }));
     
     // Validate required fields
     if (!customer.email || !customer.firstName || !customer.lastName) {
+      logCheckoutEvent('validation_failed', correlationId, { 
+        reason: 'incomplete_customer_info',
+        missing: {
+          email: !customer.email,
+          firstName: !customer.firstName,
+          lastName: !customer.lastName
+        }
+      });
       return NextResponse.json(
-        { error: 'Customer information is incomplete' },
+        { error: 'Customer information is incomplete', correlationId },
         { status: 400 }
       );
     }
     
     if (!shipping.address1 || !shipping.city || !shipping.state || !shipping.zipCode) {
+      logCheckoutEvent('validation_failed', correlationId, { 
+        reason: 'incomplete_shipping_address',
+        missing: {
+          address1: !shipping.address1,
+          city: !shipping.city,
+          state: !shipping.state,
+          zipCode: !shipping.zipCode
+        }
+      });
       return NextResponse.json(
-        { error: 'Shipping address is incomplete' },
+        { error: 'Shipping address is incomplete', correlationId },
         { status: 400 }
       );
     }
     
     if (!cart?.items?.length) {
+      logCheckoutEvent('validation_failed', correlationId, { 
+        reason: 'empty_cart',
+        cartItems: cart?.items?.length || 0
+      });
       return NextResponse.json(
-        { error: 'Cart is empty' },
+        { error: 'Cart is empty', correlationId },
         { status: 400 }
       );
     }
     
     const session = await getServerSession();
-    console.log('Checkout session:', { userId: session?.userId });
-    
-    // Get product details and validate Roastify SKUs
-    console.log('Fetching products for SKU mapping...');
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    (request.nextUrl.origin.includes('localhost') ? 'http://localhost:3000' : request.nextUrl.origin);
-    
-    const productResponse = await fetch(`${baseUrl}/api/products`, {
-      cache: 'no-store'
+    logCheckoutEvent('session_validated', correlationId, { 
+      userId: session?.userId,
+      hasSession: !!session
     });
     
-    if (!productResponse.ok) {
-      console.error('Failed to fetch products for checkout:', productResponse.status);
+    // CRITICAL FIX: Robust product data fetching with validation and fallback
+    logCheckoutEvent('products_fetch_started', correlationId, {});
+    const productTimer = createCheckoutTimer(correlationId, 'product_fetch');
+    
+    let validatedProducts;
+    
+    try {
+      // Primary: Fetch from products API
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                      (request.nextUrl.origin.includes('localhost') ? 'http://localhost:3000' : request.nextUrl.origin);
+      
+      const productResponse = await fetch(`${baseUrl}/api/products`, {
+        cache: 'no-store'
+      });
+      
+      if (!productResponse.ok) {
+        throw new Error(`Products API returned ${productResponse.status}: ${productResponse.statusText}`);
+      }
+      
+      const rawProductData = await productResponse.json();
+      
+      logCheckoutEvent('products_api_response', correlationId, {
+        responseType: typeof rawProductData,
+        isArray: Array.isArray(rawProductData),
+        hasProductsProperty: rawProductData && 'products' in rawProductData,
+        dataKeys: rawProductData && typeof rawProductData === 'object' ? Object.keys(rawProductData) : []
+      });
+      
+      // Use validation utility to normalize products data
+      validatedProducts = validateProductsData(rawProductData);
+      
+      productTimer.end({ 
+        source: 'api',
+        productCount: validatedProducts.length 
+      });
+      
+    } catch (primaryError) {
+      const errorMessage = primaryError instanceof Error ? primaryError.message : String(primaryError);
+      logCheckoutEvent('products_api_failed', correlationId, { 
+        error: errorMessage,
+        attemptingFallback: true
+      });
+      
+      try {
+        // Fallback: Direct blob storage fetch
+        logCheckoutEvent('products_fallback_started', correlationId, {});
+        const blobProducts = await fetchDirectFromBlob();
+        validatedProducts = validateProductsData(blobProducts);
+        
+        productTimer.end({ 
+          source: 'blob_fallback',
+          productCount: validatedProducts.length 
+        });
+        
+        logCheckoutEvent('products_fallback_success', correlationId, {
+          productCount: validatedProducts.length
+        });
+        
+      } catch (fallbackError) {
+        const fallbackErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        logCheckoutEvent('products_fallback_failed', correlationId, { 
+          error: fallbackErrorMessage 
+        });
+        
+        productTimer.end({ source: 'failed', error: fallbackErrorMessage });
+        
+        return NextResponse.json(
+          { 
+            error: 'Unable to load product information. Please try again.', 
+            correlationId,
+            details: 'Product data temporarily unavailable'
+          },
+          { status: 500 }
+        );
+      }
+    }
+    
+    // Extract cart SKUs for validation
+    const cartSkus = cart.items.map((item: any) => 
+      item.product_id || item.sku
+    ).filter(Boolean);
+    
+    logCheckoutEvent('sku_validation_started', correlationId, {
+      cartSkus,
+      availableProductCount: validatedProducts.length
+    });
+    
+    try {
+      validateProductsForCheckout(validatedProducts, cartSkus);
+    } catch (skuError) {
+      const skuErrorMessage = skuError instanceof Error ? skuError.message : String(skuError);
+      logCheckoutEvent('sku_validation_failed', correlationId, { 
+        error: skuErrorMessage,
+        cartSkus,
+        availableSkus: validatedProducts.map(p => p.sku)
+      });
+      
       return NextResponse.json(
-        { error: 'Unable to validate product information' },
-        { status: 500 }
+        { 
+          error: skuErrorMessage, 
+          correlationId,
+          details: 'One or more products in your cart are no longer available'
+        },
+        { status: 400 }
       );
     }
     
-    const products = await productResponse.json();
-    console.log('Products fetched:', { count: products.length });
-    
-    // Map cart items to order items with Roastify SKUs
+    // Map cart items to order items with validated products
     const orderItems = [];
+    const skuMapTimer = createCheckoutTimer(correlationId, 'sku_mapping');
     
     for (const cartItem of cart.items) {
-      const product = products.find((p: any) => 
-        p.id === cartItem.product_id || 
-        p.sku === cartItem.product_id ||
-        p.sku === cartItem.sku
+      const productId = cartItem.product_id || cartItem.sku;
+      const product = validatedProducts.find((p) => 
+        p.id === productId || 
+        p.sku === productId
       );
       
       if (!product) {
-        console.error('Product not found:', { product_id: cartItem.product_id, sku: cartItem.sku });
+        // This should not happen after validateProductsForCheckout, but safety check
+        logCheckoutEvent('sku_mapping_error', correlationId, { 
+          productId,
+          cartItem: sanitizeForLog(cartItem)
+        });
+        
         return NextResponse.json(
-          { error: `Product ${cartItem.product_name || cartItem.product_id} not found` },
+          { 
+            error: `Product ${cartItem.product_name || productId} not found`, 
+            correlationId,
+            details: 'Product validation failed during order creation'
+          },
           { status: 400 }
         );
       }
       
-      if (!product.roastify_sku) {
-        console.error('Product missing Roastify SKU:', { productName: product.productName, sku: product.sku });
-        return NextResponse.json(
-          { error: `Product "${product.productName}" has no Roastify SKU mapping. Please contact support.` },
-          { status: 400 }
-        );
-      }
-      
+      // NOTE: Using main SKU for Roastify (roastify_sku was removed in previous session)
       orderItems.push({
-        product_id: cartItem.product_id,
+        product_id: productId,
         sku: product.sku,
-        roastify_sku: product.roastify_sku,
+        roastify_sku: product.sku, // Use main SKU for Roastify mapping
         name: cartItem.product_name || product.productName,
         quantity: cartItem.quantity,
         price: cartItem.base_price,
@@ -99,7 +225,12 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    console.log('Order items mapped:', { count: orderItems.length });
+    skuMapTimer.end({ orderItemCount: orderItems.length });
+    
+    logCheckoutEvent('order_items_mapped', correlationId, { 
+      count: orderItems.length,
+      totalValue: orderItems.reduce((sum, item) => sum + item.line_total, 0)
+    });
     
     // Create order in our system
     const order = await createOrder({
@@ -187,11 +318,23 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error) {
-    console.error('Checkout error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    logCheckoutEvent('checkout_failed', correlationId, {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined
+    });
+    
+    checkoutTimer.end({ 
+      status: 'failed',
+      error: errorMessage
+    });
+    
     return NextResponse.json(
       { 
-        error: 'Checkout failed', 
-        details: (error as any)?.message || 'Unknown error'
+        error: 'Checkout failed. Please try again.', 
+        details: errorMessage,
+        correlationId
       },
       { status: 500 }
     );

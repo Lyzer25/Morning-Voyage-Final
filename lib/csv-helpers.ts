@@ -148,6 +148,8 @@ export function normalizeCategory(v?: string): string {
   if (["subscription", "subscriptions"].includes(s)) return "subscription"
   if (["gift set", "gift-set", "giftset", "gift"].includes(s)) return "gift-set"
   if (["equipment", "gear"].includes(s)) return "equipment"
+  // Mushroom coffee variants
+  if (["mushroom coffee", "mushroom", "functional coffee", "functional", "medicinal coffee", "adapto genic coffee", "nootropic coffee"].includes(s)) return "mushroom-coffee"
   return "coffee" // Default fallback
 }
 

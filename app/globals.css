@@ -10,6 +10,15 @@
 
 @layer base {
   :root {
+    /* Z-index layering system */
+    --z-index-header: 50;
+    --z-index-modal: 100;
+    --z-index-tooltip: 150;
+    --z-index-dropdown: 75;
+    --z-index-overlay: 90;
+    --z-index-export-button: 60;
+    --z-index-admin-actions: 10;
+    
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -86,5 +95,29 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Admin-specific component styling */
+@layer components {
+  .export-button-container {
+    position: relative;
+  }
+  
+  /* Ensure export button is always accessible */
+  .export-button {
+    min-height: 40px; /* Accessibility: minimum 40px touch target */
+  }
+  
+  /* Responsive adjustments for mobile */
+  @media (max-width: 640px) {
+    .export-button-container {
+      width: 100%;
+    }
+    
+    .export-button {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }

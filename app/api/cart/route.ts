@@ -1,36 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { put, list } from '@vercel/blob';
 import { getServerSession } from '@/lib/auth';
-import { getCart, saveCart } from '@/lib/cart';
+import { cookies } from 'next/headers';
+import type { Cart } from '@/types/cart';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📋 [CART GET] GET /api/cart - Request received');
-    
     const session = await getServerSession();
-    const guestCookie = request.cookies.get('mv_guest_session')?.value;
+    const cookieStore = await cookies();
     
-    console.log('📋 [CART GET] Session:', session ? { userId: session.userId, email: session.email, role: session.role } : 'null');
-    console.log('📋 [CART GET] Guest cookie:', guestCookie ? 'present' : 'null');
-
-    if (session) {
-      console.log('📋 [CART GET] Fetching user cart for:', session.userId);
-      const cart = await getCart(session.userId, true);
-      console.log('📋 [CART GET] User cart result:', cart ? { items: cart.items.length, total: cart.totals.total } : 'null');
-      return NextResponse.json({ success: true, cart: cart ?? null });
+    let cartId: string | null = null;
+    
+    // Determine cart ID from user session or guest cookie
+    if (session?.userId) {
+      cartId = `cart_user_${session.userId}`;
+    } else {
+      const guestSessionId = cookieStore.get('mv_guest_session')?.value;
+      if (guestSessionId) {
+        cartId = `cart_guest_${guestSessionId}`;
+      }
     }
-
-    if (guestCookie) {
-      console.log('📋 [CART GET] Fetching guest cart for:', guestCookie);
-      const cart = await getCart(guestCookie, false);
-      console.log('📋 [CART GET] Guest cart result:', cart ? { items: cart.items.length, total: cart.totals.total } : 'null');
-      return NextResponse.json({ success: true, cart: cart ?? null });
+    
+    if (!cartId) {
+      // No cart exists - return empty cart structure
+      return NextResponse.json({
+        cart: null,
+        message: 'No cart found'
+      });
     }
-
-    console.log('📋 [CART GET] No session or guest cookie found, returning null cart');
-    return NextResponse.json({ success: true, cart: null });
-  } catch (err) {
-    console.error('❌ [CART GET] Failed to fetch cart:', err);
-    return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
+    
+    // Fetch cart from blob storage using list() approach
+    try {
+      const blobs = await list({ prefix: `${cartId}.json`, limit: 1 });
+      const blobItem = blobs?.blobs?.[0];
+      const downloadUrl = blobItem?.url;
+      
+      if (!downloadUrl) {
+        return NextResponse.json({
+          cart: null,
+          message: 'Cart not found'
+        });
+      }
+      
+      const res = await fetch(downloadUrl, { cache: 'no-store' });
+      if (!res.ok) {
+        console.error('Cart blob fetch error:', res.status);
+        return NextResponse.json({
+          cart: null,
+          message: 'Cart not found'
+        });
+      }
+      
+      const cartData = await res.json();
+      
+      // Check if cart has expired
+      const now = new Date();
+      const expiresAt = new Date(cartData.expires_at);
+      
+      if (now > expiresAt) {
+        // Cart expired - clean up and return null
+        // Note: blob cleanup handled by separate maintenance task
+        return NextResponse.json({
+          cart: null,
+          message: 'Cart expired'
+        });
+      }
+      
+      // Recalculate totals to ensure accuracy
+      const updatedCart = recalculateCartTotals(cartData);
+      
+      return NextResponse.json({
+        cart: updatedCart,
+        message: 'Cart retrieved successfully'
+      });
+      
+    } catch (blobError) {
+      console.error('Cart blob fetch error:', blobError);
+      return NextResponse.json({
+        cart: null,
+        message: 'Cart not found'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Cart fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch cart', details: (error as any).message },
+      { status: 500 }
+    );
   }
 }
 
@@ -40,18 +97,18 @@ export async function PUT(request: NextRequest) {
     const { discount_codes, shipping_method, notes } = body;
     
     const session = await getServerSession();
-    const guestCookie = request.cookies.get('mv_guest_session')?.value;
+    const cookieStore = await cookies();
     
     // Determine cart ID
     let cartId: string | null = null;
-    let isUser: boolean = false;
     
     if (session?.userId) {
-      cartId = session.userId;
-      isUser = true;
-    } else if (guestCookie) {
-      cartId = guestCookie;
-      isUser = false;
+      cartId = `cart_user_${session.userId}`;
+    } else {
+      const guestSessionId = cookieStore.get('mv_guest_session')?.value;
+      if (guestSessionId) {
+        cartId = `cart_guest_${guestSessionId}`;
+      }
     }
     
     if (!cartId) {
@@ -61,33 +118,47 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    // Fetch existing cart
-    const cart = await getCart(cartId, isUser);
-    if (!cart) {
+    // Fetch existing cart using list() approach
+    const blobs = await list({ prefix: `${cartId}.json`, limit: 1 });
+    const blobItem = blobs?.blobs?.[0];
+    const downloadUrl = blobItem?.url;
+    
+    if (!downloadUrl) {
       return NextResponse.json(
         { error: 'Cart not found' },
         { status: 404 }
       );
     }
     
-    // Update metadata - extend existing metadata object
-    const updatedCart = {
-      ...cart,
-      metadata: {
-        ...((cart as any).metadata || {}),
-        ...(discount_codes !== undefined && { discount_codes }),
-        ...(shipping_method !== undefined && { shipping_method }),
-        ...(notes !== undefined && { notes })
-      },
-      updated_at: new Date().toISOString()
+    const res = await fetch(downloadUrl, { cache: 'no-store' });
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: 'Cart not found' },
+        { status: 404 }
+      );
+    }
+    
+    const cart = await res.json();
+    
+    // Update metadata
+    cart.metadata = {
+      ...cart.metadata,
+      discount_codes: discount_codes || cart.metadata?.discount_codes,
+      shipping_method: shipping_method || cart.metadata?.shipping_method,
+      notes: notes || cart.metadata?.notes
     };
     
+    cart.updated_at = new Date().toISOString();
+    
     // Save updated cart
-    await saveCart(updatedCart, isUser);
+    await put(`${cartId}.json`, JSON.stringify(cart, null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      allowOverwrite: true
+    });
     
     return NextResponse.json({
-      success: true,
-      cart: updatedCart,
+      cart,
       message: 'Cart updated successfully'
     });
     
@@ -98,4 +169,24 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to recalculate cart totals
+function recalculateCartTotals(cart: any) {
+  const subtotal = cart.items.reduce((sum: number, item: any) => {
+    item.line_total = item.quantity * item.base_price;
+    return sum + item.line_total;
+  }, 0);
+  
+  cart.totals = {
+    subtotal,
+    tax: 0,        // TODO: Add tax calculation later
+    shipping: 0,   // TODO: Add shipping calculation later  
+    discount: 0,   // TODO: Add discount calculation later
+    total: subtotal
+  };
+  
+  cart.updated_at = new Date().toISOString();
+  
+  return cart;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, BundleItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,39 @@ export const GiftBundleProductForm: React.FC<GiftBundleProductFormProps> = ({
   const [bundleContents, setBundleContents] = useState<BundleItem[]>(
     product?.bundleContents || [{ sku: '', productName: '', quantity: 1, unitPrice: 0, notes: '' }]
   );
+
+  // Keep form data in sync when the product prop changes (fixes stale data when editing multiple products)
+  useEffect(() => {
+    setFormData({
+      sku: product?.sku || '',
+      productName: product?.productName || '',
+      description: product?.description || '',
+      price: product?.price || 0,
+      originalPrice: product?.originalPrice || undefined,
+      category: 'gift-set',
+      
+      // Gift Bundle specific fields
+      bundleType: product?.bundleType || 'custom-selection',
+      bundleDescription: product?.bundleDescription || '',
+      giftMessage: product?.giftMessage || '',
+      packagingType: product?.packagingType || 'standard',
+      seasonalAvailability: product?.seasonalAvailability || '',
+      
+      // Status fields
+      featured: product?.featured || false,
+      status: product?.status || 'active',
+      inStock: product?.inStock !== false,
+      
+      // Shipping configuration
+      shippingFirst: product?.shippingFirst || undefined,
+      shippingAdditional: product?.shippingAdditional || undefined
+    });
+
+    // Also reset bundle contents when product changes
+    setBundleContents(
+      product?.bundleContents || [{ sku: '', productName: '', quantity: 1, unitPrice: 0, notes: '' }]
+    );
+  }, [product]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
